@@ -1,0 +1,3 @@
+NexaBootstrapConfig = {
+    validationDelayMs = 0
+}

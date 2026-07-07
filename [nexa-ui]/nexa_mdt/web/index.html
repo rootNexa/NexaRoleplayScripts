@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexa MDT</title>
+    <link rel="stylesheet" href="nui://nexa_ui/web/style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="mdt" class="mdt is-hidden" aria-live="polite">
+        <section class="mdt-shell">
+            <aside class="mdt-sidebar">
+                <div>
+                    <p data-i18n="subtitle">Dienstterminal</p>
+                    <h1 data-i18n="title">Stadtakte</h1>
+                </div>
+                <nav id="mdtNav" class="mdt-nav" aria-label="MDT Bereiche">
+                    <button class="is-active" type="button" data-tab="overview" data-i18n="tabOverview">Uebersicht</button>
+                    <button type="button" data-tab="persons" data-i18n="tabPersons">Personen</button>
+                    <button type="button" data-tab="vehicles" data-i18n="tabVehicles">Fahrzeuge</button>
+                    <button type="button" data-tab="records" data-i18n="tabRecords">Akten</button>
+                    <button type="button" data-tab="warrants" data-i18n="tabWarrants">Haftbefehle</button>
+                    <button type="button" data-tab="fines" data-i18n="tabFines">Bussgelder</button>
+                    <button type="button" data-tab="reports" data-i18n="tabReports">Berichte</button>
+                    <button type="button" data-tab="evidence" data-i18n="tabEvidence">Beweise</button>
+                    <button type="button" data-tab="dispatch" data-i18n="tabDispatch">Einsaetze</button>
+                </nav>
+                <button id="mdtClose" class="mdt-icon-button" type="button" aria-label="MDT schliessen">&times;</button>
+            </aside>
+            <section class="mdt-content">
+                <header class="mdt-toolbar">
+                    <p id="mdtNotice" data-i18n="loading">MDT wird geladen.</p>
+                    <button id="mdtRefresh" type="button" data-i18n="refresh">Aktualisieren</button>
+                </header>
+                <form id="mdtSearch" class="mdt-search">
+                    <input name="query" maxlength="48" data-i18n-placeholder="searchPlaceholder" placeholder="Name oder Akten-ID">
+                    <button type="submit" data-i18n="search">Person suchen</button>
+                </form>
+                <section id="mdtPanel" class="mdt-panel"></section>
+            </section>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

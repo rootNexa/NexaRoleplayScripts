@@ -1,0 +1,1 @@
+-- Phase 12A ist rein serverseitig. Der Client erhaelt keine Anticheat-Logik.

@@ -1,0 +1,3 @@
+NexaJobsClient = {
+    enableOxContext = true
+}

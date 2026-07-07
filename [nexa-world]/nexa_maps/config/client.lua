@@ -1,0 +1,3 @@
+NexaMapsClient = {
+    cacheEnabled = true
+}

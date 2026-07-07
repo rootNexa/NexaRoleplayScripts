@@ -1,0 +1,3 @@
+NexaEvidenceClient = {
+    enableOxContext = false
+}

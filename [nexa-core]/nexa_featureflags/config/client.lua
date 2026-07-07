@@ -1,0 +1,3 @@
+NexaFeatureFlagsClient = {
+    clientReadEnabled = true
+}

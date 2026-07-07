@@ -1,0 +1,3 @@
+NexaAnticheatClient = {
+    enabled = false
+}

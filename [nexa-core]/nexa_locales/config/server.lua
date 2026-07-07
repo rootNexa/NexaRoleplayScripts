@@ -1,0 +1,3 @@
+NexaLocalesServer = {
+    failOnMissingCoreKey = true
+}

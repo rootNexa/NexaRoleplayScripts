@@ -1,0 +1,3 @@
+NexaAuditClient = {
+    clientAccess = false
+}

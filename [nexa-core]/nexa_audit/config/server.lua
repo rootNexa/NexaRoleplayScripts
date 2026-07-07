@@ -1,0 +1,3 @@
+NexaAuditServer = {
+    bufferLimit = 500
+}

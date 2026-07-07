@@ -1,0 +1,3 @@
+NexaJobsServer = {
+    enableSalaryRequests = true
+}

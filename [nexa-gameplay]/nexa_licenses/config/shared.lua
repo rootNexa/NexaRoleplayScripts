@@ -1,0 +1,3 @@
+NexaLicensesConfig = {
+    maxReasonLength = 255
+}

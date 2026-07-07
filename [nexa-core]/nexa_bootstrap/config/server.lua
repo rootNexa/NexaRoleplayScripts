@@ -1,0 +1,3 @@
+NexaBootstrapServer = {
+    failOnMissingDependency = true
+}

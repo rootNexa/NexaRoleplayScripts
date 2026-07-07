@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexa UI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="app" class="nexa-shell" hidden>
+        <section class="nexa-panel" aria-live="polite">
+            <header class="nexa-panel__header">
+                <div>
+                    <p class="nexa-kicker" data-locale="brand">Nexa Roleplay</p>
+                    <h1 id="panelTitle">NEXA</h1>
+                </div>
+                <button class="nexa-icon-button" type="button" data-action="close" aria-label="Schliessen">x</button>
+            </header>
+            <div id="panelContent" class="nexa-panel__content"></div>
+        </section>
+    </main>
+
+    <aside id="toastRegion" class="nexa-toasts" aria-live="polite"></aside>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+NexaZonesClient = {
+    debug = false
+}

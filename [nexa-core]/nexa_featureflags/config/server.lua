@@ -1,0 +1,3 @@
+NexaFeatureFlagsServer = {
+    allowRuntimeChanges = true
+}

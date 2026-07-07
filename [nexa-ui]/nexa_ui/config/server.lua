@@ -1,0 +1,3 @@
+NexaUiServerConfig = {
+    resourceReady = true
+}

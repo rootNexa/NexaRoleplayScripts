@@ -1,0 +1,3 @@
+NexaIdentityClient = {
+    openOnStart = false
+}

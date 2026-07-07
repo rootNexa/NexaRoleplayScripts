@@ -1,0 +1,3 @@
+NexaJobsConfig = {
+    maxJobNameLength = 64
+}

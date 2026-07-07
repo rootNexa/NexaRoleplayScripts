@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexa Phone</title>
+    <link rel="stylesheet" href="nui://nexa_ui/web/style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="phone" class="phone is-hidden" aria-live="polite">
+        <section class="phone-device">
+            <header class="phone-header">
+                <div>
+                    <p data-i18n="subtitle">Basisdienste</p>
+                    <h1 data-i18n="title">Stadttelefon</h1>
+                </div>
+                <button id="phoneClose" class="phone-icon-button" type="button" aria-label="Telefon schliessen">&times;</button>
+            </header>
+
+            <nav id="phoneNav" class="phone-nav" aria-label="Telefon Apps">
+                <button class="is-active" type="button" data-app="contacts" data-i18n="appContacts">Kontakte</button>
+                <button type="button" data-app="messages" data-i18n="appMessages">Nachrichten</button>
+                <button type="button" data-app="calls" data-i18n="appCalls">Anrufe</button>
+                <button type="button" data-app="notes" data-i18n="appNotes">Notizen</button>
+                <button type="button" data-app="mail" data-i18n="appMail">Postfach</button>
+                <button type="button" data-app="apps" data-i18n="appList">Apps</button>
+            </nav>
+
+            <section class="phone-toolbar">
+                <p id="phoneNotice" data-i18n="loading">Telefon wird geladen.</p>
+                <button id="phoneRefresh" type="button" data-i18n="refresh">Aktualisieren</button>
+            </section>
+
+            <section id="phoneContent" class="phone-content"></section>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

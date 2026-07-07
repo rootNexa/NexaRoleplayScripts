@@ -1,0 +1,3 @@
+NexaChopshopClient = {
+    enableOxContext = true
+}

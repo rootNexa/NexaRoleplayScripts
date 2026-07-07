@@ -1,0 +1,3 @@
+NexaConfigClient = {
+    exposePublicConfig = true
+}

@@ -1,0 +1,23 @@
+NexaMdtLocale = {
+    title = 'Stadtakte',
+    subtitle = 'Dienstterminal',
+    tabOverview = 'Uebersicht',
+    tabPersons = 'Personen',
+    tabVehicles = 'Fahrzeuge',
+    tabRecords = 'Akten',
+    tabWarrants = 'Haftbefehle',
+    tabFines = 'Bussgelder',
+    tabReports = 'Berichte',
+    tabEvidence = 'Beweise',
+    tabDispatch = 'Einsaetze',
+    close = 'Schliessen',
+    refresh = 'Aktualisieren',
+    search = 'Person suchen',
+    searchPlaceholder = 'Name oder Akten-ID',
+    empty = 'Keine Eintraege vorhanden.',
+    loading = 'MDT wird geladen.',
+    denied = 'Zugriff verweigert.',
+    readOnlyVehicle = 'Fahrzeuganzeige ist vorbereitet und read-only. Es gibt keine Fahrzeuglogik.',
+    readOnlyEvidence = 'Beweisuebersicht ist vorbereitet und read-only. Es gibt kein Evidence-System.',
+    dispatchReadOnly = 'Dispatch-Daten werden nur ueber die bestehende API angezeigt.'
+}

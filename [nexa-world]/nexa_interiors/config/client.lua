@@ -1,0 +1,3 @@
+NexaInteriorsClient = {
+    cacheEnabled = true
+}

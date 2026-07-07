@@ -1,0 +1,3 @@
+NexaFurnitureClientConfig = {
+    notify = true
+}

@@ -1,0 +1,3 @@
+NexaSecurityClient = {
+    exposeClientState = false
+}

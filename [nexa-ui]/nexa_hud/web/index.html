@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexa HUD</title>
+    <link rel="stylesheet" href="nui://nexa_ui/web/style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="hud" class="hud" aria-live="polite">
+        <section class="hud-strip hud-strip--left">
+            <div class="hud-pill">
+                <span class="hud-label" data-i18n="health">Gesundheit</span>
+                <strong id="health">0%</strong>
+            </div>
+            <div class="hud-pill">
+                <span class="hud-label" data-i18n="armor">Schutz</span>
+                <strong id="armor">0%</strong>
+            </div>
+            <div class="hud-pill">
+                <span class="hud-label" data-i18n="voice">Stimme</span>
+                <strong id="voice">Normal</strong>
+            </div>
+        </section>
+
+        <section class="hud-strip hud-strip--right">
+            <div class="hud-pill hud-pill--wide">
+                <span class="hud-label" data-i18n="job">Taetigkeit</span>
+                <strong id="job">Zivilist</strong>
+            </div>
+            <div class="hud-pill hud-pill--wide">
+                <span class="hud-label" data-i18n="business">Firma</span>
+                <strong id="business">Keine Firma</strong>
+            </div>
+            <div class="hud-pill hud-pill--wide">
+                <span class="hud-label" data-i18n="money">Guthaben</span>
+                <strong id="money">-</strong>
+            </div>
+        </section>
+
+        <section id="vehiclePanel" class="hud-vehicle" hidden>
+            <span data-i18n="vehicle">Fahrzeug</span>
+            <strong id="speed">0 km/h</strong>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

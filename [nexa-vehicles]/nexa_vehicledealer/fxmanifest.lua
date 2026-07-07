@@ -1,0 +1,37 @@
+fx_version 'cerulean'
+game 'gta5'
+lua54 'yes'
+
+name 'nexa_vehicledealer'
+author 'Nexa Roleplay'
+description 'Fahrzeughaendler mit serverseitigem Katalog, atomarem Kauf und Garagenuebergabe'
+version '0.6.0'
+
+dependencies {
+    'ox_lib',
+    'nexa_api',
+    'nexa_security',
+    'nexa_audit',
+    'nexa_logs',
+    'nexa_garage',
+    'nexa_vehiclekeys'
+}
+
+shared_scripts {
+    '@ox_lib/init.lua',
+    'config/shared.lua',
+    'shared/constants.lua',
+    'shared/utils.lua',
+    'locales/de.lua'
+}
+
+client_scripts {
+    'config/client.lua',
+    'client/main.lua'
+}
+
+server_scripts {
+    'config/server.lua',
+    'server/main.lua',
+    'server/callbacks.lua'
+}

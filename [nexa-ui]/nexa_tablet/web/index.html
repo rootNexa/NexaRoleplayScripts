@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexa Tablet</title>
+    <link rel="stylesheet" href="nui://nexa_ui/web/style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="tablet" class="tablet is-hidden" aria-live="polite">
+        <section class="tablet-shell">
+            <aside class="tablet-sidebar">
+                <div>
+                    <p class="tablet-kicker" data-i18n="subtitle">Uebersicht</p>
+                    <h1 data-i18n="title">Stadt-Tablet</h1>
+                </div>
+                <nav class="tablet-nav" aria-label="Tablet Navigation">
+                    <button class="tablet-nav-item is-active" type="button" data-i18n="navApps">Apps</button>
+                    <button class="tablet-nav-item" type="button" data-i18n="navInfo">Info</button>
+                </nav>
+                <button id="tabletClose" class="tablet-close" type="button" aria-label="Tablet schliessen">&times;</button>
+            </aside>
+
+            <section class="tablet-content">
+                <header class="tablet-toolbar">
+                    <p id="tabletNotice" data-i18n="loading">Tablet wird geladen.</p>
+                    <button id="tabletRefresh" class="tablet-refresh" type="button">Aktualisieren</button>
+                </header>
+
+                <div id="tabletApps" class="tablet-grid"></div>
+
+                <section id="tabletEmpty" class="tablet-empty">
+                    <h2 data-i18n="emptyTitle">Keine App verfuegbar</h2>
+                    <p data-i18n="emptyText">Fuer dieses Tablet wurden keine freigegebenen Eintraege gefunden.</p>
+                </section>
+
+                <footer class="tablet-footer" data-i18n="shellText">
+                    Dieses Tablet zeigt freigegebene App-Eintraege an. Fachfunktionen folgen in spaeteren Phasen.
+                </footer>
+            </section>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

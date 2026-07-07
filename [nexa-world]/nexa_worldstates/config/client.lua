@@ -1,0 +1,3 @@
+NexaWorldStatesClient = {
+    enableNotifications = true
+}

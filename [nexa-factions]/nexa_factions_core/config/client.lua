@@ -1,0 +1,3 @@
+NexaFactionsClient = {
+    enableOxContext = true
+}

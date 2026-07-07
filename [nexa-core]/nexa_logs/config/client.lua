@@ -1,0 +1,3 @@
+NexaLogsClient = {
+    clientLoggingEnabled = false
+}

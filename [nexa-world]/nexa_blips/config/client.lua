@@ -1,0 +1,3 @@
+NexaBlipsClient = {
+    shortRange = true
+}
