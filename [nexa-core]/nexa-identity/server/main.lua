@@ -254,8 +254,23 @@ RegisterNetEvent(EVENTS.server.requestFlow, function()
         return
     end
 
+    log('info', 'Identity flow requested.', {
+        source = source,
+        action = 'ListCharacters'
+    })
+
     local result, err = callExport(CHARACTER_RESOURCE, 'ListCharacters', source)
     local normalized = normalizeExportResult('ListCharacters', result, err)
+
+    log(normalized.ok and 'info' or 'warn', 'ListCharacters export result for identity flow.', {
+        source = source,
+        response = normalized.raw,
+        normalized = {
+            ok = normalized.ok,
+            error = normalized.error,
+            count = type(normalized.data) == 'table' and #normalized.data or nil
+        }
+    })
 
     if normalized.error and normalized.error.code == 'PLAYER_NOT_FOUND' then
         SetTimeout(1500, function()

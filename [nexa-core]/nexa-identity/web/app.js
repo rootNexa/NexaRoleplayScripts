@@ -49,7 +49,6 @@ async function post(name, data = {}) {
         };
     }
 }
-}
 
 function setBusy(value) {
     busy = value === true;
