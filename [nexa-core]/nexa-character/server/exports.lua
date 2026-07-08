@@ -1,5 +1,6 @@
 local errorMessages = {
     INVALID_INPUT = 'Character input is invalid.',
+    INVALID_SOURCE = 'Player source is invalid.',
     FORBIDDEN_FIELD = 'Character input contains forbidden fields.',
     PLAYER_NOT_FOUND = 'Player session was not found.',
     CHARACTER_LIMIT_REACHED = 'Character limit reached.',
@@ -8,7 +9,7 @@ local errorMessages = {
     CORE_UNAVAILABLE = 'Core export is unavailable.'
 }
 
-local function exportResponse(data, err)
+local function exportResponse(data, err, details)
     if err then
         return {
             ok = false,
@@ -16,7 +17,7 @@ local function exportResponse(data, err)
             error = {
                 code = err,
                 message = errorMessages[err] or 'Character operation failed.',
-                details = nil
+                details = details
             }
         }
     end
@@ -30,7 +31,9 @@ end
 
 function ListCharacters(source)
     local data, err = NexaCharacter.ListCharacters(source)
-    return exportResponse(data, err)
+    return exportResponse(data or {}, err, {
+        source = tonumber(source)
+    })
 end
 
 function CreateCharacter(source, data)

@@ -67,6 +67,22 @@ local function callCore(name, ...)
     return result, err
 end
 
+local function normalizeCoreResult(action, result, err)
+    if type(result) == 'table' and type(result.ok) == 'boolean' then
+        if result.ok then
+            return result.data, nil, result
+        end
+
+        local errorPayload = type(result.error) == 'table' and result.error or {}
+        return nil, errorPayload.code or err or 'UNKNOWN_ERROR', result
+    end
+
+    return result, err, {
+        result = result,
+        err = err
+    }
+end
+
 local function emit(source, eventName, payload)
     TriggerClientEvent(eventName, source, payload)
 end
@@ -99,13 +115,32 @@ local function publicCharacters(characters)
 end
 
 function NexaCharacter.ListCharacters(source)
+    local rawSource = source
     source = normalizeSource(source)
 
+    log('info', 'ListCharacters called.', {
+        rawSource = rawSource,
+        normalizedSource = source
+    })
+
     if not source then
-        return nil, 'INVALID_INPUT'
+        return nil, 'INVALID_SOURCE'
     end
 
-    return callCore('ListCharacters', source)
+    local result, err = callCore('ListCharacters', source)
+    local characters, normalizedErr, raw = normalizeCoreResult('ListCharacters', result, err)
+
+    log(normalizedErr and 'warn' or 'info', 'ListCharacters core export response.', {
+        source = source,
+        raw = raw,
+        normalized = {
+            ok = normalizedErr == nil,
+            error = normalizedErr,
+            count = type(characters) == 'table' and #characters or nil
+        }
+    })
+
+    return characters, normalizedErr
 end
 
 function NexaCharacter.CreateCharacter(source, data)
@@ -126,7 +161,10 @@ function NexaCharacter.CreateCharacter(source, data)
         return nil, validationError
     end
 
-    return callCore('CreateCharacter', source, payload)
+    local result, err = callCore('CreateCharacter', source, payload)
+    local character, normalizedErr = normalizeCoreResult('CreateCharacter', result, err)
+
+    return character, normalizedErr
 end
 
 function NexaCharacter.SelectCharacter(source, characterId)
@@ -142,13 +180,14 @@ function NexaCharacter.SelectCharacter(source, characterId)
         return nil, 'INVALID_INPUT'
     end
 
-    local character, err = callCore('SelectCharacter', source, characterId)
+    local result, err = callCore('SelectCharacter', source, characterId)
+    local character, normalizedErr = normalizeCoreResult('SelectCharacter', result, err)
 
     if character then
         NexaCharacter.activeBySource[source] = character
     end
 
-    return character, err
+    return character, normalizedErr
 end
 
 function NexaCharacter.GetActiveCharacter(source)
@@ -158,13 +197,14 @@ function NexaCharacter.GetActiveCharacter(source)
         return nil, 'INVALID_INPUT'
     end
 
-    local character, err = callCore('GetCharacter', source)
+    local result, err = callCore('GetCharacter', source)
+    local character, normalizedErr = normalizeCoreResult('GetCharacter', result, err)
 
     if character then
         NexaCharacter.activeBySource[source] = character
     end
 
-    return character, err
+    return character, normalizedErr
 end
 
 function NexaCharacter.UpdateCharacter(source, data)
@@ -180,13 +220,14 @@ function NexaCharacter.UpdateCharacter(source, data)
         return nil, validationError
     end
 
-    local character, err = callCore('UpdateCharacter', source, payload)
+    local result, err = callCore('UpdateCharacter', source, payload)
+    local character, normalizedErr = normalizeCoreResult('UpdateCharacter', result, err)
 
     if character then
         NexaCharacter.activeBySource[source] = character
     end
 
-    return character, err
+    return character, normalizedErr
 end
 
 RegisterNetEvent(EVENTS.server.list, function()

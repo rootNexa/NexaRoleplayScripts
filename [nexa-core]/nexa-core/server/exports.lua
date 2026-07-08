@@ -11,6 +11,12 @@ function GetCharacter(source)
 end
 
 function ListCharacters(source)
+    source = tonumber(source)
+
+    if not source or source <= 0 then
+        return nil, 'INVALID_SOURCE'
+    end
+
     return Nexa.Characters.List(source)
 end
 
@@ -23,13 +29,32 @@ function GetIdentifier(source)
 end
 
 function CreateCharacter(source, data)
+    source = tonumber(source)
+
+    if not source or source <= 0 then
+        return nil, 'INVALID_SOURCE'
+    end
+
     return Nexa.Characters.Create(source, data)
 end
 
 function SelectCharacter(source, characterId)
+    source = tonumber(source)
+    characterId = tonumber(characterId)
+
+    if not source or source <= 0 or not characterId or characterId <= 0 then
+        return nil, 'INVALID_INPUT'
+    end
+
     return Nexa.Characters.Select(source, characterId)
 end
 
 function UpdateCharacter(source, data)
+    source = tonumber(source)
+
+    if not source or source <= 0 or type(data) ~= 'table' then
+        return nil, 'INVALID_INPUT'
+    end
+
     return Nexa.Characters.Update(source, data)
 end
