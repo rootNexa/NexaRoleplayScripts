@@ -49,6 +49,77 @@ local function callExport(resourceName, exportName, ...)
     return result, err
 end
 
+local errorMessages = {
+    INVALID_INPUT = 'Character input is invalid.',
+    FORBIDDEN_FIELD = 'Character input contains forbidden fields.',
+    PLAYER_NOT_FOUND = 'Player session was not found.',
+    CHARACTER_LIMIT_REACHED = 'Character limit reached.',
+    DATABASE_ERROR = 'Character data could not be saved.',
+    NOT_FOUND = 'Character was not found.',
+    RESOURCE_NOT_STARTED = 'Required resource is not started.',
+    EXPORT_ERROR = 'Export call failed.'
+}
+
+local function normalizeExportResult(action, result, err)
+    if type(result) == 'table' and type(result.ok) == 'boolean' then
+        if result.ok then
+            return {
+                ok = true,
+                data = result.data,
+                error = nil,
+                raw = result
+            }
+        end
+
+        local errorPayload = type(result.error) == 'table' and result.error or {}
+
+        return {
+            ok = false,
+            data = nil,
+            error = {
+                code = errorPayload.code or err or 'UNKNOWN_ERROR',
+                message = errorPayload.message or errorMessages[errorPayload.code] or 'Character operation failed.',
+                details = errorPayload.details
+            },
+            raw = result
+        }
+    end
+
+    if err ~= nil or result == nil then
+        return {
+            ok = false,
+            data = nil,
+            error = {
+                code = err or 'UNKNOWN_ERROR',
+                message = errorMessages[err] or 'Character operation failed.',
+                details = {
+                    action = action,
+                    resultType = type(result)
+                }
+            },
+            raw = {
+                result = result,
+                err = err
+            }
+        }
+    end
+
+    log('warn', 'Unexpected character export response format; normalized as success.', {
+        action = action,
+        resultType = type(result)
+    })
+
+    return {
+        ok = true,
+        data = result,
+        error = nil,
+        raw = {
+            result = result,
+            err = err
+        }
+    }
+end
+
 local function publicCharacter(character)
     if type(character) ~= 'table' then
         return nil
@@ -148,24 +219,31 @@ local function validateCreatePayload(data)
     }, nil
 end
 
-local function sendError(source, code, message)
+local function sendError(source, code, message, details)
     TriggerClientEvent(EVENTS.client.error, source, {
         code = code or 'INTERNAL_ERROR',
-        message = message or 'Action failed.'
+        message = message or errorMessages[code] or 'Action failed.',
+        details = details
     })
 end
 
 local function openFlow(source)
-    local characters, err = callExport(CHARACTER_RESOURCE, 'ListCharacters', source)
+    local result, err = callExport(CHARACTER_RESOURCE, 'ListCharacters', source)
+    local normalized = normalizeExportResult('ListCharacters', result, err)
 
-    if err then
-        sendError(source, err, 'Characters could not be loaded.')
+    if not normalized.ok then
+        log('warn', 'ListCharacters failed.', {
+            source = source,
+            error = normalized.error,
+            raw = normalized.raw
+        })
+        sendError(source, normalized.error.code, normalized.error.message, normalized.error.details)
         return
     end
 
     TriggerClientEvent(EVENTS.client.open, source, {
-        characters = publicCharacters(characters),
-        mode = characters and #characters > 0 and 'select' or 'create'
+        characters = publicCharacters(normalized.data),
+        mode = normalized.data and #normalized.data > 0 and 'select' or 'create'
     })
 end
 
@@ -176,9 +254,10 @@ RegisterNetEvent(EVENTS.server.requestFlow, function()
         return
     end
 
-    local characters, err = callExport(CHARACTER_RESOURCE, 'ListCharacters', source)
+    local result, err = callExport(CHARACTER_RESOURCE, 'ListCharacters', source)
+    local normalized = normalizeExportResult('ListCharacters', result, err)
 
-    if err == 'PLAYER_NOT_FOUND' then
+    if normalized.error and normalized.error.code == 'PLAYER_NOT_FOUND' then
         SetTimeout(1500, function()
             if GetPlayerName(source) ~= nil then
                 openFlow(source)
@@ -187,14 +266,19 @@ RegisterNetEvent(EVENTS.server.requestFlow, function()
         return
     end
 
-    if err then
-        sendError(source, err, 'Characters could not be loaded.')
+    if not normalized.ok then
+        log('warn', 'Identity flow request failed.', {
+            source = source,
+            error = normalized.error,
+            raw = normalized.raw
+        })
+        sendError(source, normalized.error.code, normalized.error.message, normalized.error.details)
         return
     end
 
     TriggerClientEvent(EVENTS.client.open, source, {
-        characters = publicCharacters(characters),
-        mode = characters and #characters > 0 and 'select' or 'create'
+        characters = publicCharacters(normalized.data),
+        mode = normalized.data and #normalized.data > 0 and 'select' or 'create'
     })
 end)
 
@@ -205,28 +289,61 @@ RegisterNetEvent(EVENTS.server.createCharacter, function(data)
         return
     end
 
+    log('debug', 'CreateCharacter request received.', {
+        source = source,
+        firstNameLength = type(data) == 'table' and type(data.firstName or data.first_name) == 'string' and #(data.firstName or data.first_name) or nil,
+        lastNameLength = type(data) == 'table' and type(data.lastName or data.last_name) == 'string' and #(data.lastName or data.last_name) or nil,
+        birthdateProvided = type(data) == 'table' and data.birthdate ~= nil or false,
+        gender = type(data) == 'table' and data.gender or nil
+    })
+
     local payload, validationError = validateCreatePayload(data)
 
     if not payload then
-        sendError(source, validationError, 'Character data is invalid.')
+        log('warn', 'CreateCharacter validation failed.', {
+            source = source,
+            code = validationError
+        })
+        sendError(source, validationError, errorMessages[validationError] or 'Character data is invalid.')
         return
     end
 
-    local character, createErr = callExport(CHARACTER_RESOURCE, 'CreateCharacter', source, payload)
+    local createResult, createErr = callExport(CHARACTER_RESOURCE, 'CreateCharacter', source, payload)
+    local createResponse = normalizeExportResult('CreateCharacter', createResult, createErr)
 
-    if not character then
-        sendError(source, createErr, 'Character could not be created.')
+    log(createResponse.ok and 'info' or 'warn', 'CreateCharacter export result.', {
+        source = source,
+        response = createResponse.raw,
+        normalized = {
+            ok = createResponse.ok,
+            error = createResponse.error
+        }
+    })
+
+    if not createResponse.ok then
+        sendError(source, createResponse.error.code, createResponse.error.message, createResponse.error.details)
         return
     end
 
-    local selected, selectErr = callExport(CHARACTER_RESOURCE, 'SelectCharacter', source, character.id)
+    local character = createResponse.data
+    local selectResult, selectErr = callExport(CHARACTER_RESOURCE, 'SelectCharacter', source, character and character.id)
+    local selectResponse = normalizeExportResult('SelectCharacter', selectResult, selectErr)
 
-    if not selected then
-        sendError(source, selectErr, 'Character could not be selected.')
+    log(selectResponse.ok and 'info' or 'warn', 'SelectCharacter after create result.', {
+        source = source,
+        response = selectResponse.raw,
+        normalized = {
+            ok = selectResponse.ok,
+            error = selectResponse.error
+        }
+    })
+
+    if not selectResponse.ok then
+        sendError(source, selectResponse.error.code, selectResponse.error.message, selectResponse.error.details)
         return
     end
 
-    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(selected))
+    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(selectResponse.data))
 end)
 
 RegisterNetEvent(EVENTS.server.selectCharacter, function(characterId)
@@ -243,14 +360,25 @@ RegisterNetEvent(EVENTS.server.selectCharacter, function(characterId)
         return
     end
 
-    local selected, selectErr = callExport(CHARACTER_RESOURCE, 'SelectCharacter', source, characterId)
+    local selectedResult, selectErr = callExport(CHARACTER_RESOURCE, 'SelectCharacter', source, characterId)
+    local selectResponse = normalizeExportResult('SelectCharacter', selectedResult, selectErr)
 
-    if not selected then
-        sendError(source, selectErr, 'Character could not be selected.')
+    log(selectResponse.ok and 'info' or 'warn', 'SelectCharacter export result.', {
+        source = source,
+        characterId = characterId,
+        response = selectResponse.raw,
+        normalized = {
+            ok = selectResponse.ok,
+            error = selectResponse.error
+        }
+    })
+
+    if not selectResponse.ok then
+        sendError(source, selectResponse.error.code, selectResponse.error.message, selectResponse.error.details)
         return
     end
 
-    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(selected))
+    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(selectResponse.data))
 end)
 
 AddEventHandler('onResourceStart', function(resourceName)

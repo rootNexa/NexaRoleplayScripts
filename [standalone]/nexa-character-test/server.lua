@@ -119,10 +119,30 @@ local function runForSources(source, actionName, callback)
 end
 
 local function logExportResult(name, source, ok, result, err)
+    local normalized = result
+
+    if ok and type(result) == 'table' and type(result.ok) == 'boolean' then
+        if result.ok then
+            log('info', ('%s ok'):format(name), {
+                source = source,
+                result = name == 'ListCharacters' and summarizeCharacters(result.data) or summarizeCharacter(result.data),
+                raw = result
+            })
+            return
+        end
+
+        log('warn', ('%s returned error'):format(name), {
+            source = source,
+            error = result.error,
+            raw = result
+        })
+        return
+    end
+
     if ok and err == nil then
         log('info', ('%s ok'):format(name), {
             source = source,
-            result = result
+            result = normalized
         })
         return
     end
@@ -138,14 +158,14 @@ end
 RegisterCommand('nexacharlist', function(source)
     runForSources(source, 'nexacharlist', function(playerSource)
         local ok, characters, err = callExport(CHARACTER_RESOURCE, 'ListCharacters', playerSource)
-        logExportResult('ListCharacters', playerSource, ok, ok and summarizeCharacters(characters) or characters, err)
+        logExportResult('ListCharacters', playerSource, ok, characters, err)
     end)
 end, false)
 
 RegisterCommand('nexacharcreate', function(source)
     runForSources(source, 'nexacharcreate', function(playerSource)
         local ok, character, err = callExport(CHARACTER_RESOURCE, 'CreateCharacter', playerSource, TEST_CHARACTER)
-        logExportResult('CreateCharacter', playerSource, ok, ok and summarizeCharacter(character) or character, err)
+        logExportResult('CreateCharacter', playerSource, ok, character, err)
     end)
 end, false)
 
@@ -162,14 +182,14 @@ RegisterCommand('nexacharselect', function(source, args)
         end
 
         local ok, character, err = callExport(CHARACTER_RESOURCE, 'SelectCharacter', playerSource, characterId)
-        logExportResult('SelectCharacter', playerSource, ok, ok and summarizeCharacter(character) or character, err)
+        logExportResult('SelectCharacter', playerSource, ok, character, err)
     end)
 end, false)
 
 RegisterCommand('nexacharactive', function(source)
     runForSources(source, 'nexacharactive', function(playerSource)
         local ok, character, err = callExport(CHARACTER_RESOURCE, 'GetActiveCharacter', playerSource)
-        logExportResult('GetActiveCharacter', playerSource, ok, ok and summarizeCharacter(character) or character, err)
+        logExportResult('GetActiveCharacter', playerSource, ok, character, err)
     end)
 end, false)
 

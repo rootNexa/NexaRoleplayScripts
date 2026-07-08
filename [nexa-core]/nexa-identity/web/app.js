@@ -13,14 +13,42 @@ const loading = document.getElementById('loading');
 
 let busy = false;
 
-function post(name, data = {}) {
-    return fetch(`https://${resourceName}/${name}`, {
+async function post(name, data = {}) {
+    const response = await fetch(`https://${resourceName}/${name}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json; charset=UTF-8'
         },
         body: JSON.stringify(data)
     });
+
+    const text = await response.text();
+
+    if (!text) {
+        return {
+            ok: response.ok,
+            status: response.status
+        };
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('[nexa-identity] failed to parse NUI response', {
+            name,
+            text,
+            error
+        });
+        return {
+            ok: false,
+            status: response.status,
+            error: {
+                code: 'INVALID_NUI_RESPONSE',
+                message: text
+            }
+        };
+    }
+}
 }
 
 function setBusy(value) {
@@ -32,8 +60,31 @@ function setBusy(value) {
     });
 }
 
-function showError(message) {
-    errorBox.textContent = message || 'Action failed.';
+function formatError(payload) {
+    if (!payload) {
+        return 'UNKNOWN_ERROR: Action failed.';
+    }
+
+    const parts = [];
+
+    if (payload.code) {
+        parts.push(payload.code);
+    }
+
+    if (payload.message) {
+        parts.push(payload.message);
+    }
+
+    if (payload.details) {
+        parts.push(JSON.stringify(payload.details));
+    }
+
+    return parts.length > 0 ? parts.join(' - ') : 'UNKNOWN_ERROR: Action failed.';
+}
+
+function showError(payload) {
+    console.error('[nexa-identity] error', payload);
+    errorBox.textContent = formatError(payload);
     errorBox.classList.remove('hidden');
     setBusy(false);
 }
@@ -70,6 +121,16 @@ function renderCharacters(characters) {
             setBusy(true);
             post('nexa_identity:selectCharacter', {
                 id: character.id
+            }).then((response) => {
+                console.log('[nexa-identity] selectCharacter NUI response', response);
+                if (response && response.ok === false) {
+                    showError(response.error || response);
+                }
+            }).catch((error) => {
+                showError({
+                    code: 'NUI_FETCH_FAILED',
+                    message: error.message
+                });
             });
         });
 
@@ -115,6 +176,16 @@ createForm.addEventListener('submit', (event) => {
         lastName: formData.get('lastName'),
         birthdate: formData.get('birthdate'),
         gender: formData.get('gender') || 'unknown'
+    }).then((response) => {
+        console.log('[nexa-identity] createCharacter NUI response', response);
+        if (response && response.ok === false) {
+            showError(response.error || response);
+        }
+    }).catch((error) => {
+        showError({
+            code: 'NUI_FETCH_FAILED',
+            message: error.message
+        });
     });
 });
 
@@ -136,6 +207,6 @@ window.addEventListener('message', (event) => {
     }
 
     if (message.type === 'error') {
-        showError(message.payload && message.payload.message);
+        showError(message.payload);
     }
 });
