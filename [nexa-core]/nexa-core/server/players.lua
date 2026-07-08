@@ -131,7 +131,21 @@ function Nexa.Players.Drop(source, reason)
 end
 
 function Nexa.Players.Get(source)
-    return Nexa.Players.bySource[tonumber(source)]
+    local rawSource = source
+    source = tonumber(source)
+    local player = Nexa.Players.bySource[source]
+
+    if Nexa.Log then
+        Nexa.Log(player and 'info' or 'warn', 'Players.Get lookup.', {
+            rawSource = rawSource,
+            rawSourceType = type(rawSource),
+            normalizedSource = source,
+            found = player ~= nil,
+            playerId = player and player.id or nil
+        })
+    end
+
+    return player
 end
 
 function Nexa.Players.GetPublic(source)

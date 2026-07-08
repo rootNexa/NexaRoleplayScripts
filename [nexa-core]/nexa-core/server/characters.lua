@@ -167,10 +167,20 @@ function Nexa.Characters.GetActive(source)
 end
 
 function Nexa.Characters.List(source)
+    local rawSource = source
     source = tonumber(source)
+    Nexa.Log('info', 'Characters.List entry.', {
+        rawSource = rawSource,
+        rawSourceType = type(rawSource),
+        normalizedSource = source
+    })
+
     local player = Nexa.Players.Get(source)
 
     if not player then
+        Nexa.Log('warn', 'Characters.List missing player session.', {
+            source = source
+        })
         return nil, 'PLAYER_NOT_FOUND'
     end
 
@@ -190,6 +200,12 @@ function Nexa.Characters.List(source)
     for _, row in ipairs(rows or {}) do
         characters[#characters + 1] = mapCharacter(row)
     end
+
+    Nexa.Log('info', 'Characters.List ok.', {
+        source = source,
+        playerId = player.id,
+        count = #characters
+    })
 
     return characters, nil
 end

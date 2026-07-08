@@ -14,6 +14,14 @@ local function log(level, message, context)
     print(('[%s] [%s] %s%s'):format(NEXA_CHARACTER_CONSTANTS.resourceName, level, message, suffix))
 end
 
+local function sourceDebug(value)
+    return {
+        value = value,
+        valueType = type(value),
+        tonumberValue = tonumber(value)
+    }
+end
+
 local function response(success, code, message, data, details)
     return {
         success = success == true,
@@ -33,12 +41,22 @@ local function fail(code, message, details)
 end
 
 local function normalizeSource(source)
+    log('info', 'NormalizeSource entry.', {
+        source = sourceDebug(source)
+    })
+
     source = tonumber(source)
 
     if not source or source <= 0 then
+        log('warn', 'NormalizeSource failed.', {
+            normalizedSource = source
+        })
         return nil
     end
 
+    log('info', 'NormalizeSource ok.', {
+        normalizedSource = source
+    })
     return source
 end
 
@@ -52,6 +70,21 @@ local function callCore(name, ...)
     end
 
     local args = { ... }
+    local debugArgs = {}
+
+    for index, value in ipairs(args) do
+        debugArgs[index] = {
+            value = value,
+            valueType = type(value),
+            tonumberValue = tonumber(value)
+        }
+    end
+
+    log('info', 'Core export call entry.', {
+        export = name,
+        args = debugArgs
+    })
+
     local okCall, result, err = pcall(function()
         return exports[CORE_RESOURCE][name](table.unpack(args))
     end)
@@ -63,6 +96,13 @@ local function callCore(name, ...)
         })
         return nil, 'CORE_UNAVAILABLE'
     end
+
+    log('info', 'Core export call return.', {
+        export = name,
+        resultType = type(result),
+        err = err,
+        result = result
+    })
 
     return result, err
 end
