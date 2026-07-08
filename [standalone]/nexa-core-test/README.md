@@ -17,9 +17,8 @@ Die Resource ist nicht fuer Production gedacht. Fuer Development kann sie nach `
 
 ```cfg
 ensure oxmysql
-ensure ox_lib
-ensure ox_inventory
 ensure nexa-core
+ensure nexa-spawn
 ensure nexa-core-test
 ```
 

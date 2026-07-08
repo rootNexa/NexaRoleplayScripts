@@ -17,6 +17,7 @@ NexaConfig = {
         maxBirthYear = 2010
     },
     callbacks = {
-        defaultCooldownMs = 1000
+        defaultCooldownMs = 1000,
+        timeoutMs = 10000
     }
 }

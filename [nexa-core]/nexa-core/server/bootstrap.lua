@@ -3,17 +3,6 @@ Nexa.Bootstrap = {
     errors = {}
 }
 
-function Nexa.Log(level, message, context)
-    local prefix = ('[%s] [%s]'):format(Nexa.Constants.resourceName, level or 'info')
-    local encodedContext = ''
-
-    if context ~= nil then
-        encodedContext = (' %s'):format(json.encode(context))
-    end
-
-    print(('%s %s%s'):format(prefix, message, encodedContext))
-end
-
 function Nexa.Audit(action, actor, context)
     local actorSource = type(actor) == 'number' and actor or nil
     local player = actorSource and Nexa.Players.Get(actorSource) or nil
@@ -50,7 +39,6 @@ end
 function Nexa.Bootstrap.Run()
     Nexa.Bootstrap.errors = {}
 
-    requireResource('ox_lib')
     requireResource('oxmysql')
 
     local ok, err = pcall(Nexa.Database.CheckReady)

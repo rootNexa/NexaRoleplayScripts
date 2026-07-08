@@ -1,20 +1,16 @@
 CreateThread(function()
     Wait(500)
 
-    local response = NexaClient.Callbacks.GetSession()
-
-    if response and response.success and response.data then
-        NexaClient.Session.player = response.data.player
-        NexaClient.Session.character = response.data.character
-    end
+    NexaClient.Callbacks.GetSession(function(response)
+        if response and response.success and response.data then
+            NexaClient.Session.player = response.data.player
+            NexaClient.Session.character = response.data.character
+        end
+    end)
 end)
 
 RegisterNetEvent('nexa:core:client:characterSelectFailed', function(payload)
-    if lib and lib.notify then
-        lib.notify({
-            type = 'error',
-            title = 'Nexa',
-            description = payload and payload.message or 'Charakter konnte nicht geladen werden.'
-        })
-    end
+    Nexa.Log('error', payload and payload.message or 'Charakter konnte nicht geladen werden.', {
+        code = payload and payload.code or nil
+    })
 end)

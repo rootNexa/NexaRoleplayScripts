@@ -8,12 +8,10 @@ description 'Eigenes Framework-Fundament fuer Nexa Roleplay'
 version '0.1.0'
 
 dependencies {
-    'ox_lib',
     'oxmysql'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'shared/constants.lua',
     'shared/config.lua',
     'shared/init.lua'
@@ -42,8 +40,10 @@ server_exports {
     'GetCoreObject',
     'GetPlayer',
     'GetCharacter',
+    'ListCharacters',
     'HasPermission',
     'GetIdentifier',
     'CreateCharacter',
-    'SelectCharacter'
+    'SelectCharacter',
+    'UpdateCharacter'
 }

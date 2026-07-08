@@ -11,7 +11,11 @@ NEXA_CONSTANTS = {
     },
     callbacks = {
         getSession = 'nexa:core:cb:getSession',
-        getCharacters = 'nexa:core:cb:getCharacters'
+        getCharacters = 'nexa:core:cb:getCharacters',
+        clientRequest = 'nexa:core:callbacks:clientRequest',
+        clientResponse = 'nexa:core:callbacks:clientResponse',
+        serverRequest = 'nexa:core:callbacks:serverRequest',
+        serverResponse = 'nexa:core:callbacks:serverResponse'
     },
     errors = {
         ok = 'OK',

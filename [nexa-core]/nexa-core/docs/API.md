@@ -318,11 +318,11 @@ Callbacks sind rate-limited und geben immer das Response-Format zurueck.
 Beispiel:
 
 ```lua
-local response = lib.callback.await('nexa:core:cb:getSession', false)
-
-if response.success then
-    local player = response.data.player
-end
+NexaClient.Callbacks.Trigger('nexa:core:cb:getSession', nil, function(response)
+    if response.success then
+        local player = response.data.player
+    end
+end)
 ```
 
 ## Events

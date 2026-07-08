@@ -94,6 +94,74 @@ local function validateCharacterPayload(data)
     }, nil
 end
 
+local function validateCharacterUpdatePayload(data)
+    if type(data) ~= 'table' then
+        return nil, 'INVALID_INPUT'
+    end
+
+    local payload = {}
+    local hasChanges = false
+
+    if data.firstName ~= nil or data.first_name ~= nil then
+        local firstName = validateName(data.firstName or data.first_name)
+
+        if not firstName then
+            return nil, 'INVALID_INPUT'
+        end
+
+        payload.firstName = firstName
+        hasChanges = true
+    end
+
+    if data.lastName ~= nil or data.last_name ~= nil then
+        local lastName = validateName(data.lastName or data.last_name)
+
+        if not lastName then
+            return nil, 'INVALID_INPUT'
+        end
+
+        payload.lastName = lastName
+        hasChanges = true
+    end
+
+    if data.birthdate ~= nil then
+        local birthdate = validateDate(data.birthdate)
+
+        if not birthdate then
+            return nil, 'INVALID_INPUT'
+        end
+
+        payload.birthdate = birthdate
+        hasChanges = true
+    end
+
+    if data.gender ~= nil then
+        local gender = trim(data.gender or 'unknown') or 'unknown'
+
+        if gender ~= 'male' and gender ~= 'female' and gender ~= 'diverse' and gender ~= 'unknown' then
+            return nil, 'INVALID_INPUT'
+        end
+
+        payload.gender = gender
+        hasChanges = true
+    end
+
+    if data.metadata ~= nil then
+        if type(data.metadata) ~= 'table' then
+            return nil, 'INVALID_INPUT'
+        end
+
+        payload.metadata = data.metadata
+        hasChanges = true
+    end
+
+    if not hasChanges then
+        return nil, 'INVALID_INPUT'
+    end
+
+    return payload, nil
+end
+
 function Nexa.Characters.GetActive(source)
     return Nexa.Characters.activeBySource[tonumber(source)]
 end
@@ -218,6 +286,79 @@ function Nexa.Characters.Select(source, characterId)
     })
 
     TriggerClientEvent(Nexa.Constants.events.characterSelected, source, character)
+    return character, nil
+end
+
+function Nexa.Characters.Update(source, data)
+    source = tonumber(source)
+
+    if type(data) ~= 'table' then
+        return nil, 'INVALID_INPUT'
+    end
+
+    local player = Nexa.Players.Get(source)
+    local characterId = tonumber(data.characterId or data.character_id or data.id)
+
+    if not player or not characterId then
+        return nil, 'INVALID_INPUT'
+    end
+
+    local existing = Nexa.Characters.GetByIdForPlayer(player.id, characterId)
+
+    if not existing then
+        Nexa.Audit('security.character_update_denied', source, {
+            player_id = player.id,
+            requested_character_id = characterId
+        })
+        return nil, 'NOT_FOUND'
+    end
+
+    local payload, validationError = validateCharacterUpdatePayload(data)
+
+    if not payload then
+        return nil, validationError
+    end
+
+    local firstName = payload.firstName or existing.firstName
+    local lastName = payload.lastName or existing.lastName
+    local birthdate = payload.birthdate or existing.birthdate
+    local gender = payload.gender or existing.gender
+    local metadata = payload.metadata ~= nil and payload.metadata or existing.metadata
+
+    local affected, err = Nexa.Database.Update([[
+        UPDATE nexa_characters
+        SET first_name = ?, last_name = ?, birthdate = ?, gender = ?, metadata = ?
+        WHERE id = ? AND player_id = ? AND deleted_at IS NULL
+    ]], {
+        firstName,
+        lastName,
+        birthdate,
+        gender,
+        json.encode(metadata or {}),
+        characterId,
+        player.id
+    })
+
+    if err then
+        return nil, 'DATABASE_ERROR'
+    end
+
+    if not affected or affected <= 0 then
+        return nil, 'NOT_FOUND'
+    end
+
+    local character = Nexa.Characters.GetByIdForPlayer(player.id, characterId)
+
+    if Nexa.Characters.activeBySource[source] and Nexa.Characters.activeBySource[source].id == characterId then
+        Nexa.Characters.activeBySource[source] = character
+        TriggerClientEvent(Nexa.Constants.events.characterSelected, source, character)
+    end
+
+    Nexa.Audit('character.updated', source, {
+        player_id = player.id,
+        character_id = characterId
+    })
+
     return character, nil
 end
 
