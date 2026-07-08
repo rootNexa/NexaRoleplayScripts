@@ -86,7 +86,8 @@ local function callCore(name, ...)
     })
 
     local okCall, result, err = pcall(function()
-        return exports[CORE_RESOURCE][name](table.unpack(args))
+        local coreExports = exports[CORE_RESOURCE]
+        return coreExports[name](coreExports, table.unpack(args))
     end)
 
     if not okCall then

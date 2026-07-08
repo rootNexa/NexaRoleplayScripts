@@ -34,7 +34,8 @@ local function callExport(resourceName, exportName, ...)
 
     local args = { ... }
     local ok, result, err = pcall(function()
-        return exports[resourceName][exportName](table.unpack(args))
+        local resourceExports = exports[resourceName]
+        return resourceExports[exportName](resourceExports, table.unpack(args))
     end)
 
     if not ok then
