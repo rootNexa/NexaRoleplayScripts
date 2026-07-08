@@ -1,5 +1,7 @@
 local REQUEST_EVENT = 'nexa-spawn:server:requestInitialSpawn'
 local APPROVED_EVENT = 'nexa-spawn:client:spawnApproved'
+local REQUEST_CLIENT_EVENT = 'nexa-spawn:client:requestSpawn'
+local IDENTITY_RESOURCE = 'nexa-identity'
 
 local requestedInitialSpawn = false
 local completedInitialSpawn = false
@@ -21,6 +23,14 @@ local function requestInitialSpawn()
 
     requestedInitialSpawn = true
     TriggerServerEvent(REQUEST_EVENT)
+end
+
+local function isIdentityStarted()
+    if not GetResourceState then
+        return false
+    end
+
+    return GetResourceState(IDENTITY_RESOURCE) == 'started'
 end
 
 local function applySpawn(spawn)
@@ -83,8 +93,18 @@ RegisterNetEvent(APPROVED_EVENT, function(spawn)
     applySpawn(spawn)
 end)
 
+RegisterNetEvent(REQUEST_CLIENT_EVENT, function()
+    requestInitialSpawn()
+end)
+
 CreateThread(function()
     waitForNetworkSession()
     Wait(1000)
+
+    if isIdentityStarted() then
+        log('info', 'Identity resource detected; waiting for explicit spawn request.')
+        return
+    end
+
     requestInitialSpawn()
 end)
