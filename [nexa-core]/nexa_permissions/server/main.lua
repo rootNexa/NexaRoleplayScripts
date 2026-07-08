@@ -1,115 +1,154 @@
-function has(source, permission)
-    local allowed, code = hasPermissionInternal(source, permission)
+local RESOURCE = GetCurrentResourceName()
 
-    return {
-        success = allowed,
-        code = code,
-        message = allowed and 'Berechtigung vorhanden.' or 'Berechtigung fehlt.',
-        data = {
-            source = source,
-            permission = permission
-        },
-        meta = nil,
-        audit_id = nil
-    }
+local function isDevelopment()
+    return NexaPermissionsConfig.DevMode == true or GetConvar('nexa:environment', 'development') == 'development'
 end
 
-function hasAny(source, permissions)
-    if type(permissions) ~= 'table' then
-        return {
-            success = false,
-            code = 'INVALID_INPUT',
-            message = 'Berechtigungsliste ist ungueltig.',
-            data = nil,
-            meta = nil,
-            audit_id = nil
-        }
+local function commandAllowed(source)
+    if source == 0 then
+        return true
     end
 
-    for _, permission in ipairs(permissions) do
-        local allowed = hasPermissionInternal(source, permission)
+    if isDevelopment() then
+        return true
+    end
 
-        if allowed then
-            return {
-                success = true,
-                code = 'OK',
-                message = 'Mindestens eine Berechtigung ist vorhanden.',
-                data = {
-                    source = source,
-                    permission = permission
-                },
-                meta = nil,
-                audit_id = nil
-            }
+    local response = NexaPermissions.Has(source, NexaPermissionsServer.CommandPermission)
+    return response.ok and response.data.allowed == true
+end
+
+local function printResult(prefix, response)
+    print(('[%s] %s %s'):format(RESOURCE, prefix, json.encode(response)))
+end
+
+local function registerCommands()
+    RegisterCommand('nexaperms', function(source)
+        if not commandAllowed(source) then
+            printResult('nexaperms', {
+                ok = false,
+                error = 'FORBIDDEN'
+            })
+            return
         end
+
+        printResult('nexaperms', NexaPermissions.GetPermissionCache(source))
+    end, false)
+
+    RegisterCommand('nexahas', function(source, args)
+        if not commandAllowed(source) then
+            printResult('nexahas', {
+                ok = false,
+                error = 'FORBIDDEN'
+            })
+            return
+        end
+
+        printResult('nexahas', NexaPermissions.Has(source, args[1]))
+    end, false)
+
+    RegisterCommand('nexaroles', function(source)
+        if not commandAllowed(source) then
+            printResult('nexaroles', {
+                ok = false,
+                error = 'FORBIDDEN'
+            })
+            return
+        end
+
+        printResult('nexaroles', NexaPermissions.GetRoles(source))
+    end, false)
+
+    RegisterCommand('nexaassignrole', function(source, args)
+        if not commandAllowed(source) then
+            printResult('nexaassignrole', {
+                ok = false,
+                error = 'FORBIDDEN'
+            })
+            return
+        end
+
+        printResult('nexaassignrole', NexaPermissions.AssignRoleToPlayer(args[1], args[2]))
+    end, false)
+
+    RegisterCommand('nexareloadperms', function(source)
+        if not commandAllowed(source) then
+            printResult('nexareloadperms', {
+                ok = false,
+                error = 'FORBIDDEN'
+            })
+            return
+        end
+
+        printResult('nexareloadperms', NexaPermissions.ReloadPermissions())
+    end, false)
+end
+
+local function normalizeExportArgs(...)
+    local args = { ... }
+
+    if type(args[1]) == 'table' then
+        table.remove(args, 1)
     end
 
-    return {
-        success = false,
-        code = 'NO_PERMISSION',
-        message = 'Keine passende Berechtigung vorhanden.',
-        data = {
-            source = source
-        },
-        meta = nil,
-        audit_id = nil
-    }
+    return table.unpack(args)
 end
 
-function getRoles(source)
-    return {
-        success = true,
-        code = 'OK',
-        message = 'Session-Rollen wurden geladen.',
-        data = {
-            source = source,
-            roles = {}
-        },
-        meta = {
-            persistentRolesAvailable = false
-        },
-        audit_id = nil
-    }
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= RESOURCE then
+        return
+    end
+
+    NexaPermissions.Start()
+
+    if NexaPermissionsServer.CommandsEnabled then
+        registerCommands()
+    end
+end)
+
+AddEventHandler('playerDropped', function()
+    local droppedSource = source
+
+    if droppedSource then
+        NexaPermissions.cacheBySource[tonumber(droppedSource)] = nil
+    end
+end)
+
+function Has(...)
+    local source, permission = normalizeExportArgs(...)
+    return NexaPermissions.Has(source, permission)
 end
 
-function assignRole(source, permission)
-    local allowed, code = assignSessionPermission(source, permission)
-
-    return {
-        success = allowed,
-        code = code,
-        message = allowed and 'Berechtigung wurde fuer diese Session vergeben.' or 'Berechtigung konnte nicht vergeben werden.',
-        data = {
-            source = source,
-            permission = permission
-        },
-        meta = {
-            persistent = false
-        },
-        audit_id = nil
-    }
+function HasAny(...)
+    local source, permissions = normalizeExportArgs(...)
+    return NexaPermissions.HasAny(source, permissions)
 end
 
-function removeRole(source, permission)
-    local allowed, code = removeSessionPermission(source, permission)
-
-    return {
-        success = allowed,
-        code = code,
-        message = allowed and 'Berechtigung wurde fuer diese Session entfernt.' or 'Berechtigung konnte nicht entfernt werden.',
-        data = {
-            source = source,
-            permission = permission
-        },
-        meta = {
-            persistent = false
-        },
-        audit_id = nil
-    }
+function HasAll(...)
+    local source, permissions = normalizeExportArgs(...)
+    return NexaPermissions.HasAll(source, permissions)
 end
 
-exports('has', has)
-exports('hasAny', hasAny)
-exports('getRoles', getRoles)
-exports('assignRole', assignRole)
-exports('removeRole', removeRole)
+function GetRoles(...)
+    local source = normalizeExportArgs(...)
+    return NexaPermissions.GetRoles(source)
+end
+
+function AssignRoleToPlayer(...)
+    local sourceOrIdentifier, roleName = normalizeExportArgs(...)
+    return NexaPermissions.AssignRoleToPlayer(sourceOrIdentifier, roleName)
+end
+
+function RemoveRoleFromPlayer(...)
+    local sourceOrIdentifier, roleName = normalizeExportArgs(...)
+    return NexaPermissions.RemoveRoleFromPlayer(sourceOrIdentifier, roleName)
+end
+
+function ReloadPermissions(...)
+    normalizeExportArgs(...)
+    return NexaPermissions.ReloadPermissions()
+end
+
+function GetPermissionCache(...)
+    local source = normalizeExportArgs(...)
+    return NexaPermissions.GetPermissionCache(source)
+end

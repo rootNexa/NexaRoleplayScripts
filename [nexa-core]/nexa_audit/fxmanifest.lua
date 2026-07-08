@@ -8,13 +8,11 @@ description 'Audit-Grundlage fuer kritische Nexa-Ereignisse'
 version '0.2.0'
 
 dependencies {
-    'ox_lib',
     'oxmysql',
     'nexa_config'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua',
     'shared/validators.lua'

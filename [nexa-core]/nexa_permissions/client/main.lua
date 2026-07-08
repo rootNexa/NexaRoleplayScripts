@@ -1,5 +1,1 @@
-function isClientCacheAllowed()
-    return NexaPermissionsClient.clientCacheAllowed
-end
-
-exports('isClientCacheAllowed', isClientCacheAllowed)
+-- Server-side permission resource. Client file intentionally stays empty.

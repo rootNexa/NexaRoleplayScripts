@@ -1,3 +1,1 @@
-NexaPermissionsClient = {
-    clientCacheAllowed = false
-}
+NexaPermissionsClient = {}

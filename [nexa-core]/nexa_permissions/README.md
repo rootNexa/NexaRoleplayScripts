@@ -1,57 +1,99 @@
 # nexa_permissions
 
-Zentrales Rechtesystem.
+Eigenes Rollen- und Rechtesystem fuer Nexa Framework.
 
 ## Zweck
 
-- Permission-Namen validieren
-- ACE-Rechte auswerten
-- Session-Rechte fuer Core-Integration verwalten
-- Rechteaenderungen auditieren
+- Rollen verwalten
+- Permission-Regeln auswerten
+- Rollenvererbung aufloesen
+- Spieler oder Identifier Rollen zuweisen
+- Character-Zuweisungen im Datenmodell vorbereiten
+- Permission-Cache pro Spieler bereitstellen
 
 ## Abhaengigkeiten
 
-- `ox_lib`
+- `nexa-lib`
+- `nexa-core`
 - `oxmysql`
-- `qbx_core`
-- `nexa_config`
-- `nexa_audit`
-- `nexa_logs`
 
-`nexa_permissions` haengt bewusst nicht von `nexa_api` ab.
+`oxmysql` wird hier direkt genutzt, weil `nexa-core` aktuell keine Datenbank-API exportiert. Alle Player-, Identifier- und Character-Kontexte werden ueber `nexa-core` Exports gelesen.
+
+## Migration
+
+Importiere vor dem Start:
+
+```sql
+server/resources/[nexa-core]/nexa_permissions/sql/001_permissions_roles.sql
+```
+
+Die Foundation-Tabelle `nexa_permissions` bleibt unveraendert. Die neue Resource nutzt eigene Rollen-Tabellen und zerstoert keine bestehenden Daten.
 
 ## Exports
 
-- `has(source, permission)`
-- `hasAny(source, permissions)`
-- `getRoles(source)`
-- `assignRole(source, permission)`
-- `removeRole(source, permission)`
+- `Has(source, permission)`
+- `HasAny(source, permissions)`
+- `HasAll(source, permissions)`
+- `GetRoles(source)`
+- `AssignRoleToPlayer(sourceOrIdentifier, roleName)`
+- `RemoveRoleFromPlayer(sourceOrIdentifier, roleName)`
+- `ReloadPermissions()`
+- `GetPermissionCache(source)`
 
-## Events und Callbacks
+Alle Exports geben das Nexa Response-Format zurueck:
 
-Keine oeffentlichen Events oder Callbacks.
-
-## Datenbanktabellen
-
-Keine Datenbankschreibvorgaenge in Phase 2. `permission_roles`, `role_permissions`, `player_roles`, `character_permissions`, `faction_members`, `faction_grades`, `job_grades` und `business_members` werden ab Phase 3 angebunden.
-
-## Permissions
-
-ACE-Format:
-
-```text
-nexa.<domain>.<action>
+```lua
+{
+    ok = true,
+    data = {},
+    error = nil
+}
 ```
 
-Beispiel: `nexa.admin.kick`
+oder:
 
-## Config-Werte
+```lua
+{
+    ok = false,
+    data = nil,
+    error = {
+        code = 'ERROR_CODE',
+        message = 'Readable message.',
+        details = {}
+    }
+}
+```
 
-- `acePrefix`
-- `domains`
-- `sessionAssignmentsEnabled`
+## Permission-Regeln
 
-## Testhinweise
+Unterstuetzt werden exakte Regeln und Wildcards:
 
-Die Resource kann ohne `nexa_api` starten und verhindert damit den dokumentierten Core-Zyklus.
+- `nexa.admin`
+- `nexa.admin.*`
+- `jobs.police.*`
+- `jobs.police.manage`
+
+Exakte Regeln erhalten bei gleicher Rollen-Prioritaet Vorrang vor Wildcards. Bei Konflikten gewinnt die Regel aus der Rolle mit der hoeheren Priority. Regeln koennen erlauben oder verweigern.
+
+## Default-Rollen
+
+Beim Start werden diese Rollen sichergestellt:
+
+- `user`
+- `admin`
+
+Jeder Spieler erhaelt im Cache die Rolle `user`. Die Rolle `admin` wird nur angelegt, aber niemandem automatisch zugewiesen.
+
+## Development Commands
+
+Nur im Development-Modus oder fuer Serverkonsole:
+
+- `/nexaperms`
+- `/nexahas <permission>`
+- `/nexaroles`
+- `/nexaassignrole <serverId|identifier> <role>`
+- `/nexareloadperms`
+
+## Integration
+
+`nexa-core` bleibt unabhaengig. `nexa-core:HasPermission` wird nicht hart auf diese Resource delegiert, damit die Foundation ohne zyklische Dependency starten kann. Neue Ressourcen sollen direkt `exports['nexa_permissions']:Has(source, permission)` nutzen.

@@ -4,20 +4,16 @@ lua54 'yes'
 
 name 'nexa_permissions'
 author 'Nexa Roleplay'
-description 'Zentrales Rechtesystem fuer Nexa Roleplay'
-version '0.2.0'
+description 'Eigenes Rollen- und Rechtesystem fuer Nexa Framework'
+version '0.3.0'
 
 dependencies {
-    'ox_lib',
     'oxmysql',
-    'qbx_core',
-    'nexa_config',
-    'nexa_audit',
-    'nexa_logs'
+    'nexa-lib',
+    'nexa-core'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua',
     'shared/validators.lua'
@@ -29,7 +25,19 @@ client_scripts {
 }
 
 server_scripts {
+    '@oxmysql/lib/MySQL.lua',
     'config/server.lua',
     'server/service.lua',
     'server/main.lua'
+}
+
+server_exports {
+    'Has',
+    'HasAny',
+    'HasAll',
+    'GetRoles',
+    'AssignRoleToPlayer',
+    'RemoveRoleFromPlayer',
+    'ReloadPermissions',
+    'GetPermissionCache'
 }
