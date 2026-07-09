@@ -188,6 +188,10 @@ h1 {
     font: inherit;
 }
 
+.nexa-field[data-invalid="true"] .nexa-field__control {
+    border-color: var(--nexa-error);
+}
+
 textarea.nexa-field__control {
     min-height: 96px;
     resize: vertical;
@@ -203,6 +207,13 @@ input[type="checkbox"].nexa-field__control {
     min-height: 16px;
     color: var(--nexa-muted);
     font-size: 12px;
+}
+
+.nexa-field__error {
+    min-height: 16px;
+    color: var(--nexa-error);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .nexa-toasts {

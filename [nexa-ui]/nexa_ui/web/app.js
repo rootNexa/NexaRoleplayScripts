@@ -193,7 +193,54 @@
             return control.checked;
         }
 
+        if (field.type === 'number') {
+            const numberValue = Number(control.value);
+            return Number.isFinite(numberValue) && control.value !== '' ? numberValue : control.value;
+        }
+
         return control.value;
+    }
+
+    function validateInputValue(value, field) {
+        if (field.required === true) {
+            if (field.type === 'checkbox' && value !== true) {
+                return 'Dieses Feld ist erforderlich.';
+            }
+
+            if (field.type === 'select' && (value === '' || value === undefined || value === null)) {
+                return 'Bitte waehle einen Wert aus.';
+            }
+
+            if (field.type !== 'checkbox' && field.type !== 'select' && String(value || '').trim() === '') {
+                return 'Dieses Feld ist erforderlich.';
+            }
+        }
+
+        if (field.type === 'number' && value !== '') {
+            if (typeof value !== 'number' || !Number.isFinite(value)) {
+                return 'Bitte gib eine Zahl ein.';
+            }
+
+            if (field.min !== undefined && value < Number(field.min)) {
+                return `Minimum ist ${field.min}.`;
+            }
+
+            if (field.max !== undefined && value > Number(field.max)) {
+                return `Maximum ist ${field.max}.`;
+            }
+        }
+
+        if ((field.type === 'input' || field.type === 'textarea' || field.type === undefined) && typeof value === 'string' && value !== '') {
+            if (field.minLength !== undefined && value.length < Number(field.minLength)) {
+                return `Mindestens ${field.minLength} Zeichen.`;
+            }
+
+            if (field.maxLength !== undefined && value.length > Number(field.maxLength)) {
+                return `Maximal ${field.maxLength} Zeichen.`;
+            }
+        }
+
+        return '';
     }
 
     function renderInputDialog(payload) {
@@ -221,9 +268,12 @@
             description.className = 'nexa-field__description';
             description.textContent = text(field.description, '');
 
-            row.append(label, control, description);
+            const error = document.createElement('span');
+            error.className = 'nexa-field__error';
+
+            row.append(label, control, description, error);
             form.append(row);
-            controls.push({ control, field, index });
+            controls.push({ control, error, field, index, row });
         });
 
         const actions = document.createElement('div');
@@ -248,10 +298,24 @@
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             const values = [];
+            let hasError = false;
 
             controls.forEach((item) => {
-                values[item.index] = readInputValue(item.control, item.field);
+                const value = readInputValue(item.control, item.field);
+                const error = validateInputValue(value, item.field);
+
+                item.row.dataset.invalid = error !== '' ? 'true' : 'false';
+                item.error.textContent = error;
+                values[item.index] = value;
+
+                if (error !== '') {
+                    hasError = true;
+                }
             });
+
+            if (hasError) {
+                return;
+            }
 
             post('inputSubmit', {
                 id: payload.id,
