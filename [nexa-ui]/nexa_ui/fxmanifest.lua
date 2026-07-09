@@ -34,6 +34,22 @@ client_scripts {
     'client/nui.lua'
 }
 
+client_exports {
+    'open',
+    'close',
+    'notify',
+    'confirm',
+    'menu',
+    'getTheme',
+    'getLocale',
+    'registerContext',
+    'showContext',
+    'hideContext',
+    'getOpenContextMenu',
+    'inputDialog',
+    'closeInputDialog'
+}
+
 server_scripts {
     'config/server.lua',
     'server/main.lua'
