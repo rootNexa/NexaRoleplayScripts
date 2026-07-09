@@ -76,7 +76,7 @@ local function getMdtAvailability(source)
     }
 end
 
-lib.callback.register('nexa:lspd:cb:getStatus', function(source)
+exports.nexa_api:RegisterServerCallback('nexa:lspd:cb:getStatus', function(source)
     local rejected = checkRequest(source, 'nexa:lspd:cb:getStatus')
 
     if rejected ~= nil then
@@ -108,7 +108,7 @@ lib.callback.register('nexa:lspd:cb:getStatus', function(source)
     }, nil, nil)
 end)
 
-lib.callback.register('nexa:lspd:cb:listMembers', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:lspd:cb:listMembers', function(source, payload)
     local rejected = checkRequest(source, 'nexa:lspd:cb:listMembers')
 
     if rejected ~= nil then
@@ -136,7 +136,7 @@ lib.callback.register('nexa:lspd:cb:listMembers', function(source, payload)
     return response
 end)
 
-lib.callback.register('nexa:lspd:cb:listDispatch', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:lspd:cb:listDispatch', function(source, payload)
     local rejected = checkRequest(source, 'nexa:lspd:cb:listDispatch')
 
     if rejected ~= nil then
@@ -173,7 +173,7 @@ lib.callback.register('nexa:lspd:cb:listDispatch', function(source, payload)
     return response
 end)
 
-lib.callback.register('nexa:lspd:cb:getRecordsStatus', function(source)
+exports.nexa_api:RegisterServerCallback('nexa:lspd:cb:getRecordsStatus', function(source)
     local rejected = checkRequest(source, 'nexa:lspd:cb:getRecordsStatus')
 
     if rejected ~= nil then

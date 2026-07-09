@@ -1,9 +1,49 @@
 local function notify(title, description, noticeType)
-    lib.notify({
+    exports.nexa_ui:notify({
         title = title,
-        description = description,
-        type = noticeType or 'inform'
+        message = description,
+        type = noticeType or 'info'
     })
+end
+
+local function normalizeCallbackResponse(response)
+    if type(response) ~= 'table' then
+        return nil
+    end
+
+    if response.success ~= nil then
+        return response
+    end
+
+    if response.ok == true and type(response.data) == 'table' and response.data.success ~= nil then
+        return response.data
+    end
+
+    if response.ok == false then
+        local error = response.error or {}
+
+        return {
+            success = false,
+            code = error.code,
+            message = error.message or 'Anfrage fehlgeschlagen.',
+            meta = error.details
+        }
+    end
+
+    return response
+end
+
+local function awaitServerCallback(name, payload)
+    local pending = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback(name, payload or {}, function(response)
+        pending:resolve(normalizeCallbackResponse(response))
+    end)
+
+    if type(request) == 'table' and request.ok == false then
+        return normalizeCallbackResponse(request)
+    end
+
+    return Citizen.Await(pending)
 end
 
 local factionCoreCallbacks = {
@@ -25,7 +65,7 @@ RegisterNetEvent(NEXA_LSPD_EVENTS.requestResult, function(response)
 end)
 
 local function openMdt()
-    local response = lib.callback.await('nexa:lspd:cb:getRecordsStatus', false)
+    local response = awaitServerCallback('nexa:lspd:cb:getRecordsStatus', {})
 
     if type(response) ~= 'table' or response.success ~= true then
         notify('LSPD', response and response.message or 'Aktenzugriff ist derzeit nicht verfuegbar.', 'error')
@@ -48,7 +88,7 @@ local function openMdt()
 end
 
 local function openDispatchMenu()
-    local response = lib.callback.await('nexa:lspd:cb:listDispatch', false, {
+    local response = awaitServerCallback('nexa:lspd:cb:listDispatch', {
         status = 'open'
     })
 
@@ -63,7 +103,7 @@ local function openDispatchMenu()
     if #calls == 0 then
         options[#options + 1] = {
             title = 'Keine offenen Einsaetze',
-            readOnly = true
+            disabled = true
         }
     else
         for index = 1, math.min(#calls, NexaLspdClient.maxDispatchPreview) do
@@ -71,22 +111,22 @@ local function openDispatchMenu()
             options[#options + 1] = {
                 title = ('%s | %s'):format(call.call_number or 'Unbekannt', call.category or 'general'),
                 description = ('Status: %s | Prioritaet: %s'):format(call.status or 'offen', tostring(call.priority or '?')),
-                readOnly = true
+                disabled = true
             }
         end
     end
 
-    lib.registerContext({
+    exports.nexa_ui:registerContext({
         id = 'nexa_lspd_dispatch_menu',
         title = 'LSPD Dispatch',
         options = options
     })
 
-    lib.showContext('nexa_lspd_dispatch_menu')
+    exports.nexa_ui:showContext('nexa_lspd_dispatch_menu')
 end
 
 local function openMembersMenu()
-    local response = lib.callback.await(factionCoreCallbacks.members, false, {
+    local response = awaitServerCallback(factionCoreCallbacks.members, {
         factionName = NexaLspdConfig.factionName,
         limit = NexaLspdClient.maxMemberPreview
     })
@@ -102,7 +142,7 @@ local function openMembersMenu()
     if #members == 0 then
         options[#options + 1] = {
             title = 'Keine aktiven Mitglieder',
-            readOnly = true
+            disabled = true
         }
     else
         for _, member in ipairs(members) do
@@ -117,22 +157,22 @@ local function openMembersMenu()
             options[#options + 1] = {
                 title = label,
                 description = description,
-                readOnly = true
+                disabled = true
             }
         end
     end
 
-    lib.registerContext({
+    exports.nexa_ui:registerContext({
         id = 'nexa_lspd_members_menu',
         title = 'LSPD Mitglieder',
         options = options
     })
 
-    lib.showContext('nexa_lspd_members_menu')
+    exports.nexa_ui:showContext('nexa_lspd_members_menu')
 end
 
 local function openLspdMenu()
-    local response = lib.callback.await(factionCoreCallbacks.overview, false, {
+    local response = awaitServerCallback(factionCoreCallbacks.overview, {
         factionName = NexaLspdConfig.factionName
     })
 
@@ -141,7 +181,7 @@ local function openLspdMenu()
         return
     end
 
-    local recordsResponse = lib.callback.await('nexa:lspd:cb:getRecordsStatus', false)
+    local recordsResponse = awaitServerCallback('nexa:lspd:cb:getRecordsStatus', {})
     local mdt = {}
 
     if type(recordsResponse) == 'table' and recordsResponse.success == true then
@@ -167,14 +207,14 @@ local function openLspdMenu()
         dispatchHint = ('Funk: %s (%.2f)'):format(radioChannels[1].label or radioChannels[1].name or 'LSPD', radioChannels[1].frequency or 0.0)
     end
 
-    lib.registerContext({
+    exports.nexa_ui:registerContext({
         id = 'nexa_lspd_menu',
         title = 'LSPD',
         options = {
             {
                 title = 'Status',
                 description = statusText,
-                readOnly = true
+                disabled = true
             },
             {
                 title = 'Dienst',
@@ -190,12 +230,12 @@ local function openLspdMenu()
                 description = dispatchHint,
                 disabled = membership == nil,
                 onSelect = function()
-                    local input = lib.inputDialog('LSPD Callsign', {
+                    local input = exports.nexa_ui:inputDialog('LSPD Callsign', {
                         {
                             type = 'input',
                             label = 'Callsign',
                             required = false,
-                            max = NexaLspdConfig.maxCallsignLength
+                            maxLength = NexaLspdConfig.maxCallsignLength
                         }
                     })
 
@@ -230,11 +270,11 @@ local function openLspdMenu()
         }
     })
 
-    lib.showContext('nexa_lspd_menu')
+    exports.nexa_ui:showContext('nexa_lspd_menu')
 end
 
 RegisterCommand(NexaLspdConfig.commandName, function()
-    if not NexaLspdClient.enableOxContext then
+    if not NexaLspdClient.enableContextMenu then
         return
     end
 

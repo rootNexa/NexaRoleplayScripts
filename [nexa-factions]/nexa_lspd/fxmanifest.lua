@@ -8,8 +8,8 @@ description 'LSPD Phase 8B auf Basis des Fraktions-Cores'
 version '0.8.0'
 
 dependencies {
-    'ox_lib',
     'nexa_api',
+    'nexa_ui',
     'nexa_featureflags',
     'nexa_security',
     'nexa_permissions',
@@ -20,7 +20,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }

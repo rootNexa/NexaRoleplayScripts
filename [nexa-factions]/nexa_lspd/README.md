@@ -14,7 +14,7 @@ Phase-8B-Resource fuer die LSPD-Fachanbindung auf Basis des gemeinsamen Fraktion
 - Audit/Logging
 - Rate-Limits
 - Featureflag
-- minimale `ox_lib`-Interaktionen
+- minimale NexaUI-Interaktionen
 
 ## Grenzen
 
