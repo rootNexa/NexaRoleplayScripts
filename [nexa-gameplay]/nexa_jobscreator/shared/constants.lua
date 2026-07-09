@@ -10,7 +10,17 @@ NEXA_JOBSCREATOR_TABLES = {
 }
 
 NEXA_JOBSCREATOR_ERRORS = {
+    duplicateName = 'DUPLICATE_ORGANIZATION_NAME',
+    invalidInput = 'INVALID_INPUT',
     invalidType = 'INVALID_ORGANIZATION_TYPE',
     invalidMdtType = 'INVALID_MDT_TYPE',
+    notFound = 'ORGANIZATION_NOT_FOUND',
     databaseError = 'DATABASE_ERROR'
+}
+
+NEXA_JOBSCREATOR_CALLBACKS = {
+    createOrganization = 'nexa:jobscreator:cb:createOrganization',
+    getOrganization = 'nexa:jobscreator:cb:getOrganization',
+    listOrganizations = 'nexa:jobscreator:cb:listOrganizations',
+    setOrganizationEnabled = 'nexa:jobscreator:cb:setOrganizationEnabled'
 }

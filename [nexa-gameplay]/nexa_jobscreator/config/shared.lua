@@ -21,5 +21,6 @@ NexaJobsCreatorMdtTypes = {
     government = true,
     gang = true,
     business = true,
-    media = true
+    media = true,
+    none = true
 }

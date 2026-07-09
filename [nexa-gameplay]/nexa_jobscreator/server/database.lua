@@ -106,3 +106,79 @@ function NexaJobsCreatorDatabase.GetSchema()
         }
     }
 end
+
+function NexaJobsCreatorDatabase.InsertOrganization(payload)
+    return MySQL.insert.await([[
+        INSERT INTO organizations (name, label, organization_type, mdt_type, enabled)
+        VALUES (?, ?, ?, ?, ?)
+    ]], {
+        payload.name,
+        payload.label,
+        payload.organization_type,
+        payload.mdt_type,
+        payload.enabled and 1 or 0
+    })
+end
+
+function NexaJobsCreatorDatabase.GetOrganization(id)
+    return MySQL.single.await([[
+        SELECT id, name, label, organization_type, mdt_type, enabled, created_at, updated_at
+        FROM organizations
+        WHERE id = ?
+        LIMIT 1
+    ]], {
+        id
+    })
+end
+
+function NexaJobsCreatorDatabase.FindOrganizationByName(name)
+    return MySQL.single.await([[
+        SELECT id, name, label, organization_type, mdt_type, enabled, created_at, updated_at
+        FROM organizations
+        WHERE name = ?
+        LIMIT 1
+    ]], {
+        name
+    })
+end
+
+function NexaJobsCreatorDatabase.ListOrganizations(filter)
+    filter = filter or {}
+
+    local query = [[
+        SELECT id, name, label, organization_type, mdt_type, enabled, created_at, updated_at
+        FROM organizations
+        WHERE 1 = 1
+    ]]
+    local params = {}
+
+    if filter.organization_type then
+        query = query .. ' AND organization_type = ?'
+        params[#params + 1] = filter.organization_type
+    end
+
+    if filter.mdt_type then
+        query = query .. ' AND mdt_type = ?'
+        params[#params + 1] = filter.mdt_type
+    end
+
+    if filter.enabled ~= nil then
+        query = query .. ' AND enabled = ?'
+        params[#params + 1] = filter.enabled and 1 or 0
+    end
+
+    query = query .. ' ORDER BY label ASC, id ASC'
+
+    return MySQL.query.await(query, params)
+end
+
+function NexaJobsCreatorDatabase.SetOrganizationEnabled(id, enabled)
+    return MySQL.update.await([[
+        UPDATE organizations
+        SET enabled = ?
+        WHERE id = ?
+    ]], {
+        enabled and 1 or 0,
+        id
+    })
+end

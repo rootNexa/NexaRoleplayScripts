@@ -21,6 +21,7 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - idempotente Datenbank-Foundation fuer `organization_members`
 - Typ-Konstanten fuer `police`, `ems`, `government`, `gang`, `business`, `media`
 - minimale Status- und Schema-Exports
+- serverseitige Organisations-API fuer Erstellen, Laden, Listen und Aktivieren/Deaktivieren
 
 ## Nicht Enthalten
 
@@ -62,3 +63,31 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - `callsign`
 - `is_on_duty`
 - `joined_at`
+
+## Server Exports
+
+- `CreateOrganization(payload)`
+- `GetOrganization(id)`
+- `ListOrganizations(filter)`
+- `SetOrganizationEnabled(id, enabled)`
+
+Alle API-Antworten enthalten `ok`, `success`, `code`, `message`, `data` und `meta`.
+
+## Callbacks
+
+Die Callbacks werden ueber `nexa_api` registriert:
+
+- `nexa:jobscreator:cb:createOrganization`
+- `nexa:jobscreator:cb:getOrganization`
+- `nexa:jobscreator:cb:listOrganizations`
+- `nexa:jobscreator:cb:setOrganizationEnabled`
+
+## Organisation Payload
+
+`CreateOrganization(payload)` erwartet:
+
+- `name`: Pflicht, String, kleingeschriebener Slug mit Buchstaben, Zahlen, `_` oder `-`
+- `label`: Pflicht, String
+- `organization_type`: Pflicht, `police`, `ems`, `government`, `gang`, `business` oder `media`
+- `mdt_type`: Pflicht, `police`, `ems`, `government`, `gang`, `business`, `media` oder `none`
+- `enabled`: optional, boolean
