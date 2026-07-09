@@ -8,7 +8,6 @@ description 'MDT Anzeige- und Workflow-System ohne Gameplay-Entscheidungen'
 version '0.5.4'
 
 dependencies {
-    'ox_lib',
     'nexa_ui',
     'nexa_api',
     'nexa_security',
@@ -26,7 +25,6 @@ files {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua',
     'shared/utils.lua',

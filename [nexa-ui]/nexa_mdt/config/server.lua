@@ -11,6 +11,9 @@ NexaMdtServerConfig = {
         reports = 'police.mdt.reports',
         dispatch = 'dispatch.view'
     },
+    mdtTypeFactionNames = {
+        police = 'lspd'
+    },
     limits = {
         maxQueryLength = 48,
         maxPersons = 8,

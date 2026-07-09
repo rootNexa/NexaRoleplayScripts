@@ -53,3 +53,31 @@ function NexaMdtBuildResponse(success, code, message, data, meta)
         audit_id = nil
     }
 end
+
+function NexaMdtNormalizeType(mdtType)
+    if type(mdtType) == 'string' and MDT_TYPES[mdtType] ~= nil then
+        return mdtType
+    end
+
+    return NexaMdtConfig.defaultMdtType or MDT_TYPES.police
+end
+
+function NexaMdtGetModulesForType(mdtType)
+    local normalizedType = NexaMdtNormalizeType(mdtType)
+    local moduleIds = MDT_TYPE_MODULES[normalizedType] or {}
+    local modules = {
+        {
+            id = 'overview',
+            label = MDT_MODULE_LABELS.overview or 'Uebersicht'
+        }
+    }
+
+    for _, moduleId in ipairs(moduleIds) do
+        modules[#modules + 1] = {
+            id = moduleId,
+            label = MDT_MODULE_LABELS[moduleId] or moduleId
+        }
+    end
+
+    return modules
+end

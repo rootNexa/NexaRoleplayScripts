@@ -1,5 +1,6 @@
 local mdtVisible = false
 local mdtSnapshot = {}
+local currentMdtType = NexaMdtConfig.defaultMdtType or MDT_TYPES.police
 
 local function sendMdtMessage(messageType, payload)
     SendNUIMessage({
@@ -37,11 +38,11 @@ local function setVisible(visible)
 end
 
 local function showNotice(text, noticeType)
-    if lib and lib.notify then
-        lib.notify({
+    if GetResourceState(NexaMdtConfig.designSystemResource) == 'started' then
+        exports.nexa_ui:notify({
             title = NexaMdtLocale.title,
-            description = text,
-            type = noticeType or 'inform'
+            message = text,
+            type = noticeType or 'info'
         })
     end
 
@@ -50,8 +51,50 @@ local function showNotice(text, noticeType)
     })
 end
 
+local function normalizeCallbackResponse(response)
+    if type(response) ~= 'table' then
+        return nil
+    end
+
+    if response.success ~= nil then
+        return response
+    end
+
+    if response.ok == true and type(response.data) == 'table' and response.data.success ~= nil then
+        return response.data
+    end
+
+    if response.ok == false then
+        local error = response.error or {}
+
+        return {
+            success = false,
+            code = error.code,
+            message = error.message or NexaMdtLocale.denied,
+            meta = error.details
+        }
+    end
+
+    return response
+end
+
+local function awaitServerCallback(name, payload)
+    local pending = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback(name, payload or {}, function(response)
+        pending:resolve(normalizeCallbackResponse(response))
+    end)
+
+    if type(request) == 'table' and request.ok == false then
+        return normalizeCallbackResponse(request)
+    end
+
+    return Citizen.Await(pending)
+end
+
 local function refreshSnapshot()
-    local response = lib.callback.await(NexaMdtConfig.snapshotCallback, false)
+    local response = awaitServerCallback(NexaMdtConfig.snapshotCallback, {
+        mdtType = currentMdtType
+    })
 
     if type(response) ~= 'table' or response.success ~= true then
         mdtSnapshot = {}
@@ -61,12 +104,16 @@ local function refreshSnapshot()
     end
 
     mdtSnapshot = response.data or {}
+    currentMdtType = mdtSnapshot.mdtType or currentMdtType
     sendMdtMessage(NEXA_MDT_MESSAGES.snapshot, mdtSnapshot)
     return true
 end
 
 local function searchPerson(payload)
-    local response = lib.callback.await(NexaMdtConfig.personSearchCallback, false, payload or {})
+    payload = payload or {}
+    payload.mdtType = payload.mdtType or currentMdtType
+
+    local response = awaitServerCallback(NexaMdtConfig.personSearchCallback, payload)
 
     if type(response) ~= 'table' or response.success ~= true then
         sendMdtMessage(NEXA_MDT_MESSAGES.searchResult, {

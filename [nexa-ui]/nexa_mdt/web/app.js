@@ -2,6 +2,7 @@ const state = {
     visible: false,
     activeTab: 'overview',
     locale: {},
+    modules: [],
     snapshot: {},
     searchResult: []
 };
@@ -77,9 +78,38 @@ function renderList(items, mapItem) {
 }
 
 function renderOverview(data) {
-    panelRoot.append(card(t('tabPersons', 'Personen'), String((data.persons || []).length), t('search', 'Person suchen')));
-    panelRoot.append(card(t('tabRecords', 'Akten'), String((data.records || []).length), t('tabOverview', 'Uebersicht')));
-    panelRoot.append(card(t('tabDispatch', 'Einsaetze'), String((data.dispatch || []).length), t('dispatchReadOnly', 'Dispatch-Daten werden nur ueber die bestehende API angezeigt.')));
+    const typeLabel = data.mdtType ? data.mdtType.toUpperCase() : 'MDT';
+    panelRoot.append(card(typeLabel, `${state.modules.length} Module`, t('tabOverview', 'Uebersicht')));
+
+    state.modules.filter((module) => module.id !== 'overview').forEach((module) => {
+        const items = data[module.id];
+        panelRoot.append(card(module.label, String(Array.isArray(items) ? items.length : 0), module.id));
+    });
+}
+
+function renderNav(modules) {
+    const nextModules = Array.isArray(modules) && modules.length > 0 ? modules : [
+        {
+            id: 'overview',
+            label: t('tabOverview', 'Uebersicht')
+        }
+    ];
+
+    state.modules = nextModules;
+    navRoot.replaceChildren();
+
+    if (!state.modules.some((module) => module.id === state.activeTab)) {
+        state.activeTab = 'overview';
+    }
+
+    state.modules.forEach((module) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.tab = module.id;
+        button.textContent = module.label || module.id;
+        button.classList.toggle('is-active', module.id === state.activeTab);
+        navRoot.append(button);
+    });
 }
 
 function render() {
@@ -125,6 +155,25 @@ function render() {
         panelRoot.append(card(t('tabDispatch', 'Einsaetze'), t('dispatchReadOnly', 'Dispatch-Daten werden nur ueber die bestehende API angezeigt.')));
         renderList(data.dispatch, (item) => card(item.call_number || item.id, item.description || item.category, item.status));
     }
+
+    if (![
+        'overview',
+        'persons',
+        'vehicles',
+        'records',
+        'warrants',
+        'fines',
+        'reports',
+        'evidence',
+        'dispatch'
+    ].includes(state.activeTab)) {
+        const module = state.modules.find((item) => item.id === state.activeTab) || {
+            id: state.activeTab,
+            label: state.activeTab
+        };
+
+        renderList(data[module.id], (item) => card(item.title || item.name || module.label, item.summary || item.description || '', item.status || ''));
+    }
 }
 
 function setVisible(visible) {
@@ -166,6 +215,7 @@ window.addEventListener('message', (event) => {
 
     if (message.type === 'mdt:snapshot') {
         state.snapshot = payload || {};
+        renderNav(state.snapshot.modules);
         state.searchResult = [];
         noticeRoot.textContent = t('refresh', 'Aktualisieren');
         render();

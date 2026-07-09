@@ -25,7 +25,18 @@ function NexaMdtGetLocalSnapshot()
         warrants = NexaMdtCopyTable(NexaMdtServerConfig.sampleWarrants),
         fines = NexaMdtCopyTable(NexaMdtServerConfig.sampleFines),
         reports = NexaMdtCopyTable(NexaMdtServerConfig.sampleReports),
-        evidence = NexaMdtCopyTable(NexaMdtServerConfig.sampleEvidence)
+        evidence = NexaMdtCopyTable(NexaMdtServerConfig.sampleEvidence),
+        patients = {},
+        treatments = {},
+        documents = {},
+        licenses = {},
+        fees = {},
+        members = {},
+        territories = {},
+        reputation = {},
+        employees = {},
+        invoices = {},
+        press = {}
     }
 end
 

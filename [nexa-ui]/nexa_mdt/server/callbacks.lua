@@ -28,7 +28,11 @@ local function hasPermission(source, permission)
     return ok and type(result) == 'table' and result.success == true
 end
 
-local function hasFactionPermission(source, permission)
+local function getFactionNameForMdtType(mdtType)
+    return NexaMdtServerConfig.mdtTypeFactionNames[NexaMdtNormalizeType(mdtType)] or NexaMdtNormalizeType(mdtType)
+end
+
+local function hasFactionPermission(source, mdtType, permission)
     if type(permission) ~= 'string' or permission == '' then
         return false
     end
@@ -39,7 +43,7 @@ local function hasFactionPermission(source, permission)
 
     local ok, result = pcall(function()
         return exports.nexa_api['faction.hasPermission'](source, {
-            factionName = 'lspd',
+            factionName = getFactionNameForMdtType(mdtType),
             permission = permission
         })
     end)
@@ -47,9 +51,9 @@ local function hasFactionPermission(source, permission)
     return ok and type(result) == 'table' and result.success == true
 end
 
-local function canViewMdt(source)
+local function canViewMdt(source, mdtType)
     return hasPermission(source, NexaMdtServerConfig.permissions.view)
-        or hasFactionPermission(source, NexaMdtServerConfig.permissions.view)
+        or hasFactionPermission(source, mdtType, NexaMdtServerConfig.permissions.view)
 end
 
 local function auditAccess(action, source, metadata)
@@ -72,9 +76,9 @@ local function auditAccess(action, source, metadata)
     end
 end
 
-local function getDispatchCalls(source)
+local function getDispatchCalls(source, mdtType)
     if not hasPermission(source, NexaMdtServerConfig.permissions.dispatch)
-        and not hasFactionPermission(source, NexaMdtServerConfig.permissions.dispatch) then
+        and not hasFactionPermission(source, mdtType, NexaMdtServerConfig.permissions.dispatch) then
         return {}
     end
 
@@ -95,18 +99,24 @@ local function getDispatchCalls(source)
     return result.data and result.data.calls or {}
 end
 
-local function buildSnapshot(source)
+local function buildSnapshot(source, mdtType)
+    local normalizedType = NexaMdtNormalizeType(mdtType)
     local snapshot = NexaMdtGetLocalSnapshot()
-    snapshot.dispatch = getDispatchCalls(source)
+    snapshot.mdtType = normalizedType
+    snapshot.modules = NexaMdtGetModulesForType(normalizedType)
+    snapshot.availableTypes = NexaMdtCopyTable(MDT_TYPES)
+    snapshot.dispatch = getDispatchCalls(source, normalizedType)
     return snapshot
 end
 
-lib.callback.register(NexaMdtConfig.snapshotCallback, function(source)
+exports.nexa_api:RegisterServerCallback(NexaMdtConfig.snapshotCallback, function(source, payload)
+    local mdtType = NexaMdtNormalizeType(type(payload) == 'table' and payload.mdtType or nil)
+
     if not checkRequest(source, NexaMdtServerConfig.callbacks.snapshot) then
         return NexaMdtBuildResponse(false, 'RATE_LIMITED', 'Bitte warte einen Moment.', nil, nil)
     end
 
-    if not canViewMdt(source) then
+    if not canViewMdt(source, mdtType) then
         return NexaMdtBuildResponse(false, 'NO_PERMISSION', 'Zugriff verweigert.', nil, nil)
     end
 
@@ -114,21 +124,24 @@ lib.callback.register(NexaMdtConfig.snapshotCallback, function(source)
         source = source
     })
 
-    return NexaMdtBuildResponse(true, 'OK', 'MDT-Daten wurden geladen.', buildSnapshot(source), {
+    return NexaMdtBuildResponse(true, 'OK', 'MDT-Daten wurden geladen.', buildSnapshot(source, mdtType), {
+        mdtType = mdtType,
         vehicleReadOnly = true,
         evidenceReadOnly = true,
         dispatchViaApi = true
     })
 end)
 
-lib.callback.register(NexaMdtConfig.personSearchCallback, function(source, payload)
+exports.nexa_api:RegisterServerCallback(NexaMdtConfig.personSearchCallback, function(source, payload)
+    local mdtType = NexaMdtNormalizeType(type(payload) == 'table' and payload.mdtType or nil)
+
     if not checkRequest(source, NexaMdtServerConfig.callbacks.personSearch) then
         return NexaMdtBuildResponse(false, 'RATE_LIMITED', 'Bitte warte einen Moment.', nil, nil)
     end
 
-    if not canViewMdt(source)
+    if not canViewMdt(source, mdtType)
         or (not hasPermission(source, NexaMdtServerConfig.permissions.records)
-            and not hasFactionPermission(source, NexaMdtServerConfig.permissions.records)) then
+            and not hasFactionPermission(source, mdtType, NexaMdtServerConfig.permissions.records)) then
         return NexaMdtBuildResponse(false, 'NO_PERMISSION', 'Zugriff verweigert.', nil, nil)
     end
 

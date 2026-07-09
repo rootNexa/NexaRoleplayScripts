@@ -1,10 +1,12 @@
 # nexa_mdt
 
-Phase-5E-Resource fuer MDT Anzeige und Workflows.
+Generisches MDT-Fundament fuer Organisationen, Jobs, Gangs, Fraktionen und Betriebe.
 
 ## Umfang
 
 - MDT-Grundstruktur mit NUI-App-Shell
+- generische `mdtType`-Struktur fuer `police`, `ems`, `government`, `gang`, `business` und `media`
+- dynamische Modullisten je `mdtType`
 - Personenabfrage mit serverseitiger Permission-Pruefung
 - Fahrzeugabfrage als vorbereitete read-only Struktur ohne Fahrzeuglogik
 - Aktenuebersicht
@@ -17,11 +19,13 @@ Phase-5E-Resource fuer MDT Anzeige und Workflows.
 - Audit/Logging bei Aktenzugriffen
 - deutsche, lore-friendly Texte
 - Nutzung von `nexa_ui`
-- minimale `ox_lib`-Interaktionen
+- Nutzung des Nexa Callback-Systems ueber `nexa_api`
 
 ## Grenzen
 
 - MDT ist Anzeige- und Workflow-System.
+- Feste Fraktionsressourcen wie `nexa_lspd` sind keine harte Abhaengigkeit.
+- Bestehende Polizeiansichten laufen als `police`-Module weiter.
 - Dispatch-Daten werden nur ueber `nexa_api['dispatch.listCalls']` angezeigt.
 - `nexa_dispatch` hat keine harte Abhaengigkeit zu `nexa_mdt`.
 - Keine kritischen Entscheidungen im Client.
