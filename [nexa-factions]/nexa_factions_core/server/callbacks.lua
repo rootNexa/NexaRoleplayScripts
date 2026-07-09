@@ -24,7 +24,7 @@ local function checkRequest(source, eventName)
     return nil
 end
 
-lib.callback.register('nexa:factions_core:cb:getOverview', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:factions_core:cb:getOverview', function(source, payload)
     local rejected = checkRequest(source, 'nexa:factions_core:cb:getOverview')
 
     if rejected ~= nil then
@@ -38,7 +38,7 @@ lib.callback.register('nexa:factions_core:cb:getOverview', function(source, payl
     return exports.nexa_api['faction.getCurrent'](source, payload or {})
 end)
 
-lib.callback.register('nexa:factions_core:cb:listMembers', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:factions_core:cb:listMembers', function(source, payload)
     local rejected = checkRequest(source, 'nexa:factions_core:cb:listMembers')
 
     if rejected ~= nil then
@@ -52,7 +52,7 @@ lib.callback.register('nexa:factions_core:cb:listMembers', function(source, payl
     return exports.nexa_api['faction.listMembers'](source, payload or {})
 end)
 
-lib.callback.register('nexa:factions_core:cb:listAccounts', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:factions_core:cb:listAccounts', function(source, payload)
     local rejected = checkRequest(source, 'nexa:factions_core:cb:listAccounts')
 
     if rejected ~= nil then
@@ -66,7 +66,7 @@ lib.callback.register('nexa:factions_core:cb:listAccounts', function(source, pay
     return exports.nexa_api['faction.listAccounts'](source, payload or {})
 end)
 
-lib.callback.register('nexa:factions_core:cb:setCallsign', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:factions_core:cb:setCallsign', function(source, payload)
     local rejected = checkRequest(source, 'nexa:factions_core:cb:setCallsign')
 
     if rejected ~= nil then
@@ -82,7 +82,7 @@ lib.callback.register('nexa:factions_core:cb:setCallsign', function(source, payl
     return exports.nexa_api['faction.setCallsign'](source, payload)
 end)
 
-lib.callback.register('nexa:factions_core:cb:assignMember', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:factions_core:cb:assignMember', function(source, payload)
     local rejected = checkRequest(source, 'nexa:factions_core:cb:assignMember')
 
     if rejected ~= nil then
@@ -98,7 +98,7 @@ lib.callback.register('nexa:factions_core:cb:assignMember', function(source, pay
     return exports.nexa_api['faction.assignMember'](source, payload)
 end)
 
-lib.callback.register('nexa:factions_core:cb:transferFunds', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:factions_core:cb:transferFunds', function(source, payload)
     local rejected = checkRequest(source, 'nexa:factions_core:cb:transferFunds')
 
     if rejected ~= nil then

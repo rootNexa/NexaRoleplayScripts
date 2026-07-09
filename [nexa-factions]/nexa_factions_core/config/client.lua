@@ -1,3 +1,3 @@
 NexaFactionsClient = {
-    enableOxContext = true
+    enableContextMenu = true
 }

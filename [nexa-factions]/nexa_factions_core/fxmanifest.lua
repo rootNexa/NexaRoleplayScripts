@@ -8,8 +8,8 @@ description 'Gemeinsamer Fraktions-Core fuer Phase 8A'
 version '0.8.0'
 
 dependencies {
-    'ox_lib',
     'nexa_api',
+    'nexa_ui',
     'nexa_featureflags',
     'nexa_audit',
     'nexa_security',
@@ -18,7 +18,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }

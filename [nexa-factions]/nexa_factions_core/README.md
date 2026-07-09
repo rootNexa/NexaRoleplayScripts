@@ -14,7 +14,7 @@ Phase-8A-Resource fuer gemeinsame Kernlogik offizieller Fraktionen.
 - Audit/Logging
 - Rate-Limits
 - Featureflag
-- minimale `ox_lib`-Interaktionen
+- minimale NexaUI-Interaktionen
 
 ## Grenzen
 
