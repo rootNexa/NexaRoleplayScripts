@@ -15,9 +15,18 @@ local function refreshInteriors()
         return
     end
 
-    local response = lib.callback.await('nexa:interiors:cb:getAvailable', false)
+    local interiorsRequest = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback('nexa:interiors:cb:getAvailable', {}, function(response)
+        interiorsRequest:resolve(response)
+    end, NexaInteriorsClient.callbackTimeoutMs)
 
-    if type(response) == 'table' and response.success and response.data ~= nil then
+    if type(request) == 'table' and request.ok == false then
+        return
+    end
+
+    local response = Citizen.Await(interiorsRequest)
+
+    if type(response) == 'table' and response.ok == true and response.data ~= nil then
         applyInteriors(response.data.interiors or {})
     end
 end
