@@ -28,18 +28,16 @@ Read-only HUD fuer Phase 5B.
 
 ## Abhaengigkeiten
 
-- `ox_lib`
 - `nexa_ui`
 - `nexa_api`
 
 ## Datenquellen
 
-Serverseitige HUD-Daten werden ausschliesslich read-only ueber bestehende `nexa_api`-Exports gelesen:
+Serverseitige HUD-Daten werden ausschliesslich read-only ueber `nexa_api` gelesen:
 
-- `character.getActive`
-- `account.list`
-- `job.getCharacter`
-- `business.list`
+- `GetCharacter(source)`
+
+Account-, Job- und Business-Felder bleiben im Snapshot vorhanden und werden mit neutralen Anzeigewerten geliefert, bis die jeweiligen Nexa-Module eigene stabile Contracts bereitstellen.
 
 Lokale Anzeigen wie Gesundheit, Schutz und Fahrzeugtempo kommen aus FiveM-Client-Natives und sind nur Darstellung.
 

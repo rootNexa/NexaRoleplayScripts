@@ -1,15 +1,20 @@
-local function buildResponse(success, code, message, data, meta)
-    if GetResourceState('nexa_api') == 'started' then
-        return exports.nexa_api:buildResponse(success, code, message, data, meta, nil)
-    end
-
+local function responseOk(data)
     return {
-        success = success,
-        code = code,
-        message = message,
+        ok = true,
         data = data,
-        meta = meta,
-        audit_id = nil
+        error = nil
+    }
+end
+
+local function responseFail(code, message, details)
+    return {
+        ok = false,
+        data = nil,
+        error = {
+            code = code,
+            message = message,
+            details = details
+        }
     }
 end
 
@@ -27,52 +32,55 @@ local function checkRequest(source)
     return rateLimit ~= nil and rateLimit.success == true
 end
 
-local function firstValue(list)
-    if type(list) ~= 'table' then
-        return nil
-    end
-
-    return list[1]
-end
-
-local function getApiResult(exportName, source, payload)
+local function getApi()
     if GetResourceState('nexa_api') ~= 'started' then
         return nil
     end
 
-    local ok, result = pcall(function()
-        return exports.nexa_api[exportName](source, payload or {})
+    local ok, api = pcall(function()
+        return exports.nexa_api:GetApi()
     end)
 
-    if not ok or type(result) ~= 'table' or result.success ~= true then
+    if not ok or type(api) ~= 'table' then
         return nil
     end
 
-    return result.data
+    return api
+end
+
+local function getCharacterSnapshot(api, source)
+    if not api or type(api.GetCharacter) ~= 'function' then
+        return nil
+    end
+
+    local ok, response = pcall(api.GetCharacter, source)
+
+    if not ok or type(response) ~= 'table' or response.ok ~= true then
+        return nil
+    end
+
+    return response.data
 end
 
 local function getReadOnlySnapshot(source)
-    local identityData = getApiResult('character.getActive', source)
-    local accountData = getApiResult('account.list', source)
-    local jobData = getApiResult('job.getCharacter', source, {})
-    local businessData = getApiResult('business.list', source)
-
-    local character = identityData and identityData.character or nil
-    local accounts = accountData and accountData.accounts or {}
-    local businesses = businessData and businessData.businesses or {}
+    local api = getApi()
 
     return {
-        character = character,
-        account = NexaHudFormatAccount(firstValue(accounts)),
-        job = NexaHudFormatJob(jobData and jobData.job or nil),
-        business = NexaHudFormatBusiness(firstValue(businesses))
+        character = getCharacterSnapshot(api, source),
+        account = NexaHudFormatAccount({
+            account_type = 'private',
+            balance = 0,
+            currency = 'USD'
+        }),
+        job = NexaHudFormatJob({}),
+        business = NexaHudFormatBusiness({})
     }
 end
 
-lib.callback.register(NexaHudConfig.snapshotCallback, function(source)
+exports.nexa_api:RegisterServerCallback(NexaHudConfig.snapshotCallback, function(source)
     if not checkRequest(source) then
-        return buildResponse(false, 'RATE_LIMITED', 'Bitte warte einen Moment.', nil, nil)
+        return responseFail('RATE_LIMITED', 'Bitte warte einen Moment.', nil)
     end
 
-    return buildResponse(true, 'OK', 'HUD-Daten wurden geladen.', getReadOnlySnapshot(source), nil)
+    return responseOk(getReadOnlySnapshot(source))
 end)

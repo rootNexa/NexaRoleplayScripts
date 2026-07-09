@@ -8,7 +8,6 @@ description 'Read-only HUD fuer Status, Job, Firma, Konto, Voice und Fahrzeuganz
 version '0.5.1'
 
 dependencies {
-    'ox_lib',
     'nexa_ui',
     'nexa_api'
 }
@@ -22,7 +21,6 @@ files {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua',
     'shared/utils.lua',

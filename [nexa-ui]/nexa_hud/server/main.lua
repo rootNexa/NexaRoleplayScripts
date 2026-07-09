@@ -1,3 +1,3 @@
 CreateThread(function()
-    lib.print.info('nexa_hud bereit.')
+    print('[nexa_hud] bereit.')
 end)

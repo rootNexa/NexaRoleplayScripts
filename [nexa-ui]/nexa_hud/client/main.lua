@@ -153,9 +153,18 @@ local function getVehicleDisplay()
 end
 
 local function refreshSnapshot()
-    local response = lib.callback.await(NexaHudConfig.snapshotCallback, false)
+    local snapshot = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback(NexaHudConfig.snapshotCallback, {}, function(response)
+        snapshot:resolve(response)
+    end, NexaHudClientConfig.snapshotTimeoutMs)
 
-    if type(response) ~= 'table' or response.success ~= true then
+    if type(request) == 'table' and request.ok == false then
+        return
+    end
+
+    local response = Citizen.Await(snapshot)
+
+    if type(response) ~= 'table' or response.ok ~= true then
         return
     end
 
