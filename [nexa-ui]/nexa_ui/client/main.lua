@@ -228,11 +228,21 @@ function inputDialog(title, fields, options)
         options = options or {}
     }
 
+    setUiFocus(true)
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.inputOpen, {
+        id = CurrentInputDialog.id,
+        title = title,
+        fields = fields,
+        options = options or {}
+    })
+
     return nil
 end
 
 function closeInputDialog()
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.inputClose)
     CurrentInputDialog = nil
+    refreshUiFocus()
 
     return true
 end
@@ -272,6 +282,10 @@ function NexaUiHandleContextSelect(data)
 end
 
 function NexaUiHandleCloseRequest()
+    if CurrentInputDialog ~= nil then
+        closeInputDialog()
+    end
+
     hideContext(true)
     close()
 end

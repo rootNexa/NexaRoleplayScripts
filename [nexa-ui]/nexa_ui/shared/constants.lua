@@ -14,6 +14,8 @@ NEXA_UI_MESSAGE_TYPES = {
     menu = 'menu',
     contextOpen = 'context_open',
     contextClose = 'context_close',
+    inputOpen = 'input_open',
+    inputClose = 'input_close',
     theme = 'theme'
 }
 

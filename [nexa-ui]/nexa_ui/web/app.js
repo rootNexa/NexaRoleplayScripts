@@ -145,6 +145,84 @@
         panelContent.append(list);
     }
 
+    function createInputPreview(field) {
+        if (field.type === 'textarea') {
+            const textarea = document.createElement('textarea');
+            textarea.rows = 4;
+            textarea.disabled = true;
+            textarea.value = field.default || '';
+            return textarea;
+        }
+
+        if (field.type === 'checkbox') {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.disabled = true;
+            checkbox.checked = field.default === true;
+            return checkbox;
+        }
+
+        if (field.type === 'select') {
+            const select = document.createElement('select');
+            select.disabled = true;
+
+            (field.options || []).forEach((rawOption) => {
+                const option = typeof rawOption === 'object' && rawOption !== null ? rawOption : {
+                    label: String(rawOption || ''),
+                    value: rawOption
+                };
+                const element = document.createElement('option');
+                element.value = option.value;
+                element.textContent = text(option.label, String(option.value || ''));
+                select.append(element);
+            });
+
+            if (field.default !== undefined) {
+                select.value = field.default;
+            }
+
+            return select;
+        }
+
+        const input = document.createElement('input');
+        input.type = field.type === 'number' ? 'number' : 'text';
+        input.disabled = true;
+        input.value = field.default !== undefined ? field.default : '';
+
+        return input;
+    }
+
+    function renderInputDialog(payload) {
+        locale = payload.locale || locale;
+        showShell(payload.title || locale.panelTitle || 'NEXA');
+        clearPanel();
+
+        const form = document.createElement('div');
+        form.className = 'nexa-input-dialog';
+
+        (payload.fields || []).forEach((rawField) => {
+            const field = typeof rawField === 'object' && rawField !== null ? rawField : {};
+            const row = document.createElement('label');
+            row.className = 'nexa-field';
+
+            const label = document.createElement('span');
+            label.className = 'nexa-field__label';
+            label.textContent = text(field.label || field.title, 'Feld');
+
+            const control = createInputPreview(field);
+            control.className = 'nexa-field__control';
+
+            const description = document.createElement('span');
+            description.className = 'nexa-field__description';
+            description.textContent = text(field.description, '');
+
+            row.append(label, control, description);
+            form.append(row);
+        });
+
+        panelContent.append(form);
+    }
+
     function notify(payload) {
         const toast = document.createElement('article');
         toast.className = 'nexa-toast';
@@ -172,7 +250,7 @@
             showPanel(payload);
         }
 
-        if (message.type === 'closePanel' || message.type === 'context_close') {
+        if (message.type === 'closePanel' || message.type === 'context_close' || message.type === 'input_close') {
             hidePanel();
         }
 
@@ -190,6 +268,10 @@
 
         if (message.type === 'context_open') {
             renderContext(payload);
+        }
+
+        if (message.type === 'input_open') {
+            renderInputDialog(payload);
         }
     });
 
