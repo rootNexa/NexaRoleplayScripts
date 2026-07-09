@@ -8,7 +8,6 @@ description 'Zentrale Blip-Konfiguration fuer Nexa Roleplay'
 version '0.10.1'
 
 dependencies {
-    'ox_lib',
     'nexa_api',
     'nexa_featureflags',
     'nexa_security',
@@ -18,7 +17,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }

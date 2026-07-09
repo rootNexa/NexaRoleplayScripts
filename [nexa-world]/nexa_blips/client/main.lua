@@ -36,9 +36,18 @@ local function applyBlips(blips)
 end
 
 local function refreshBlips()
-    local response = lib.callback.await('nexa:blips:cb:getAvailable', false)
+    local blipsRequest = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback('nexa:blips:cb:getAvailable', {}, function(response)
+        blipsRequest:resolve(response)
+    end, NexaBlipsClient.callbackTimeoutMs)
 
-    if type(response) == 'table' and response.success and response.data ~= nil then
+    if type(request) == 'table' and request.ok == false then
+        return
+    end
+
+    local response = Citizen.Await(blipsRequest)
+
+    if type(response) == 'table' and response.ok == true and response.data ~= nil then
         applyBlips(response.data.blips or {})
     end
 end
