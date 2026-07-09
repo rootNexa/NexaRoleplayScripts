@@ -22,6 +22,7 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - Typ-Konstanten fuer `police`, `ems`, `government`, `gang`, `business`, `media`
 - minimale Status- und Schema-Exports
 - serverseitige Organisations-API fuer Erstellen, Laden, Listen und Aktivieren/Deaktivieren
+- serverseitige Grade- und Member-API fuer Organisationsstruktur und Duty-Status
 
 ## Nicht Enthalten
 
@@ -70,6 +71,15 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - `GetOrganization(id)`
 - `ListOrganizations(filter)`
 - `SetOrganizationEnabled(id, enabled)`
+- `CreateGrade(payload)`
+- `ListGrades(organizationId)`
+- `UpdateGrade(id, payload)`
+- `DeleteGrade(id)`
+- `AddMember(payload)`
+- `ListMembers(organizationId)`
+- `UpdateMember(id, payload)`
+- `RemoveMember(id)`
+- `SetDuty(memberId, isOnDuty)`
 
 Alle API-Antworten enthalten `ok`, `success`, `code`, `message`, `data` und `meta`.
 
@@ -81,6 +91,15 @@ Die Callbacks werden ueber `nexa_api` registriert:
 - `nexa:jobscreator:cb:getOrganization`
 - `nexa:jobscreator:cb:listOrganizations`
 - `nexa:jobscreator:cb:setOrganizationEnabled`
+- `nexa:jobscreator:cb:createGrade`
+- `nexa:jobscreator:cb:listGrades`
+- `nexa:jobscreator:cb:updateGrade`
+- `nexa:jobscreator:cb:deleteGrade`
+- `nexa:jobscreator:cb:addMember`
+- `nexa:jobscreator:cb:listMembers`
+- `nexa:jobscreator:cb:updateMember`
+- `nexa:jobscreator:cb:removeMember`
+- `nexa:jobscreator:cb:setDuty`
 
 ## Organisation Payload
 
@@ -91,3 +110,29 @@ Die Callbacks werden ueber `nexa_api` registriert:
 - `organization_type`: Pflicht, `police`, `ems`, `government`, `gang`, `business` oder `media`
 - `mdt_type`: Pflicht, `police`, `ems`, `government`, `gang`, `business`, `media` oder `none`
 - `enabled`: optional, boolean
+
+## Grade Payloads
+
+`CreateGrade(payload)` erwartet:
+
+- `organization_id`: Pflicht, ID einer existierenden Organisation
+- `name`: Pflicht, String-Slug
+- `label`: Pflicht, String
+- `level`: Pflicht, Zahl
+- `permissions`: optional, Tabelle fuer JSON-Rechte
+
+`UpdateGrade(id, payload)` akzeptiert `name`, `label`, `level` und `permissions` als optionale Aenderungen.
+
+## Member Payloads
+
+`AddMember(payload)` erwartet:
+
+- `organization_id`: Pflicht, ID einer existierenden Organisation
+- `character_id`: Pflicht
+- `grade_id`: optional, muss zur Organisation gehoeren
+- `callsign`: optional, String
+- `is_on_duty`: optional, boolean
+
+`UpdateMember(id, payload)` akzeptiert `grade_id`, `callsign` und `is_on_duty` als optionale Aenderungen.
+
+`SetDuty(memberId, isOnDuty)` setzt nur den Duty-Status eines Mitglieds.

@@ -120,6 +120,72 @@ local function normalizeOrganizationRow(row)
     return row
 end
 
+local function decodeJsonField(value)
+    if type(value) ~= 'string' or value == '' then
+        return value
+    end
+
+    local ok, decoded = pcall(json.decode, value)
+
+    if ok then
+        return decoded
+    end
+
+    return value
+end
+
+local function encodeJsonField(value)
+    if value == nil then
+        return nil
+    end
+
+    if type(value) ~= 'table' then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'JSON-Feld muss eine Tabelle sein.', nil)
+    end
+
+    local ok, encoded = pcall(json.encode, value)
+
+    if not ok then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'JSON-Feld konnte nicht serialisiert werden.', nil)
+    end
+
+    return encoded, nil
+end
+
+local function normalizeGradeRow(row)
+    if type(row) ~= 'table' then
+        return row
+    end
+
+    row.permissions = decodeJsonField(row.permissions)
+
+    return row
+end
+
+local function normalizeMemberRow(row)
+    if type(row) ~= 'table' then
+        return row
+    end
+
+    if row.is_on_duty ~= nil then
+        row.is_on_duty = row.is_on_duty == true or tonumber(row.is_on_duty) == 1
+    end
+
+    return row
+end
+
+local function normalizeOptionalString(value)
+    if value == nil then
+        return nil, false, nil
+    end
+
+    if type(value) ~= 'string' then
+        return nil, true, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Wert muss ein String sein.', nil)
+    end
+
+    return normalizeString(value), true, nil
+end
+
 local function validateCreatePayload(payload)
     if type(payload) ~= 'table' then
         return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Organisation ist ungueltig.', nil)
@@ -195,6 +261,30 @@ local function validateId(id)
     end
 
     return id, nil
+end
+
+local function validatePositiveInteger(value, field, message)
+    value = tonumber(value)
+
+    if not value or value < 1 or value % 1 ~= 0 then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, message or 'ID ist ungueltig.', {
+            field = field
+        })
+    end
+
+    return value, nil
+end
+
+local function validateLevel(value)
+    value = tonumber(value)
+
+    if not value or value % 1 ~= 0 then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Level ist ungueltig.', {
+            field = 'level'
+        })
+    end
+
+    return value, nil
 end
 
 local function normalizeListFilter(filter)
@@ -372,6 +462,603 @@ local function SetOrganizationEnabled(id, enabled)
     return GetOrganization(organizationId)
 end
 
+local function ensureOrganizationExists(organizationId)
+    local ok, organization = pcall(NexaJobsCreatorDatabase.GetOrganization, organizationId)
+
+    if not ok then
+        return nil, databaseFail('Organisation konnte nicht geprueft werden.', organization)
+    end
+
+    if not organization then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.notFound, 'Organisation wurde nicht gefunden.', {
+            id = organizationId
+        })
+    end
+
+    return organization, nil
+end
+
+local function ensureGradeExists(gradeId)
+    local ok, grade = pcall(NexaJobsCreatorDatabase.GetGrade, gradeId)
+
+    if not ok then
+        return nil, databaseFail('Grade konnte nicht geprueft werden.', grade)
+    end
+
+    if not grade then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.gradeNotFound, 'Grade wurde nicht gefunden.', {
+            id = gradeId
+        })
+    end
+
+    return normalizeGradeRow(grade), nil
+end
+
+local function ensureMemberExists(memberId)
+    local ok, member = pcall(NexaJobsCreatorDatabase.GetMember, memberId)
+
+    if not ok then
+        return nil, databaseFail('Mitglied konnte nicht geprueft werden.', member)
+    end
+
+    if not member then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.memberNotFound, 'Mitglied wurde nicht gefunden.', {
+            id = memberId
+        })
+    end
+
+    return normalizeMemberRow(member), nil
+end
+
+local function validateCreateGradePayload(payload)
+    if type(payload) ~= 'table' then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Payload ist ungueltig.', nil)
+    end
+
+    local organizationId, invalid = validatePositiveInteger(payload.organization_id, 'organization_id', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return nil, invalid
+    end
+
+    local name = normalizeSlug(payload.name)
+    local label = normalizeString(payload.label)
+    local level
+
+    level, invalid = validateLevel(payload.level)
+
+    if invalid then
+        return nil, invalid
+    end
+
+    if not name then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Name fehlt.', {
+            field = 'name'
+        })
+    end
+
+    if name:find('^[a-z0-9_%-]+$') == nil then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Name muss ein Slug sein.', {
+            field = 'name'
+        })
+    end
+
+    if #name > NexaJobsCreatorConfig.maxGradeNameLength then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Name ist zu lang.', {
+            field = 'name',
+            max = NexaJobsCreatorConfig.maxGradeNameLength
+        })
+    end
+
+    if not label then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Label fehlt.', {
+            field = 'label'
+        })
+    end
+
+    if #label > NexaJobsCreatorConfig.maxGradeLabelLength then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Label ist zu lang.', {
+            field = 'label',
+            max = NexaJobsCreatorConfig.maxGradeLabelLength
+        })
+    end
+
+    local permissions, permissionInvalid = encodeJsonField(payload.permissions)
+
+    if permissionInvalid then
+        return nil, permissionInvalid
+    end
+
+    return {
+        organization_id = organizationId,
+        name = name,
+        label = label,
+        level = level,
+        permissions = permissions
+    }, nil
+end
+
+local function CreateGrade(payload)
+    local normalized, invalid = validateCreateGradePayload(payload)
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(normalized.organization_id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local insertOk, gradeId = pcall(NexaJobsCreatorDatabase.InsertGrade, normalized)
+
+    if not insertOk then
+        return databaseFail('Grade konnte nicht erstellt werden.', gradeId)
+    end
+
+    local grade, gradeError = ensureGradeExists(gradeId)
+
+    if gradeError then
+        return gradeError
+    end
+
+    return responseOk(grade, 'Grade wurde erstellt.')
+end
+
+local function ListGrades(organizationId)
+    local id, invalid = validatePositiveInteger(organizationId, 'organization_id', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local ok, grades = pcall(NexaJobsCreatorDatabase.ListGrades, id)
+
+    if not ok then
+        return databaseFail('Grades konnten nicht geladen werden.', grades)
+    end
+
+    for _, grade in ipairs(grades or {}) do
+        normalizeGradeRow(grade)
+    end
+
+    return responseOk(grades or {}, 'Grades wurden geladen.', {
+        count = #(grades or {})
+    })
+end
+
+local function validateUpdateGradePayload(payload)
+    if type(payload) ~= 'table' then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Payload ist ungueltig.', nil)
+    end
+
+    local updates = {}
+
+    if payload.name ~= nil then
+        local name = normalizeSlug(payload.name)
+
+        if not name or name:find('^[a-z0-9_%-]+$') == nil then
+            return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Name ist ungueltig.', {
+                field = 'name'
+            })
+        end
+
+        if #name > NexaJobsCreatorConfig.maxGradeNameLength then
+            return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Name ist zu lang.', {
+                field = 'name',
+                max = NexaJobsCreatorConfig.maxGradeNameLength
+            })
+        end
+
+        updates.name = name
+    end
+
+    if payload.label ~= nil then
+        local label = normalizeString(payload.label)
+
+        if not label then
+            return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Label ist ungueltig.', {
+                field = 'label'
+            })
+        end
+
+        if #label > NexaJobsCreatorConfig.maxGradeLabelLength then
+            return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade-Label ist zu lang.', {
+                field = 'label',
+                max = NexaJobsCreatorConfig.maxGradeLabelLength
+            })
+        end
+
+        updates.label = label
+    end
+
+    if payload.level ~= nil then
+        local level, invalid = validateLevel(payload.level)
+
+        if invalid then
+            return nil, invalid
+        end
+
+        updates.level = level
+    end
+
+    if payload.permissions ~= nil then
+        local permissions, invalid = encodeJsonField(payload.permissions)
+
+        if invalid then
+            return nil, invalid
+        end
+
+        updates.permissions = permissions
+    end
+
+    if next(updates) == nil then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Keine Grade-Aenderung angegeben.', nil)
+    end
+
+    return updates, nil
+end
+
+local function UpdateGrade(id, payload)
+    local gradeId, invalid = validatePositiveInteger(id, 'id', 'Grade-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local _, gradeError = ensureGradeExists(gradeId)
+
+    if gradeError then
+        return gradeError
+    end
+
+    local updates
+
+    updates, invalid = validateUpdateGradePayload(payload)
+
+    if invalid then
+        return invalid
+    end
+
+    local updateOk, affectedRows = pcall(NexaJobsCreatorDatabase.UpdateGrade, gradeId, updates)
+
+    if not updateOk then
+        return databaseFail('Grade konnte nicht aktualisiert werden.', affectedRows)
+    end
+
+    local grade, reloadedError = ensureGradeExists(gradeId)
+
+    if reloadedError then
+        return reloadedError
+    end
+
+    return responseOk(grade, 'Grade wurde aktualisiert.')
+end
+
+local function DeleteGrade(id)
+    local gradeId, invalid = validatePositiveInteger(id, 'id', 'Grade-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local _, gradeError = ensureGradeExists(gradeId)
+
+    if gradeError then
+        return gradeError
+    end
+
+    local deleteOk, affectedRows = pcall(NexaJobsCreatorDatabase.DeleteGrade, gradeId)
+
+    if not deleteOk then
+        return databaseFail('Grade konnte nicht geloescht werden.', affectedRows)
+    end
+
+    if tonumber(affectedRows) == 0 then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.gradeNotFound, 'Grade wurde nicht gefunden.', {
+            id = gradeId
+        })
+    end
+
+    return responseOk({
+        id = gradeId
+    }, 'Grade wurde geloescht.')
+end
+
+local function validateCreateMemberPayload(payload)
+    if type(payload) ~= 'table' then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Member-Payload ist ungueltig.', nil)
+    end
+
+    local organizationId, invalid = validatePositiveInteger(payload.organization_id, 'organization_id', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return nil, invalid
+    end
+
+    local characterId
+    characterId, invalid = validatePositiveInteger(payload.character_id, 'character_id', 'Character-ID ist ungueltig.')
+
+    if invalid then
+        return nil, invalid
+    end
+
+    local gradeId = nil
+
+    if payload.grade_id ~= nil then
+        gradeId, invalid = validatePositiveInteger(payload.grade_id, 'grade_id', 'Grade-ID ist ungueltig.')
+
+        if invalid then
+            return nil, invalid
+        end
+    end
+
+    local callsign, _, callsignInvalid = normalizeOptionalString(payload.callsign)
+
+    if callsignInvalid then
+        return nil, callsignInvalid
+    end
+
+    if payload.is_on_duty ~= nil and type(payload.is_on_duty) ~= 'boolean' then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Duty-Status muss boolean sein.', {
+            field = 'is_on_duty'
+        })
+    end
+
+    return {
+        organization_id = organizationId,
+        character_id = characterId,
+        grade_id = gradeId,
+        callsign = callsign,
+        is_on_duty = payload.is_on_duty == true
+    }, nil
+end
+
+local function validateMemberGrade(organizationId, gradeId)
+    if gradeId == nil then
+        return nil
+    end
+
+    local grade, gradeError = ensureGradeExists(gradeId)
+
+    if gradeError then
+        return gradeError
+    end
+
+    if tonumber(grade.organization_id) ~= tonumber(organizationId) then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Grade gehoert nicht zur Organisation.', {
+            organization_id = organizationId,
+            grade_id = gradeId
+        })
+    end
+
+    return nil
+end
+
+local function AddMember(payload)
+    local normalized, invalid = validateCreateMemberPayload(payload)
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(normalized.organization_id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local gradeInvalid = validateMemberGrade(normalized.organization_id, normalized.grade_id)
+
+    if gradeInvalid then
+        return gradeInvalid
+    end
+
+    local insertOk, memberId = pcall(NexaJobsCreatorDatabase.InsertMember, normalized)
+
+    if not insertOk then
+        return databaseFail('Mitglied konnte nicht hinzugefuegt werden.', memberId)
+    end
+
+    local member, memberError = ensureMemberExists(memberId)
+
+    if memberError then
+        return memberError
+    end
+
+    return responseOk(member, 'Mitglied wurde hinzugefuegt.')
+end
+
+local function ListMembers(organizationId)
+    local id, invalid = validatePositiveInteger(organizationId, 'organization_id', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local ok, members = pcall(NexaJobsCreatorDatabase.ListMembers, id)
+
+    if not ok then
+        return databaseFail('Mitglieder konnten nicht geladen werden.', members)
+    end
+
+    for _, member in ipairs(members or {}) do
+        normalizeMemberRow(member)
+    end
+
+    return responseOk(members or {}, 'Mitglieder wurden geladen.', {
+        count = #(members or {})
+    })
+end
+
+local function validateUpdateMemberPayload(payload)
+    if type(payload) ~= 'table' then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Member-Payload ist ungueltig.', nil)
+    end
+
+    local updates = {}
+
+    if payload.grade_id ~= nil then
+        local gradeId, invalid = validatePositiveInteger(payload.grade_id, 'grade_id', 'Grade-ID ist ungueltig.')
+
+        if invalid then
+            return nil, invalid
+        end
+
+        updates.grade_id = gradeId
+        updates.grade_id_set = true
+    end
+
+    if payload.callsign ~= nil then
+        local callsign, _, invalid = normalizeOptionalString(payload.callsign)
+
+        if invalid then
+            return nil, invalid
+        end
+
+        updates.callsign = callsign
+        updates.callsign_set = true
+    end
+
+    if payload.is_on_duty ~= nil then
+        if type(payload.is_on_duty) ~= 'boolean' then
+            return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Duty-Status muss boolean sein.', {
+                field = 'is_on_duty'
+            })
+        end
+
+        updates.is_on_duty = payload.is_on_duty
+        updates.is_on_duty_set = true
+    end
+
+    if not updates.grade_id_set and not updates.callsign_set and not updates.is_on_duty_set then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Keine Member-Aenderung angegeben.', nil)
+    end
+
+    return updates, nil
+end
+
+local function UpdateMember(id, payload)
+    local memberId, invalid = validatePositiveInteger(id, 'id', 'Member-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local currentMember, memberError = ensureMemberExists(memberId)
+
+    if memberError then
+        return memberError
+    end
+
+    local updates
+
+    updates, invalid = validateUpdateMemberPayload(payload)
+
+    if invalid then
+        return invalid
+    end
+
+    if updates.grade_id_set then
+        local gradeInvalid = validateMemberGrade(currentMember.organization_id, updates.grade_id)
+
+        if gradeInvalid then
+            return gradeInvalid
+        end
+    end
+
+    local updateOk, affectedRows = pcall(NexaJobsCreatorDatabase.UpdateMember, memberId, updates)
+
+    if not updateOk then
+        return databaseFail('Mitglied konnte nicht aktualisiert werden.', affectedRows)
+    end
+
+    local member, reloadedError = ensureMemberExists(memberId)
+
+    if reloadedError then
+        return reloadedError
+    end
+
+    return responseOk(member, 'Mitglied wurde aktualisiert.')
+end
+
+local function RemoveMember(id)
+    local memberId, invalid = validatePositiveInteger(id, 'id', 'Member-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local _, memberError = ensureMemberExists(memberId)
+
+    if memberError then
+        return memberError
+    end
+
+    local deleteOk, affectedRows = pcall(NexaJobsCreatorDatabase.RemoveMember, memberId)
+
+    if not deleteOk then
+        return databaseFail('Mitglied konnte nicht entfernt werden.', affectedRows)
+    end
+
+    if tonumber(affectedRows) == 0 then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.memberNotFound, 'Mitglied wurde nicht gefunden.', {
+            id = memberId
+        })
+    end
+
+    return responseOk({
+        id = memberId
+    }, 'Mitglied wurde entfernt.')
+end
+
+local function SetDuty(memberId, isOnDuty)
+    local id, invalid = validatePositiveInteger(memberId, 'memberId', 'Member-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    if type(isOnDuty) ~= 'boolean' then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Duty-Status muss boolean sein.', {
+            field = 'isOnDuty'
+        })
+    end
+
+    local _, memberError = ensureMemberExists(id)
+
+    if memberError then
+        return memberError
+    end
+
+    local updateOk, affectedRows = pcall(NexaJobsCreatorDatabase.SetDuty, id, isOnDuty)
+
+    if not updateOk then
+        return databaseFail('Duty-Status konnte nicht aktualisiert werden.', affectedRows)
+    end
+
+    local member, reloadedError = ensureMemberExists(id)
+
+    if reloadedError then
+        return reloadedError
+    end
+
+    return responseOk(member, 'Duty-Status wurde aktualisiert.')
+end
+
 local function registerCallbacks()
     exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.createOrganization, function(source, payload)
         local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.createOrganization)
@@ -417,6 +1104,118 @@ local function registerCallbacks()
 
         return SetOrganizationEnabled(payload.id, payload.enabled)
     end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.createGrade, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.createGrade)
+
+        if rejected then
+            return rejected
+        end
+
+        return CreateGrade(payload)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.listGrades, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.listGrades)
+
+        if rejected then
+            return rejected
+        end
+
+        local organizationId = type(payload) == 'table' and payload.organization_id or payload
+        return ListGrades(organizationId)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.updateGrade, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.updateGrade)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        return UpdateGrade(payload.id, payload)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.deleteGrade, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.deleteGrade)
+
+        if rejected then
+            return rejected
+        end
+
+        local id = type(payload) == 'table' and payload.id or payload
+        return DeleteGrade(id)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.addMember, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.addMember)
+
+        if rejected then
+            return rejected
+        end
+
+        return AddMember(payload)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.listMembers, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.listMembers)
+
+        if rejected then
+            return rejected
+        end
+
+        local organizationId = type(payload) == 'table' and payload.organization_id or payload
+        return ListMembers(organizationId)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.updateMember, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.updateMember)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        return UpdateMember(payload.id, payload)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.removeMember, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.removeMember)
+
+        if rejected then
+            return rejected
+        end
+
+        local id = type(payload) == 'table' and payload.id or payload
+        return RemoveMember(id)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.setDuty, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.setDuty)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        local isOnDuty = payload.isOnDuty
+
+        if isOnDuty == nil then
+            isOnDuty = payload.is_on_duty
+        end
+
+        return SetDuty(payload.memberId or payload.id, isOnDuty)
+    end)
 end
 
 AddEventHandler('onResourceStart', function(resourceName)
@@ -436,3 +1235,12 @@ exports('CreateOrganization', CreateOrganization)
 exports('GetOrganization', GetOrganization)
 exports('ListOrganizations', ListOrganizations)
 exports('SetOrganizationEnabled', SetOrganizationEnabled)
+exports('CreateGrade', CreateGrade)
+exports('ListGrades', ListGrades)
+exports('UpdateGrade', UpdateGrade)
+exports('DeleteGrade', DeleteGrade)
+exports('AddMember', AddMember)
+exports('ListMembers', ListMembers)
+exports('UpdateMember', UpdateMember)
+exports('RemoveMember', RemoveMember)
+exports('SetDuty', SetDuty)
