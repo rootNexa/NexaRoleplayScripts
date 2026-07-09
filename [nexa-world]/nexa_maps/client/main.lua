@@ -15,9 +15,18 @@ local function refreshMaps()
         return
     end
 
-    local response = lib.callback.await('nexa:maps:cb:list', false, {})
+    local mapsRequest = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback('nexa:maps:cb:list', {}, function(response)
+        mapsRequest:resolve(response)
+    end, NexaMapsClient.callbackTimeoutMs)
 
-    if type(response) == 'table' and response.success and response.data ~= nil then
+    if type(request) == 'table' and request.ok == false then
+        return
+    end
+
+    local response = Citizen.Await(mapsRequest)
+
+    if type(response) == 'table' and response.ok == true and response.data ~= nil then
         applyMaps(response.data.maps or {})
     end
 end

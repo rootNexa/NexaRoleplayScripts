@@ -7,7 +7,20 @@ local function isEnabled()
 end
 
 local function buildResponse(success, code, message, data, meta, auditId)
-    return exports.nexa_api:buildResponse(success, code, message, data, meta, auditId)
+    return {
+        ok = success == true,
+        success = success == true,
+        data = data,
+        error = success == true and nil or {
+            code = code,
+            message = message,
+            details = meta
+        },
+        code = code,
+        message = message,
+        meta = meta,
+        audit_id = auditId
+    }
 end
 
 local function writeAudit(action, source, metadata)

@@ -8,7 +8,6 @@ description 'Map- und MLO-Datei-Registry fuer Nexa Roleplay'
 version '0.10.4'
 
 dependencies {
-    'ox_lib',
     'nexa_api',
     'nexa_featureflags',
     'nexa_security',
@@ -17,7 +16,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
