@@ -45,9 +45,7 @@ client_exports {
     'registerContext',
     'showContext',
     'hideContext',
-    'getOpenContextMenu',
-    'inputDialog',
-    'closeInputDialog'
+    'getOpenContextMenu'
 }
 
 server_scripts {

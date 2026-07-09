@@ -120,32 +120,4 @@ RegisterNUICallback('nexaUiMenuSelect', function(data, cb)
     })
 end)
 
-RegisterNUICallback('nexaUiContextSelect', function(data, cb)
-    traceUiVisual('NUICallback:nexaUiContextSelect')
-    cb({
-        success = NexaUiHandleContextSelect(data)
-    })
-end)
-
-RegisterNUICallback('nexaUiContextClose', function(_, cb)
-    traceUiVisual('NUICallback:nexaUiContextClose')
-    cb({
-        success = hideContext(true)
-    })
-end)
-
-RegisterNUICallback('nexaUiInputSubmit', function(data, cb)
-    traceUiVisual('NUICallback:nexaUiInputSubmit')
-    cb({
-        success = NexaUiHandleInputSubmit(data)
-    })
-end)
-
-RegisterNUICallback('nexaUiInputCancel', function(data, cb)
-    traceUiVisual('NUICallback:nexaUiInputCancel')
-    cb({
-        success = NexaUiHandleInputCancel(data)
-    })
-end)
-
 exports('confirm', confirm)
