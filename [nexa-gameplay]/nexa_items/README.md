@@ -4,13 +4,31 @@ Foundation fuer ein generisches Nexa Item-System und das spaetere Nexa Item Stud
 
 ## Ziel
 
-`nexa_items` ist die zentrale Backend-Grundlage fuer ingame erstellbare und bearbeitbare Items. Admins sollen spaeter Items erstellen, konfigurieren, deaktivieren und fuer andere Nexa-Systeme bereitstellen koennen.
+`nexa_items` ist die zentrale Grundlage fuer ingame erstellbare und bearbeitbare Items. Admins sollen spaeter Items erstellen, konfigurieren, deaktivieren und fuer andere Nexa-Systeme bereitstellen koennen.
 
-Diese Resource baut noch kein Inventory, keine UI, keine Item-Benutzung, keine Waffenlogik und keine Animationen. Sie stellt nur das serverseitige Datenmodell, Validierung, Exports und Nexa-Callbacks bereit.
+Diese Resource baut noch kein Inventory, keine Item-Benutzung, keine Waffenlogik und keine Animationen. Sie stellt das serverseitige Datenmodell, Validierung, Exports und Nexa-Callbacks bereit.
+
+## Item Studio UI Foundation
+
+Phase 1 enthaelt eine clientseitige Admin-UI-Foundation ueber NexaUI Context, NexaUI Input und NexaUI Notify. Die UI ist bewusst nur eine Bedienoberflaeche ohne Speicherung und ohne Backend-Mutationen.
+
+Commands:
+
+- `/itemstudio`
+- `/nexaitems`
+
+Vorhandene Bereiche:
+
+- Sidebar mit Dashboard, Items, Kategorien, Import, Export und Settings
+- Itemliste mit Suche, Kategoriebaum und Toolbar
+- Toolbar mit Neu, Bearbeiten, Duplizieren, Aktivieren, Deaktivieren, Loeschen, Import und Export
+- Editor-Tabs fuer Allgemein, Typ, Metadata, Use Config und Preview
+- Rechte Editor als Vorbereitung fuer spaetere Admin-Permissions
+- Preview mit Bild, Name, Beschreibung, Stack, Gewicht und Seltenheit
 
 ## Nicht Enthalten
 
-- keine UI
+- keine persistente UI-Speicherung
 - kein Inventory
 - keine Item-Benutzung
 - keine Waffenlogik
