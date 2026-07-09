@@ -1,6 +1,8 @@
 local currentPanel = nil
 local ContextRegistry = {}
 local CurrentContext = nil
+local CurrentInputDialog = nil
+local InputDialogRequestId = 0
 local identitySpawnCompletedAt = nil
 
 local function getRenderingCamState()
@@ -213,6 +215,28 @@ function getOpenContextMenu()
     return CurrentContext
 end
 
+function inputDialog(title, fields, options)
+    if type(title) ~= 'string' or type(fields) ~= 'table' then
+        return nil
+    end
+
+    InputDialogRequestId = InputDialogRequestId + 1
+    CurrentInputDialog = {
+        id = InputDialogRequestId,
+        title = title,
+        fields = fields,
+        options = options or {}
+    }
+
+    return nil
+end
+
+function closeInputDialog()
+    CurrentInputDialog = nil
+
+    return true
+end
+
 function NexaUiHandleContextSelect(data)
     local contextId = type(data) == 'table' and data.contextId or nil
     local optionIndex = type(data) == 'table' and tonumber(data.optionIndex) or nil
@@ -267,6 +291,8 @@ exports('registerContext', registerContext)
 exports('showContext', showContext)
 exports('hideContext', hideContext)
 exports('getOpenContextMenu', getOpenContextMenu)
+exports('inputDialog', inputDialog)
+exports('closeInputDialog', closeInputDialog)
 
 if NexaUiConfig.allowDemoInteractions then
     RegisterCommand('nexaui', function()
