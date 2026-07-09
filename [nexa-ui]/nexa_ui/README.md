@@ -10,6 +10,8 @@ Zentrales NEXA Design-System fuer Phase 5A.
 - Notifications
 - Confirm-Dialoge
 - einfache Menues
+- Context-Menues
+- Input-Dialoge
 - deutsche Locale
 - clientseitige Exports fuer UI-Hilfen
 
@@ -25,7 +27,6 @@ Zentrales NEXA Design-System fuer Phase 5A.
 
 ## Abhaengigkeiten
 
-- `ox_lib`
 - `nexa_config`
 - `nexa_locales`
 
@@ -38,6 +39,12 @@ Client:
 - `notify(payload)`
 - `confirm(payload, callback)`
 - `menu(payload)`
+- `registerContext(context)`
+- `showContext(id)`
+- `hideContext(force)`
+- `getOpenContextMenu()`
+- `inputDialog(title, fields, options)`
+- `closeInputDialog()`
 - `getTheme()`
 - `getLocale()`
 

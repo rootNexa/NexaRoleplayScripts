@@ -8,7 +8,6 @@ description 'Zentrales NEXA Design-System, NUI-Grundstruktur und UI-Hilfen'
 version '0.5.0'
 
 dependencies {
-    'ox_lib',
     'nexa_config',
     'nexa_locales'
 }
@@ -22,7 +21,6 @@ files {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua',
     'shared/types.lua',

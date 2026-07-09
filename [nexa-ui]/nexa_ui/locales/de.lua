@@ -7,6 +7,7 @@ NexaUiLocale = {
     cancel = 'Abbrechen',
     close = 'Schliessen',
     menuTitle = 'Auswahl',
+    inputSubmit = 'Absenden',
     panelTitle = 'NEXA',
     panelSubtitle = 'San Andreas Benutzeroberflaeche',
     emptyMenu = 'Keine Eintraege verfuegbar.',
