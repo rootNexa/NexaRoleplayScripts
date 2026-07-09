@@ -1,3 +1,0 @@
-NexaApiServer = {
-    requireContracts = true
-}

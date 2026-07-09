@@ -1,9 +1,7 @@
-function getClientStatus()
-    return {
-        resourceName = NEXA_API.resourceName,
-        version = NEXA_API.version,
-        clientApiEnabled = NexaApiClient.clientApiEnabled
-    }
-end
+AddEventHandler('onClientResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then
+        return
+    end
 
-exports('getClientStatus', getClientStatus)
+    print(('[nexa_api] client ready version %s'):format(NexaApiClient.Version))
+end)

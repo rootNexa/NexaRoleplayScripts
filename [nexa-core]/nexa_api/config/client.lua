@@ -1,3 +1,0 @@
-NexaApiClient = {
-    clientApiEnabled = true
-}
