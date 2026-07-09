@@ -7,7 +7,7 @@ Phase 10F umfasst nur:
 - NPC-Registry
 - einfache Ped-Konfiguration als Datenstruktur
 - Interaktionspunkte
-- ox_target-kompatible Grundlage
+- Nexa-eigene Interaktionsgrundlage ohne Fremd-Target-Abhaengigkeit
 - Permission-/Job-/Faction-Filter
 - deutsche und lore-freundliche Labels
 - Audit und Logging fuer Registry- und Interaktionsvalidierung

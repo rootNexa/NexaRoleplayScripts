@@ -7,7 +7,20 @@ local function isEnabled()
 end
 
 local function buildResponse(success, code, message, data, meta, auditId)
-    return exports.nexa_api:buildResponse(success, code, message, data, meta, auditId)
+    return {
+        ok = success == true,
+        success = success == true,
+        data = data,
+        error = success == true and nil or {
+            code = code,
+            message = message,
+            details = meta
+        },
+        code = code,
+        message = message,
+        meta = meta,
+        audit_id = auditId
+    }
 end
 
 local function writeAudit(action, source, metadata)
@@ -33,9 +46,12 @@ local function hasPermission(source, permission)
         return true
     end
 
-    local result = exports.nexa_api['permission.has'](source, permission)
+    local result = exports.nexa_api:HasPermission(source, permission)
 
-    return result == true or (type(result) == 'table' and result.success == true)
+    return type(result) == 'table'
+        and result.ok == true
+        and result.data ~= nil
+        and result.data.allowed == true
 end
 
 local function hasJob(source, jobName)
@@ -43,13 +59,7 @@ local function hasJob(source, jobName)
         return true
     end
 
-    local result = exports.nexa_api['job.getCharacter'](source, {})
-
-    return type(result) == 'table'
-        and result.success == true
-        and result.data ~= nil
-        and result.data.job ~= nil
-        and result.data.job.job_name == jobName
+    return false
 end
 
 local function hasFaction(source, factionName)
@@ -57,16 +67,7 @@ local function hasFaction(source, factionName)
         return true
     end
 
-    local result = exports.nexa_api['faction.getCurrent'](source, {
-        factionName = factionName
-    })
-
-    return type(result) == 'table'
-        and result.success == true
-        and result.data ~= nil
-        and result.data.membership ~= nil
-        and result.data.membership.faction ~= nil
-        and result.data.membership.faction.name == factionName
+    return false
 end
 
 local function canAccessNpc(source, npc)

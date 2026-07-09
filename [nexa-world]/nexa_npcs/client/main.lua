@@ -15,9 +15,18 @@ local function refreshNpcs()
         return
     end
 
-    local response = lib.callback.await('nexa:npcs:cb:getAvailable', false)
+    local npcsRequest = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback('nexa:npcs:cb:getAvailable', {}, function(response)
+        npcsRequest:resolve(response)
+    end, NexaNpcsClient.callbackTimeoutMs)
 
-    if type(response) == 'table' and response.success and response.data ~= nil then
+    if type(request) == 'table' and request.ok == false then
+        return
+    end
+
+    local response = Citizen.Await(npcsRequest)
+
+    if type(response) == 'table' and response.ok == true and response.data ~= nil then
         applyNpcs(response.data.npcs or {})
     end
 end

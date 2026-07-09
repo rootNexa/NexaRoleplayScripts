@@ -8,8 +8,6 @@ description 'NPC- und Interaction-Registry fuer Nexa Roleplay'
 version '0.10.5'
 
 dependencies {
-    'ox_lib',
-    'ox_target',
     'nexa_api',
     'nexa_featureflags',
     'nexa_security',
@@ -19,7 +17,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
