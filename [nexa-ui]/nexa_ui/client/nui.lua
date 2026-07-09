@@ -127,4 +127,18 @@ RegisterNUICallback('contextSelect', function(data, cb)
     })
 end)
 
+RegisterNUICallback('inputSubmit', function(data, cb)
+    traceUiVisual('NUICallback:inputSubmit')
+    cb({
+        success = NexaUiHandleInputSubmit(data)
+    })
+end)
+
+RegisterNUICallback('inputCancel', function(data, cb)
+    traceUiVisual('NUICallback:inputCancel')
+    cb({
+        success = NexaUiHandleInputCancel(data)
+    })
+end)
+
 exports('confirm', confirm)

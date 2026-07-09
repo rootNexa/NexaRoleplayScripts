@@ -60,6 +60,21 @@ local function refreshUiFocus()
     setUiFocus(currentPanel ~= nil or CurrentContext ~= nil)
 end
 
+local function resolveInputDialog(value)
+    local dialog = CurrentInputDialog
+
+    if dialog == nil or dialog.waiting ~= true then
+        return false
+    end
+
+    CurrentInputDialog = nil
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.inputClose)
+    refreshUiFocus()
+    dialog.promise:resolve(value)
+
+    return true
+end
+
 function open(payload)
     traceUiVisual('event/export:nexa_ui open before', {
         fullscreenNui = true,
@@ -225,7 +240,9 @@ function inputDialog(title, fields, options)
         id = InputDialogRequestId,
         title = title,
         fields = fields,
-        options = options or {}
+        options = options or {},
+        waiting = true,
+        promise = promise.new()
     }
 
     setUiFocus(true)
@@ -236,15 +253,27 @@ function inputDialog(title, fields, options)
         options = options or {}
     })
 
-    return nil
+    return Citizen.Await(CurrentInputDialog.promise)
 end
 
 function closeInputDialog()
-    sendUiMessage(NEXA_UI_MESSAGE_TYPES.inputClose)
-    CurrentInputDialog = nil
-    refreshUiFocus()
+    return resolveInputDialog(nil)
+end
 
-    return true
+function NexaUiHandleInputSubmit(data)
+    if type(data) ~= 'table' or CurrentInputDialog == nil or data.id ~= CurrentInputDialog.id then
+        return false
+    end
+
+    return resolveInputDialog(type(data.values) == 'table' and data.values or {})
+end
+
+function NexaUiHandleInputCancel(data)
+    if type(data) == 'table' and data.id ~= nil and CurrentInputDialog ~= nil and data.id ~= CurrentInputDialog.id then
+        return false
+    end
+
+    return resolveInputDialog(nil)
 end
 
 function NexaUiHandleContextSelect(data)

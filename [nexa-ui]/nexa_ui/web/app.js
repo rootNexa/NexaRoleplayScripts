@@ -145,11 +145,10 @@
         panelContent.append(list);
     }
 
-    function createInputPreview(field) {
+    function createInputControl(field) {
         if (field.type === 'textarea') {
             const textarea = document.createElement('textarea');
             textarea.rows = 4;
-            textarea.disabled = true;
             textarea.value = field.default || '';
             return textarea;
         }
@@ -157,14 +156,12 @@
         if (field.type === 'checkbox') {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.disabled = true;
             checkbox.checked = field.default === true;
             return checkbox;
         }
 
         if (field.type === 'select') {
             const select = document.createElement('select');
-            select.disabled = true;
 
             (field.options || []).forEach((rawOption) => {
                 const option = typeof rawOption === 'object' && rawOption !== null ? rawOption : {
@@ -186,10 +183,17 @@
 
         const input = document.createElement('input');
         input.type = field.type === 'number' ? 'number' : 'text';
-        input.disabled = true;
         input.value = field.default !== undefined ? field.default : '';
 
         return input;
+    }
+
+    function readInputValue(control, field) {
+        if (field.type === 'checkbox') {
+            return control.checked;
+        }
+
+        return control.value;
     }
 
     function renderInputDialog(payload) {
@@ -197,10 +201,11 @@
         showShell(payload.title || locale.panelTitle || 'NEXA');
         clearPanel();
 
-        const form = document.createElement('div');
+        const form = document.createElement('form');
         form.className = 'nexa-input-dialog';
+        const controls = [];
 
-        (payload.fields || []).forEach((rawField) => {
+        (payload.fields || []).forEach((rawField, index) => {
             const field = typeof rawField === 'object' && rawField !== null ? rawField : {};
             const row = document.createElement('label');
             row.className = 'nexa-field';
@@ -209,7 +214,7 @@
             label.className = 'nexa-field__label';
             label.textContent = text(field.label || field.title, 'Feld');
 
-            const control = createInputPreview(field);
+            const control = createInputControl(field);
             control.className = 'nexa-field__control';
 
             const description = document.createElement('span');
@@ -218,6 +223,40 @@
 
             row.append(label, control, description);
             form.append(row);
+            controls.push({ control, field, index });
+        });
+
+        const actions = document.createElement('div');
+        actions.className = 'nexa-actions';
+
+        const cancel = document.createElement('button');
+        cancel.className = 'nexa-button';
+        cancel.type = 'button';
+        cancel.textContent = text(payload.options && payload.options.cancelLabel, locale.cancel || 'Abbrechen');
+        cancel.addEventListener('click', () => post('inputCancel', {
+            id: payload.id
+        }));
+
+        const submit = document.createElement('button');
+        submit.className = 'nexa-button nexa-button--primary';
+        submit.type = 'submit';
+        submit.textContent = text(payload.options && payload.options.submitLabel, locale.confirm || 'Bestaetigen');
+
+        actions.append(cancel, submit);
+        form.append(actions);
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const values = [];
+
+            controls.forEach((item) => {
+                values[item.index] = readInputValue(item.control, item.field);
+            });
+
+            post('inputSubmit', {
+                id: payload.id,
+                values
+            });
         });
 
         panelContent.append(form);

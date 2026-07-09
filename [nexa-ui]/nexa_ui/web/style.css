@@ -188,13 +188,9 @@ h1 {
     font: inherit;
 }
 
-.nexa-field__control:disabled {
-    opacity: 0.85;
-}
-
 textarea.nexa-field__control {
     min-height: 96px;
-    resize: none;
+    resize: vertical;
 }
 
 input[type="checkbox"].nexa-field__control {
