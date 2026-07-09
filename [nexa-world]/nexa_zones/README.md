@@ -5,6 +5,7 @@ Zentrale Zonenverwaltung fuer Nexa Roleplay.
 Phase 10C umfasst nur:
 
 - Poly-, Box- und Sphere-Zones als Struktur
+- eigenes clientseitiges Zone-Tracking ohne Fremd-Zonenbibliothek
 - serverseitig gefilterte Zonenlisten
 - Betreten-/Verlassen-Meldungen als nicht-autoritative Client-Signale
 - serverseitige Validierung kritischer Zonenaktionen

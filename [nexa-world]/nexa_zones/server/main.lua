@@ -7,7 +7,20 @@ local function isEnabled()
 end
 
 local function buildResponse(success, code, message, data, meta, auditId)
-    return exports.nexa_api:buildResponse(success, code, message, data, meta, auditId)
+    return {
+        ok = success == true,
+        success = success == true,
+        data = data,
+        error = success == true and nil or {
+            code = code,
+            message = message,
+            details = meta
+        },
+        code = code,
+        message = message,
+        meta = meta,
+        audit_id = auditId
+    }
 end
 
 local function writeAudit(action, source, metadata)
@@ -33,9 +46,12 @@ local function hasPermission(source, permission)
         return true
     end
 
-    local result = exports.nexa_api['permission.has'](source, permission)
+    local result = exports.nexa_api:HasPermission(source, permission)
 
-    return result == true or (type(result) == 'table' and result.success == true)
+    return type(result) == 'table'
+        and result.ok == true
+        and result.data ~= nil
+        and result.data.allowed == true
 end
 
 local function canAccessZone(source, zone)
@@ -159,13 +175,24 @@ local function inSphere(coords, zone)
     return distance <= (tonumber(zone.radius) + NexaZonesServer.validationDistance)
 end
 
+local function rotatePoint(x, y, degrees)
+    local radians = math.rad(-(tonumber(degrees) or 0.0))
+    local cosValue = math.cos(radians)
+    local sinValue = math.sin(radians)
+
+    return (x * cosValue) - (y * sinValue), (x * sinValue) + (y * cosValue)
+end
+
 local function inBox(coords, zone)
     local halfX = tonumber(zone.size.x) / 2 + NexaZonesServer.validationDistance
     local halfY = tonumber(zone.size.y) / 2 + NexaZonesServer.validationDistance
     local halfZ = tonumber(zone.size.z) / 2 + NexaZonesServer.validationDistance
+    local dx = coords.x - zone.coords.x
+    local dy = coords.y - zone.coords.y
+    local localX, localY = rotatePoint(dx, dy, zone.rotation)
 
-    return math.abs(coords.x - zone.coords.x) <= halfX
-        and math.abs(coords.y - zone.coords.y) <= halfY
+    return math.abs(localX) <= halfX
+        and math.abs(localY) <= halfY
         and math.abs(coords.z - zone.coords.z) <= halfZ
 end
 

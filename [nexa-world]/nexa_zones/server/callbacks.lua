@@ -1,19 +1,34 @@
+local CALLBACK_GET_AVAILABLE = 'nexa:zones:cb:getAvailable'
+local CALLBACK_VALIDATE_CRITICAL = 'nexa:zones:cb:validateCriticalAction'
+
+local function responseFail(code, message, details)
+    return {
+        ok = false,
+        data = nil,
+        error = {
+            code = code,
+            message = message,
+            details = details
+        }
+    }
+end
+
 local function rejectRequest(source, eventName)
     if not exports.nexa_security:validateSource(source) then
-        return exports.nexa_api:buildResponse(false, 'INVALID_INPUT', 'Ungueltige Anfrage.', nil, nil, nil)
+        return responseFail('INVALID_INPUT', 'Ungueltige Anfrage.', nil)
     end
 
     local rateLimit = exports.nexa_security:checkRateLimit(source, eventName)
 
     if not rateLimit.success then
-        return exports.nexa_api:buildResponse(false, 'RATE_LIMITED', 'Bitte warte einen Moment.', nil, nil, nil)
+        return responseFail('RATE_LIMITED', 'Bitte warte einen Moment.', nil)
     end
 
     return nil
 end
 
-lib.callback.register('nexa:zones:cb:getAvailable', function(source)
-    local rejected = rejectRequest(source, 'nexa:zones:cb:getAvailable')
+exports.nexa_api:RegisterServerCallback(CALLBACK_GET_AVAILABLE, function(source)
+    local rejected = rejectRequest(source, CALLBACK_GET_AVAILABLE)
 
     if rejected ~= nil then
         return rejected
@@ -22,8 +37,8 @@ lib.callback.register('nexa:zones:cb:getAvailable', function(source)
     return exports.nexa_zones['zones.getAvailable'](source)
 end)
 
-lib.callback.register('nexa:zones:cb:validateCriticalAction', function(source, payload)
-    local rejected = rejectRequest(source, 'nexa:zones:cb:validateCriticalAction')
+exports.nexa_api:RegisterServerCallback(CALLBACK_VALIDATE_CRITICAL, function(source, payload)
+    local rejected = rejectRequest(source, CALLBACK_VALIDATE_CRITICAL)
 
     if rejected ~= nil then
         return rejected
