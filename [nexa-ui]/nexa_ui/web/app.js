@@ -120,9 +120,14 @@
 
         (context.options || []).forEach((option) => {
             const entry = document.createElement('li');
-            const item = document.createElement('div');
-            item.className = 'nexa-menu__item nexa-menu__item--static';
-            item.dataset.disabled = option.disabled === true ? 'true' : 'false';
+            const item = document.createElement('button');
+            item.className = 'nexa-menu__item';
+            item.type = 'button';
+            item.disabled = option.disabled === true;
+            item.addEventListener('click', () => post('contextSelect', {
+                contextId: context.id,
+                optionIndex: option.optionIndex
+            }));
 
             const label = document.createElement('span');
             label.className = 'nexa-menu__label';

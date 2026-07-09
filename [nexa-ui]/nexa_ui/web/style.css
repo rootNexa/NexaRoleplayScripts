@@ -148,14 +148,6 @@ h1 {
     cursor: default;
 }
 
-.nexa-menu__item--static {
-    cursor: default;
-}
-
-.nexa-menu__item--static[data-disabled="true"] {
-    opacity: 0.55;
-}
-
 .nexa-menu__label {
     display: block;
     color: var(--nexa-ink);

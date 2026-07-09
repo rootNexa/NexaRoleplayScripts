@@ -120,4 +120,11 @@ RegisterNUICallback('nexaUiMenuSelect', function(data, cb)
     })
 end)
 
+RegisterNUICallback('contextSelect', function(data, cb)
+    traceUiVisual('NUICallback:contextSelect')
+    cb({
+        success = NexaUiHandleContextSelect(data)
+    })
+end)
+
 exports('confirm', confirm)

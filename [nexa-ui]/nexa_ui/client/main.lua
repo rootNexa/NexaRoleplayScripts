@@ -55,7 +55,7 @@ local function setUiFocus(enabled)
 end
 
 local function refreshUiFocus()
-    setUiFocus(currentPanel ~= nil)
+    setUiFocus(currentPanel ~= nil or CurrentContext ~= nil)
 end
 
 function open(payload)
@@ -152,9 +152,10 @@ local function normalizeContextForDisplay(context)
     local options = {}
 
     if type(context.options) == 'table' then
-        for _, option in ipairs(context.options) do
+        for optionIndex, option in ipairs(context.options) do
             if type(option) == 'table' then
                 options[#options + 1] = {
+                    optionIndex = optionIndex,
                     title = NexaUiSanitizeText(option.title or option.label or '', 64) or '',
                     description = NexaUiSanitizeText(option.description or '', 128) or '',
                     disabled = option.disabled == true
@@ -186,6 +187,7 @@ function showContext(id)
     end
 
     CurrentContext = id
+    refreshUiFocus()
     sendUiMessage(NEXA_UI_MESSAGE_TYPES.contextOpen, {
         context = normalizeContextForDisplay(ContextRegistry[id]),
         locale = NexaUiLocale,
@@ -202,12 +204,47 @@ function hideContext(force)
 
     CurrentContext = nil
     sendUiMessage(NEXA_UI_MESSAGE_TYPES.contextClose)
+    refreshUiFocus()
 
     return true
 end
 
 function getOpenContextMenu()
     return CurrentContext
+end
+
+function NexaUiHandleContextSelect(data)
+    local contextId = type(data) == 'table' and data.contextId or nil
+    local optionIndex = type(data) == 'table' and tonumber(data.optionIndex) or nil
+
+    if CurrentContext == nil or contextId ~= CurrentContext or optionIndex == nil then
+        return false
+    end
+
+    local context = ContextRegistry[CurrentContext]
+    local option = context and type(context.options) == 'table' and context.options[optionIndex] or nil
+
+    if type(option) ~= 'table' or option.disabled == true then
+        return false
+    end
+
+    if type(option.onSelect) == 'function' then
+        option.onSelect(option.args)
+    end
+
+    if type(option.event) == 'string' and option.event ~= '' then
+        TriggerEvent(option.event, option.args)
+    end
+
+    if type(option.serverEvent) == 'string' and option.serverEvent ~= '' then
+        TriggerServerEvent(option.serverEvent, option.args)
+    end
+
+    if option.keepOpen ~= true then
+        hideContext(true)
+    end
+
+    return true
 end
 
 function NexaUiHandleCloseRequest()
@@ -238,5 +275,44 @@ if NexaUiConfig.allowDemoInteractions then
             message = 'UI-System bereit.',
             type = 'success'
         })
+    end, false)
+
+    RegisterCommand('nexaui_context', function()
+        registerContext({
+            id = 'nexa_demo_context',
+            title = 'Nexa Context',
+            options = {
+                {
+                    title = 'Lokale Aktion',
+                    description = 'Fuehrt eine lokale Auswahl aus.',
+                    onSelect = function()
+                        notify({
+                            title = 'Nexa',
+                            message = 'Context-Auswahl ausgefuehrt.',
+                            type = 'success'
+                        })
+                    end
+                },
+                {
+                    title = 'Offen halten',
+                    description = 'Diese Option schliesst das Menue nicht.',
+                    keepOpen = true,
+                    onSelect = function()
+                        notify({
+                            title = 'Nexa',
+                            message = 'Context bleibt offen.',
+                            type = 'info'
+                        })
+                    end
+                },
+                {
+                    title = 'Deaktiviert',
+                    description = 'Diese Option ist gesperrt.',
+                    disabled = true
+                }
+            }
+        })
+
+        showContext('nexa_demo_context')
     end, false)
 end
