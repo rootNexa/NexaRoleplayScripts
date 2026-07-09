@@ -148,6 +148,28 @@ function getLocale()
     return NexaUiCopyTable(NexaUiLocale)
 end
 
+local function normalizeContextForDisplay(context)
+    local options = {}
+
+    if type(context.options) == 'table' then
+        for _, option in ipairs(context.options) do
+            if type(option) == 'table' then
+                options[#options + 1] = {
+                    title = NexaUiSanitizeText(option.title or option.label or '', 64) or '',
+                    description = NexaUiSanitizeText(option.description or '', 128) or '',
+                    disabled = option.disabled == true
+                }
+            end
+        end
+    end
+
+    return {
+        id = context.id,
+        title = NexaUiSanitizeText(context.title or NexaUiLocale.menuTitle, 64) or NexaUiLocale.menuTitle,
+        options = options
+    }
+end
+
 function registerContext(context)
     if type(context) ~= 'table' or type(context.id) ~= 'string' or context.id == '' then
         return false
@@ -164,6 +186,11 @@ function showContext(id)
     end
 
     CurrentContext = id
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.contextOpen, {
+        context = normalizeContextForDisplay(ContextRegistry[id]),
+        locale = NexaUiLocale,
+        theme = getTheme()
+    })
 
     return true
 end
@@ -174,6 +201,7 @@ function hideContext(force)
     end
 
     CurrentContext = nil
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.contextClose)
 
     return true
 end

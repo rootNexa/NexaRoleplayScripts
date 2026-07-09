@@ -11,7 +11,6 @@ Zentrales NEXA Design-System fuer Phase 5A.
 - Confirm-Dialoge
 - einfache Menues
 - Context-Menues
-- Input-Dialoge
 - deutsche Locale
 - clientseitige Exports fuer UI-Hilfen
 
@@ -43,8 +42,6 @@ Client:
 - `showContext(id)`
 - `hideContext(force)`
 - `getOpenContextMenu()`
-- `inputDialog(title, fields, options)`
-- `closeInputDialog()`
 - `getTheme()`
 - `getLocale()`
 

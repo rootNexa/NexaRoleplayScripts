@@ -12,6 +12,8 @@ NEXA_UI_MESSAGE_TYPES = {
     notify = 'notify',
     confirm = 'confirm',
     menu = 'menu',
+    contextOpen = 'context_open',
+    contextClose = 'context_close',
     theme = 'theme'
 }
 

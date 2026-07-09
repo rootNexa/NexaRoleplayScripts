@@ -119,174 +119,25 @@
         list.className = 'nexa-menu';
 
         (context.options || []).forEach((option) => {
-            list.append(makeMenuButton(option, () => {
-                if (option.disabled === true) {
-                    return;
-                }
+            const entry = document.createElement('li');
+            const item = document.createElement('div');
+            item.className = 'nexa-menu__item nexa-menu__item--static';
+            item.dataset.disabled = option.disabled === true ? 'true' : 'false';
 
-                post('nexaUiContextSelect', {
-                    contextId: context.id,
-                    index: option.index
-                });
-            }));
+            const label = document.createElement('span');
+            label.className = 'nexa-menu__label';
+            label.textContent = text(option.title || option.label, locale.menuTitle || 'Auswahl');
+
+            const description = document.createElement('span');
+            description.className = 'nexa-menu__description';
+            description.textContent = text(option.description, '');
+
+            item.append(label, description);
+            entry.append(item);
+            list.append(entry);
         });
 
         panelContent.append(list);
-    }
-
-    function createInput(field) {
-        if (field.type === 'textarea') {
-            const textarea = document.createElement('textarea');
-            textarea.rows = 4;
-            textarea.value = field.default || '';
-            return textarea;
-        }
-
-        if (field.type === 'checkbox') {
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = field.default === true;
-            return checkbox;
-        }
-
-        if (field.type === 'select') {
-            const select = document.createElement('select');
-
-            (field.options || []).forEach((option) => {
-                const element = document.createElement('option');
-                element.value = option.value;
-                element.textContent = text(option.label, option.value);
-                select.append(element);
-            });
-
-            if (field.default !== undefined) {
-                select.value = field.default;
-            }
-
-            return select;
-        }
-
-        const input = document.createElement('input');
-        input.type = field.type === 'number' ? 'number' : 'text';
-        input.value = field.default !== undefined ? field.default : '';
-
-        if (field.min !== undefined && field.type === 'number') {
-            input.min = field.min;
-        }
-
-        if (field.max !== undefined && field.type === 'number') {
-            input.max = field.max;
-        }
-
-        return input;
-    }
-
-    function readInput(control, field) {
-        if (field.type === 'checkbox') {
-            return control.checked;
-        }
-
-        if (field.type === 'number') {
-            return control.value === '' ? null : Number(control.value);
-        }
-
-        return control.value;
-    }
-
-    function validateInput(value, field) {
-        if (field.required === true && (value === null || value === '' || value === false)) {
-            return false;
-        }
-
-        if (field.type === 'number' && value !== null) {
-            if (!Number.isFinite(value)) {
-                return false;
-            }
-
-            if (field.min !== undefined && value < Number(field.min)) {
-                return false;
-            }
-
-            if (field.max !== undefined && value > Number(field.max)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    function renderInputDialog(payload) {
-        const dialog = payload.dialog || {};
-        locale = payload.locale || locale;
-        showShell(dialog.title || locale.panelTitle || 'NEXA');
-        clearPanel();
-
-        const form = document.createElement('form');
-        form.className = 'nexa-form';
-        const controls = [];
-
-        (dialog.fields || []).forEach((field) => {
-            const row = document.createElement('label');
-            row.className = 'nexa-field';
-
-            const label = document.createElement('span');
-            label.className = 'nexa-field__label';
-            label.textContent = text(field.label, 'Feld');
-
-            const control = createInput(field);
-            control.className = 'nexa-field__control';
-
-            const description = document.createElement('span');
-            description.className = 'nexa-field__description';
-            description.textContent = text(field.description, '');
-
-            row.append(label, control, description);
-            form.append(row);
-            controls.push({ field, control, row });
-        });
-
-        const actions = document.createElement('div');
-        actions.className = 'nexa-actions';
-
-        const cancel = document.createElement('button');
-        cancel.className = 'nexa-button';
-        cancel.type = 'button';
-        cancel.textContent = text(dialog.cancelLabel, locale.cancel || 'Abbrechen');
-        cancel.addEventListener('click', () => post('nexaUiInputCancel', {
-            id: dialog.id
-        }));
-
-        const submit = document.createElement('button');
-        submit.className = 'nexa-button nexa-button--primary';
-        submit.type = 'submit';
-        submit.textContent = text(dialog.submitLabel, locale.inputSubmit || 'Absenden');
-
-        actions.append(cancel, submit);
-        form.append(actions);
-
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const values = [];
-
-            for (const item of controls) {
-                const value = readInput(item.control, item.field);
-
-                item.row.dataset.invalid = validateInput(value, item.field) ? 'false' : 'true';
-
-                if (item.row.dataset.invalid === 'true') {
-                    return;
-                }
-
-                values[item.field.index - 1] = value;
-            }
-
-            post('nexaUiInputSubmit', {
-                id: dialog.id,
-                values
-            });
-        });
-
-        panelContent.append(form);
     }
 
     function notify(payload) {
@@ -316,7 +167,7 @@
             showPanel(payload);
         }
 
-        if (message.type === 'closePanel' || message.type === 'context_close' || message.type === 'input_close') {
+        if (message.type === 'closePanel' || message.type === 'context_close') {
             hidePanel();
         }
 
@@ -334,10 +185,6 @@
 
         if (message.type === 'context_open') {
             renderContext(payload);
-        }
-
-        if (message.type === 'input_open') {
-            renderInputDialog(payload);
         }
     });
 
