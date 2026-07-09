@@ -3,9 +3,12 @@ RegisterNetEvent(NEXA_WORLDSTATES_EVENTS.requestResult, function(response)
         return
     end
 
-    lib.notify({
-        title = 'World States',
-        description = response.message or 'Anfrage abgeschlossen.',
-        type = response.success and 'success' or 'error'
-    })
+    local ok = response.ok == true or response.success == true
+    local message = response.message
+
+    if not message and type(response.error) == 'table' then
+        message = response.error.message
+    end
+
+    print(('[nexa_worldstates] %s %s'):format(ok and 'OK' or 'ERROR', message or 'Anfrage abgeschlossen.'))
 end)

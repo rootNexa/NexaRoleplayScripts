@@ -8,7 +8,7 @@ Phase 10A stellt den World Core bereit:
 - serverseitige Validierung
 - Rate-Limits
 - Audit und Logging
-- API-Contracts ueber `nexa_api.world`
+- Nexa-Callbacks ueber `nexa_api`
 
 Grenzen:
 
@@ -20,4 +20,4 @@ Grenzen:
 - Keine MLO-spezifische Logik.
 - Keine Gameplay-Systeme.
 
-Clients duerfen World States nie final entscheiden. Diese Resource validiert nur Anfragen und leitet sie an `nexa_api.world` weiter; Persistenz laeuft ueber `resource_settings`.
+Clients duerfen World States nie final entscheiden. Diese Resource validiert Anfragen serverseitig und haelt World States im eigenen autoritativen Runtime-Store.
