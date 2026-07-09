@@ -19,10 +19,12 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - idempotente Datenbank-Foundation fuer `organizations`
 - idempotente Datenbank-Foundation fuer `organization_grades`
 - idempotente Datenbank-Foundation fuer `organization_members`
+- idempotente Datenbank-Foundation fuer `organization_modules`
 - Typ-Konstanten fuer `police`, `ems`, `government`, `gang`, `business`, `media`
 - minimale Status- und Schema-Exports
 - serverseitige Organisations-API fuer Erstellen, Laden, Listen und Aktivieren/Deaktivieren
 - serverseitige Grade- und Member-API fuer Organisationsstruktur und Duty-Status
+- serverseitiges Modul-System fuer optionale Organisationsfunktionen
 
 ## Nicht Enthalten
 
@@ -65,6 +67,16 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - `is_on_duty`
 - `joined_at`
 
+`organization_modules`
+
+- `id`
+- `organization_id`
+- `module_name`
+- `enabled`
+- `config_json`
+- `created_at`
+- `updated_at`
+
 ## Server Exports
 
 - `CreateOrganization(payload)`
@@ -80,6 +92,11 @@ Nexa Roleplay soll keine festen Hauptsysteme wie `nexa_lspd`, `nexa_ems`, `nexa_
 - `UpdateMember(id, payload)`
 - `RemoveMember(id)`
 - `SetDuty(memberId, isOnDuty)`
+- `AssignModule(organizationId, moduleName)`
+- `RemoveModule(organizationId, moduleName)`
+- `HasModule(organizationId, moduleName)`
+- `ListModules(organizationId)`
+- `UpdateModuleConfig(organizationId, moduleName, config)`
 
 Alle API-Antworten enthalten `ok`, `success`, `code`, `message`, `data` und `meta`.
 
@@ -100,6 +117,11 @@ Die Callbacks werden ueber `nexa_api` registriert:
 - `nexa:jobscreator:cb:updateMember`
 - `nexa:jobscreator:cb:removeMember`
 - `nexa:jobscreator:cb:setDuty`
+- `nexa:jobscreator:cb:assignModule`
+- `nexa:jobscreator:cb:removeModule`
+- `nexa:jobscreator:cb:hasModule`
+- `nexa:jobscreator:cb:listModules`
+- `nexa:jobscreator:cb:updateModuleConfig`
 
 ## Organisation Payload
 
@@ -136,3 +158,31 @@ Die Callbacks werden ueber `nexa_api` registriert:
 `UpdateMember(id, payload)` akzeptiert `grade_id`, `callsign` und `is_on_duty` als optionale Aenderungen.
 
 `SetDuty(memberId, isOnDuty)` setzt nur den Duty-Status eines Mitglieds.
+
+## Module-System
+
+Organisationen besitzen keine fest eingebauten Funktionen. Stattdessen werden optionale Module pro Organisation zugewiesen.
+
+Erlaubte Module:
+
+- `mdt`
+- `dispatch`
+- `garage`
+- `storage`
+- `billing`
+- `evidence`
+- `armory`
+- `medical`
+- `documents`
+- `radio`
+- `impound`
+
+`AssignModule(organizationId, moduleName)` weist ein erlaubtes Modul zu. Pro Organisation kann jedes Modul nur einmal existieren.
+
+`RemoveModule(organizationId, moduleName)` entfernt die Modulzuweisung.
+
+`HasModule(organizationId, moduleName)` gibt zurueck, ob die Organisation das Modul aktiv besitzt.
+
+`ListModules(organizationId)` listet alle Module der Organisation.
+
+`UpdateModuleConfig(organizationId, moduleName, config)` speichert eine Tabellen-Konfiguration als JSON in `config_json`.

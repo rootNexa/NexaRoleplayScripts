@@ -57,10 +57,29 @@ CREATE TABLE IF NOT EXISTS organization_members (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ]]
 
+local createModulesTable = [[
+CREATE TABLE IF NOT EXISTS organization_modules (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id INT UNSIGNED NOT NULL,
+    module_name VARCHAR(64) NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    config_json JSON NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_organization_modules_name (organization_id, module_name),
+    KEY idx_organization_modules_enabled (organization_id, enabled),
+    CONSTRAINT fk_organization_modules_organization
+        FOREIGN KEY (organization_id) REFERENCES organizations (id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+]]
+
 local migrations = {
     createOrganizationsTable,
     createGradesTable,
-    createMembersTable
+    createMembersTable,
+    createModulesTable
 }
 
 function NexaJobsCreatorDatabase.Migrate()
@@ -103,6 +122,15 @@ function NexaJobsCreatorDatabase.GetSchema()
             'callsign',
             'is_on_duty',
             'joined_at'
+        },
+        organization_modules = {
+            'id',
+            'organization_id',
+            'module_name',
+            'enabled',
+            'config_json',
+            'created_at',
+            'updated_at'
         }
     }
 end
@@ -332,5 +360,73 @@ function NexaJobsCreatorDatabase.SetDuty(memberId, isOnDuty)
     ]], {
         isOnDuty and 1 or 0,
         memberId
+    })
+end
+
+function NexaJobsCreatorDatabase.InsertModule(payload)
+    return MySQL.insert.await([[
+        INSERT INTO organization_modules (organization_id, module_name, enabled, config_json)
+        VALUES (?, ?, ?, ?)
+    ]], {
+        payload.organization_id,
+        payload.module_name,
+        payload.enabled and 1 or 0,
+        payload.config_json
+    })
+end
+
+function NexaJobsCreatorDatabase.GetModule(organizationId, moduleName)
+    return MySQL.single.await([[
+        SELECT id, organization_id, module_name, enabled, config_json, created_at, updated_at
+        FROM organization_modules
+        WHERE organization_id = ? AND module_name = ?
+        LIMIT 1
+    ]], {
+        organizationId,
+        moduleName
+    })
+end
+
+function NexaJobsCreatorDatabase.GetModuleById(id)
+    return MySQL.single.await([[
+        SELECT id, organization_id, module_name, enabled, config_json, created_at, updated_at
+        FROM organization_modules
+        WHERE id = ?
+        LIMIT 1
+    ]], {
+        id
+    })
+end
+
+function NexaJobsCreatorDatabase.ListModules(organizationId)
+    return MySQL.query.await([[
+        SELECT id, organization_id, module_name, enabled, config_json, created_at, updated_at
+        FROM organization_modules
+        WHERE organization_id = ?
+        ORDER BY module_name ASC, id ASC
+    ]], {
+        organizationId
+    })
+end
+
+function NexaJobsCreatorDatabase.RemoveModule(organizationId, moduleName)
+    return MySQL.update.await([[
+        DELETE FROM organization_modules
+        WHERE organization_id = ? AND module_name = ?
+    ]], {
+        organizationId,
+        moduleName
+    })
+end
+
+function NexaJobsCreatorDatabase.UpdateModuleConfig(organizationId, moduleName, configJson)
+    return MySQL.update.await([[
+        UPDATE organization_modules
+        SET config_json = ?
+        WHERE organization_id = ? AND module_name = ?
+    ]], {
+        configJson,
+        organizationId,
+        moduleName
     })
 end

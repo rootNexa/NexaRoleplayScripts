@@ -72,7 +72,8 @@ local function getStatus()
         version = NEXA_JOBSCREATOR.version,
         migrated = migrated,
         organizationTypes = NexaJobsCreatorSupportedTypes,
-        mdtTypes = NexaJobsCreatorMdtTypes
+        mdtTypes = NexaJobsCreatorMdtTypes,
+        modules = NEXA_JOBSCREATOR_MODULES
     }
 end
 
@@ -82,6 +83,10 @@ end
 
 local function isSupportedMdtType(mdtType)
     return type(mdtType) == 'string' and NexaJobsCreatorMdtTypes[mdtType] == true
+end
+
+local function isSupportedModule(moduleName)
+    return type(moduleName) == 'string' and NEXA_JOBSCREATOR_MODULES[moduleName] == true
 end
 
 local function normalizeString(value)
@@ -170,6 +175,20 @@ local function normalizeMemberRow(row)
     if row.is_on_duty ~= nil then
         row.is_on_duty = row.is_on_duty == true or tonumber(row.is_on_duty) == 1
     end
+
+    return row
+end
+
+local function normalizeModuleRow(row)
+    if type(row) ~= 'table' then
+        return row
+    end
+
+    if row.enabled ~= nil then
+        row.enabled = row.enabled == true or tonumber(row.enabled) == 1
+    end
+
+    row.config_json = decodeJsonField(row.config_json)
 
     return row
 end
@@ -1059,6 +1078,272 @@ local function SetDuty(memberId, isOnDuty)
     return responseOk(member, 'Duty-Status wurde aktualisiert.')
 end
 
+local function validateModuleName(moduleName)
+    moduleName = normalizeSlug(moduleName)
+
+    if not moduleName then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Modulname fehlt.', {
+            field = 'moduleName'
+        })
+    end
+
+    if not isSupportedModule(moduleName) then
+        return nil, responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Modul ist nicht erlaubt.', {
+            field = 'moduleName',
+            value = moduleName
+        })
+    end
+
+    return moduleName, nil
+end
+
+local function encodeModuleConfig(config)
+    if config == nil then
+        config = {}
+    end
+
+    return encodeJsonField(config)
+end
+
+local function getModule(organizationId, moduleName)
+    local ok, module = pcall(NexaJobsCreatorDatabase.GetModule, organizationId, moduleName)
+
+    if not ok then
+        return nil, databaseFail('Organisationsmodul konnte nicht geladen werden.', module)
+    end
+
+    return normalizeModuleRow(module), nil
+end
+
+local function AssignModule(organizationId, moduleName)
+    local id, invalid = validatePositiveInteger(organizationId, 'organizationId', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local normalizedModule
+    normalizedModule, invalid = validateModuleName(moduleName)
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local existing, existingError = getModule(id, normalizedModule)
+
+    if existingError then
+        return existingError
+    end
+
+    if existing then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.moduleExists, 'Modul ist der Organisation bereits zugewiesen.', {
+            organization_id = id,
+            module_name = normalizedModule
+        })
+    end
+
+    local configJson
+    configJson, invalid = encodeModuleConfig({})
+
+    if invalid then
+        return invalid
+    end
+
+    local insertOk, moduleId = pcall(NexaJobsCreatorDatabase.InsertModule, {
+        organization_id = id,
+        module_name = normalizedModule,
+        enabled = true,
+        config_json = configJson
+    })
+
+    if not insertOk then
+        return databaseFail('Modul konnte nicht zugewiesen werden.', moduleId)
+    end
+
+    local ok, module = pcall(NexaJobsCreatorDatabase.GetModuleById, moduleId)
+
+    if not ok then
+        return databaseFail('Modul wurde zugewiesen, konnte aber nicht geladen werden.', module)
+    end
+
+    return responseOk(normalizeModuleRow(module), 'Modul wurde zugewiesen.')
+end
+
+local function RemoveModule(organizationId, moduleName)
+    local id, invalid = validatePositiveInteger(organizationId, 'organizationId', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local normalizedModule
+    normalizedModule, invalid = validateModuleName(moduleName)
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local existing, existingError = getModule(id, normalizedModule)
+
+    if existingError then
+        return existingError
+    end
+
+    if not existing then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.moduleNotFound, 'Modul wurde nicht gefunden.', {
+            organization_id = id,
+            module_name = normalizedModule
+        })
+    end
+
+    local deleteOk, affectedRows = pcall(NexaJobsCreatorDatabase.RemoveModule, id, normalizedModule)
+
+    if not deleteOk then
+        return databaseFail('Modul konnte nicht entfernt werden.', affectedRows)
+    end
+
+    if tonumber(affectedRows) == 0 then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.moduleNotFound, 'Modul wurde nicht gefunden.', {
+            organization_id = id,
+            module_name = normalizedModule
+        })
+    end
+
+    return responseOk({
+        organization_id = id,
+        module_name = normalizedModule
+    }, 'Modul wurde entfernt.')
+end
+
+local function HasModule(organizationId, moduleName)
+    local id, invalid = validatePositiveInteger(organizationId, 'organizationId', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local normalizedModule
+    normalizedModule, invalid = validateModuleName(moduleName)
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local module, moduleError = getModule(id, normalizedModule)
+
+    if moduleError then
+        return moduleError
+    end
+
+    return responseOk({
+        organization_id = id,
+        module_name = normalizedModule,
+        hasModule = module ~= nil and module.enabled == true,
+        module = module
+    }, 'Modulstatus wurde geladen.')
+end
+
+local function ListModules(organizationId)
+    local id, invalid = validatePositiveInteger(organizationId, 'organizationId', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local ok, modules = pcall(NexaJobsCreatorDatabase.ListModules, id)
+
+    if not ok then
+        return databaseFail('Module konnten nicht geladen werden.', modules)
+    end
+
+    for _, module in ipairs(modules or {}) do
+        normalizeModuleRow(module)
+    end
+
+    return responseOk(modules or {}, 'Module wurden geladen.', {
+        count = #(modules or {})
+    })
+end
+
+local function UpdateModuleConfig(organizationId, moduleName, config)
+    local id, invalid = validatePositiveInteger(organizationId, 'organizationId', 'Organisations-ID ist ungueltig.')
+
+    if invalid then
+        return invalid
+    end
+
+    local normalizedModule
+    normalizedModule, invalid = validateModuleName(moduleName)
+
+    if invalid then
+        return invalid
+    end
+
+    local _, missingOrganization = ensureOrganizationExists(id)
+
+    if missingOrganization then
+        return missingOrganization
+    end
+
+    local existing, existingError = getModule(id, normalizedModule)
+
+    if existingError then
+        return existingError
+    end
+
+    if not existing then
+        return responseFail(NEXA_JOBSCREATOR_ERRORS.moduleNotFound, 'Modul wurde nicht gefunden.', {
+            organization_id = id,
+            module_name = normalizedModule
+        })
+    end
+
+    local configJson
+    configJson, invalid = encodeModuleConfig(config)
+
+    if invalid then
+        return invalid
+    end
+
+    local updateOk, affectedRows = pcall(NexaJobsCreatorDatabase.UpdateModuleConfig, id, normalizedModule, configJson)
+
+    if not updateOk then
+        return databaseFail('Modul-Konfiguration konnte nicht aktualisiert werden.', affectedRows)
+    end
+
+    local module, moduleError = getModule(id, normalizedModule)
+
+    if moduleError then
+        return moduleError
+    end
+
+    return responseOk(module, 'Modul-Konfiguration wurde aktualisiert.')
+end
+
 local function registerCallbacks()
     exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.createOrganization, function(source, payload)
         local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.createOrganization)
@@ -1216,6 +1501,73 @@ local function registerCallbacks()
 
         return SetDuty(payload.memberId or payload.id, isOnDuty)
     end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.assignModule, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.assignModule)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        return AssignModule(payload.organizationId or payload.organization_id, payload.moduleName or payload.module_name)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.removeModule, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.removeModule)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        return RemoveModule(payload.organizationId or payload.organization_id, payload.moduleName or payload.module_name)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.hasModule, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.hasModule)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        return HasModule(payload.organizationId or payload.organization_id, payload.moduleName or payload.module_name)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.listModules, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.listModules)
+
+        if rejected then
+            return rejected
+        end
+
+        local organizationId = type(payload) == 'table' and (payload.organizationId or payload.organization_id) or payload
+        return ListModules(organizationId)
+    end)
+
+    exports.nexa_api:RegisterServerCallback(NEXA_JOBSCREATOR_CALLBACKS.updateModuleConfig, function(source, payload)
+        local rejected = rejectCallbackRequest(source, NEXA_JOBSCREATOR_CALLBACKS.updateModuleConfig)
+
+        if rejected then
+            return rejected
+        end
+
+        if type(payload) ~= 'table' then
+            return responseFail(NEXA_JOBSCREATOR_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
+        end
+
+        return UpdateModuleConfig(payload.organizationId or payload.organization_id, payload.moduleName or payload.module_name, payload.config)
+    end)
 end
 
 AddEventHandler('onResourceStart', function(resourceName)
@@ -1244,3 +1596,8 @@ exports('ListMembers', ListMembers)
 exports('UpdateMember', UpdateMember)
 exports('RemoveMember', RemoveMember)
 exports('SetDuty', SetDuty)
+exports('AssignModule', AssignModule)
+exports('RemoveModule', RemoveModule)
+exports('HasModule', HasModule)
+exports('ListModules', ListModules)
+exports('UpdateModuleConfig', UpdateModuleConfig)
