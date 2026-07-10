@@ -335,3 +335,25 @@ Vorgefundene Validierungs-/Testressourcen:
 - `[nexa-core]/nexa-lib/shared/validate.lua`
 
 Es wurde kein allgemeiner lokaler Testbefehl fuer das komplette Repository gefunden. FXServer-Starttests bleiben fuer Runtime-Validierung notwendig.
+
+## Chapter 05 Player State
+
+`nexa_playerstate` is the gameplay lifecycle owner.
+
+Direct dependencies:
+
+- `nexa-core`
+- `nexa_identity`
+- `nexa_characters`
+
+Allowed downstream dependency:
+
+- `nexa_admin -> nexa_playerstate`
+
+Forbidden dependencies:
+
+- `nexa-core -> nexa_playerstate`
+- `nexa_identity -> nexa_playerstate`
+- `nexa_characters -> nexa_playerstate`
+
+`nexa-spawn` remains a deprecated development helper and must not be treated as the production spawn lifecycle owner.
