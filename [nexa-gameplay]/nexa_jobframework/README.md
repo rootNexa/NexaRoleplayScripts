@@ -53,3 +53,7 @@ Es trennt temporaere Job-Sessions klar von Organisationsmitgliedschaft und Duty 
 ## Security
 
 Der Client darf nur technische Beobachtungen melden. Character, Session, Phase, Task, Route, Resource Node und Reward werden serverseitig aus Definitionen und aktuellem Runtime-State geprueft.
+
+## Sessions, Groups und Progress
+
+Sessions werden pro Character gebunden und verhindern doppelte aktive Auftraege. Gruppen sind als Foundation mit Leader, Invite und Membership-Kontext vorbereitet. Progress laeuft ueber `Progress.Get`, `Progress.Apply`, `Progress.SetValidated` und `Progress.Complete`; alle Pfade schreiben serverseitige Audit- und Event-Kontexte statt Clientwerte ungeprueft zu uebernehmen.
