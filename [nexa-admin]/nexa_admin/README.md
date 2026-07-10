@@ -1,68 +1,95 @@
 # nexa_admin
 
-Admin-Core-Grundstruktur fuer Nexa Roleplay.
+Server-authoritative admin foundation for Nexa Roleplay.
 
-Phase 11A umfasst:
+## Purpose
 
-- Admin-Rollen und Admin-Permissions als serverseitige Struktur
-- minimale Admin-Menue-Grundstruktur ueber ox_lib
-- Spieleruebersicht
-- sichere Admin-Aktions-Contracts ohne Ausfuehrung kritischer Aktionen
-- Audit und Logging fuer Admin-Zugriffe und Contract-Validierungen
-- Rate-Limits und Featureflag
+`nexa_admin` owns the technical foundation for admin actions:
 
-Nicht enthalten:
+- warnings
+- kicks
+- temporary and permanent bans
+- unbans
+- teleport, bring, goto and return
+- freeze
+- admin heal and revive recovery
+- spectate state
+- noclip state
+- admin notes
+- action audit
+- command and export adapters
 
-- Tickets
-- Teleport
-- Ban-System
-- Anticheat
-- Devtools
+It does not provide a full NUI admin menu in this chapter.
 
-Phase 11B ergaenzt:
+## Dependencies
 
-- Report erstellen
-- eigene Reports anzeigen
-- Reports mit Admin-Permission anzeigen
-- Reports annehmen
-- Reports schliessen
-- Report-Historie
+- `nexa-core`
+- `nexa_identity`
+- `nexa_characters`
+- `nexa_permissions`
+- `nexa_api`
 
-Reports sind serverseitige Laufzeitdaten in `nexa_admin`. Spieler sehen nur eigene Reports. Admins sehen, bearbeiten und schliessen Reports nur mit expliziten Admin-Permissions. Jede Admin-Reportaktion wird auditierbar protokolliert.
+No legacy framework bridge, old UI library dependency or direct database-driver usage is allowed.
 
-Spieler koennen Reports ueber den eigenen Report-Command erstellen und ihre eigenen Reports anzeigen. Das Admin-Menue bleibt Admins mit `admin.menu` vorbehalten.
+## Security Model
 
-Phase 11C ergaenzt:
+- All actions are checked server-side.
+- Commands and callbacks are thin adapters.
+- Client events only apply server-approved effects.
+- Mutating actions require reasons.
+- Duty-gated actions use `nexa_permissions` admin-duty state.
+- Actor source is always the real FiveM source.
+- Bans are account-based; identifiers are enforcement references only.
 
-- `/ticket`
-- Ticket-Grund
-- Ticketliste fuer Admins
-- Ticketstatus
-- Ticketzuweisung
-- Ticket schliessen
+## Canonical Exports
 
-Tickets sind serverseitige Laufzeitdaten in `nexa_admin`. Spieler koennen Tickets erstellen. Admins sehen, weisen zu und schliessen Tickets nur mit expliziten `admin.tickets.*` Permissions. Discord-Tickets, Webpanel, Anticheat und Ban-System sind nicht enthalten.
+- `WarnPlayer(actorSource, targetSource, reason)`
+- `KickPlayer(actorSource, targetSource, reason)`
+- `BanPlayer(actorSource, targetSourceOrAccountId, reason, durationMinutes)`
+- `UnbanPlayer(actorSource, banId, reason)`
+- `GoToPlayer(actorSource, targetSource)`
+- `BringPlayer(actorSource, targetSource)`
+- `ReturnPlayer(actorSource, targetSource)`
+- `SetPlayerFrozen(actorSource, targetSource, state, reason)`
+- `HealPlayer(actorSource, targetSource, reason)`
+- `RevivePlayer(actorSource, targetSource, reason)`
+- `StartSpectate(actorSource, targetSource)`
+- `StopSpectate(actorSource)`
+- `StartNoclip(actorSource)`
+- `StopNoclip(actorSource)`
+- `CreateAdminNote(actorSource, target, payload)`
+- `ListAdminNotes(actorSource, target)`
+- `GetAdminActionState(source)`
+- `ResolveConnection(identityContext)`
+- `IsAccountBanned(accountId)`
+- `ListActions()`
 
-Phase 11D ergaenzt:
+## Commands
 
-- Warn
-- Kick
-- Tempban-Vorbereitung
-- Spieler einfrieren und freigeben
-- Spectate-Vorbereitung
-- Admin-Notizen
+- `/warn`
+- `/kick`
+- `/tempban`
+- `/ban`
+- `/unban`
+- `/goto`
+- `/bring`
+- `/return`
+- `/freeze`
+- `/unfreeze`
+- `/heal`
+- `/revive`
+- `/spectate`
+- `/specoff`
+- `/noclip`
+- `/adminduty`
 
-Moderationsaktionen laufen ausschliesslich ueber serverseitige `admin.moderation.*` Contracts. Jede Aktion wird auditierbar protokolliert und rate-limitiert. Tempban und Spectate sind nur vorbereitete, auditierte Strukturen; ein vollstaendiges Anticheat-Ban-System, Screenshot-System, Executor Detection und Devtools sind nicht enthalten.
+Commands call the domain exports and do not contain core business logic.
 
-Phase 11E ergaenzt:
+## Migration
 
-- Bring
-- GoTo
-- Return
-- Koordinaten-Teleport
-- Admin-Heal-Vorbereitung
-- Admin-Revive-Vorbereitung
+Migration `040_admin_foundation` creates:
 
-Admin-Utilities laufen ausschliesslich ueber serverseitige `admin.utility.*` Contracts mit Permission, Audit und Rate-Limit. Teleports werden serverseitig autorisiert und nur als freigegebene Client-Wirkung ausgefuehrt. Admin-Heal und Admin-Revive sind vorbereitete, auditierte Utilities; EMS-Logik, vollstaendige Revive-Systeme, Godmode-Systeme, Anticheat und Devtools sind nicht enthalten.
-
-Der Client darf Adminrechte nur fuer Anzeigezwecke anfragen. Jede Adminfunktion wird serverseitig ueber `nexa_permissions`, `nexa_security`, `nexa_audit` und `nexa_api` validiert. Die Resource nutzt keine direkten Client-DB-Zugriffe und startet keine Production-Devtools.
+- `nexa_admin_warnings`
+- `nexa_admin_bans`
+- `nexa_admin_notes`
+- `nexa_admin_actions`
