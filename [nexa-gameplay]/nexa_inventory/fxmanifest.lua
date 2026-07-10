@@ -13,7 +13,8 @@ dependencies {
     'nexa_characters',
     'nexa_playerstate',
     'nexa_permissions',
-    'nexa_api'
+    'nexa_api',
+    'nexa_items'
 }
 
 shared_scripts {

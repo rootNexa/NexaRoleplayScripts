@@ -15,33 +15,7 @@ NexaInventoryConfig = {
     maxInventoryTypeLength = 32,
     maxOwnerTypeLength = 32,
     maxSnapshotDistance = 4.0,
-    transferDistance = 3.0,
-    internalCatalog = {
-        water = {
-            name = 'water',
-            label = 'Water',
-            weight = 500,
-            stackable = true,
-            max_stack = 10,
-            usable = true
-        },
-        bread = {
-            name = 'bread',
-            label = 'Bread',
-            weight = 250,
-            stackable = true,
-            max_stack = 10,
-            usable = true
-        },
-        radio = {
-            name = 'radio',
-            label = 'Radio',
-            weight = 750,
-            stackable = false,
-            max_stack = 1,
-            usable = true
-        }
-    }
+    transferDistance = 3.0
 }
 
 NexaInventoryTypes = {

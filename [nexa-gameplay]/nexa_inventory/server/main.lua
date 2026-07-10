@@ -267,29 +267,29 @@ local function itemDefinition(itemName)
         return nil, fail(NEXA_INVENTORY_ERRORS.itemDefinitionNotFound, 'Item name is invalid.')
     end
 
-    if GetResourceState('nexa_items') == 'started' then
-        local itemOk, itemResponse = pcall(function()
-            return exports.nexa_items:GetItem(itemName)
-        end)
-
-        if itemOk and type(itemResponse) == 'table' and itemResponse.success == true and type(itemResponse.data) == 'table' then
-            local item = itemResponse.data
-            return {
-                name = item.name,
-                label = item.label,
-                weight = tonumber(item.weight) or 0,
-                stackable = item.stackable == true,
-                max_stack = tonumber(item.max_stack) or 1,
-                usable = item.usable == true,
-                metadata = item.metadata or {}
-            }, nil
-        end
+    if GetResourceState('nexa_items') ~= 'started' then
+        return nil, fail(NEXA_INVENTORY_ERRORS.itemDefinitionNotFound, 'nexa_items is not ready.')
     end
 
-    local fallback = NexaInventoryConfig.internalCatalog[itemName]
+    local itemOk, itemResponse = pcall(function()
+        return exports.nexa_items:GetItemDefinition(itemName)
+    end)
 
-    if fallback then
-        return fallback, nil
+    if itemOk and type(itemResponse) == 'table' and itemResponse.success == true and type(itemResponse.data) == 'table' then
+        local item = itemResponse.data
+        return {
+            name = item.name,
+            label = item.label,
+            weight = tonumber(item.weight) or 0,
+            stackable = item.stackable == true,
+            max_stack = tonumber(item.max_stack) or 1,
+            usable = item.usable == true,
+            quickslot_allowed = item.quickslot_allowed == true,
+            droppable = item.droppable == true,
+            tradeable = item.tradeable == true,
+            container_allowed = item.container_allowed == true,
+            metadata = item.default_metadata or {}
+        }, nil
     end
 
     return nil, fail(NEXA_INVENTORY_ERRORS.itemDefinitionNotFound, 'Item definition not found.', {

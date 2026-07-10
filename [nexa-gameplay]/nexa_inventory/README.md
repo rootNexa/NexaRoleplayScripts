@@ -29,9 +29,7 @@ Legacy tables `inventories` and `inventory_items` are not deleted or migrated au
 
 ## Item Definitions
 
-When `nexa_items` is started, item definitions are resolved through `exports.nexa_items:GetItem(name)`.
-
-If `nexa_items` is unavailable, a tiny internal transition catalog is available for `water`, `bread` and `radio`. This fallback is documented migration debt and must not grow into a second item system.
+Item definitions are resolved exclusively through `exports.nexa_items:GetItemDefinition(name)`. If `nexa_items` is unavailable or not ready, item mutations fail clearly instead of falling back to a second catalog.
 
 ## Exports
 
