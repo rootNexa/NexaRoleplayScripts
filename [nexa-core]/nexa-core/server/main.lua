@@ -77,7 +77,7 @@ AddEventHandler('playerJoining', function()
 end)
 
 RegisterCommand('nexa_core_status', function(source)
-    if source ~= 0 and not Nexa.Permissions.Has(source, 'admin.core.status') then
+    if source ~= 0 and not Nexa.Permissions.Has(source, 'nexa.admin.core.status') then
         return
     end
 

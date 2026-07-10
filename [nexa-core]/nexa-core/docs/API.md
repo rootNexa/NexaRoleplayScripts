@@ -273,7 +273,7 @@ Prueft serverseitig, ob ein Spieler eine Permission besitzt.
 Parameter:
 
 - `source` (`number|string`): FiveM-Source
-- `permission` (`string`): Permission im Format `domain.action`
+- `permission` (`string`): Permission im Format `nexa.<bereich>.<aktion>`
 
 Rueckgabe:
 
@@ -282,7 +282,7 @@ Rueckgabe:
 Beispiel:
 
 ```lua
-if not exports['nexa-core']:HasPermission(source, 'admin.core.status') then
+if not exports['nexa-core']:HasPermission(source, 'nexa.admin.core.status') then
     return false, 'NO_PERMISSION'
 end
 ```
@@ -297,6 +297,20 @@ Sicherheit:
 
 - Permission-Entscheidungen duerfen nicht vom Client uebernommen werden.
 - Sichtbare UI-Rechte sind nur Komfort, keine Autoritaet.
+
+Interne Permission-API:
+
+- `Nexa.Permissions.Has(subject, permission, context)`
+- `Nexa.Permissions.GetAll(subject)`
+- `Nexa.Permissions.AssignRole(subject, role)`
+- `Nexa.Permissions.RemoveRole(subject, role)`
+- `Nexa.Permissions.Grant(subject, permission)`
+- `Nexa.Permissions.Deny(subject, permission)`
+- `Nexa.Permissions.Revoke(subject, permission)`
+- `Nexa.Permissions.Invalidate(subject)`
+- `Nexa.Permissions.GetDecisionTrace(subject, permission)`
+
+Details stehen in `docs/architecture/core-permissions.md`.
 
 ### `GetIdentifier(source)`
 
@@ -473,7 +487,7 @@ if not character then
     return false, 'CHARACTER_NOT_LOADED'
 end
 
-if not exports['nexa-core']:HasPermission(source, 'example.use') then
+if not exports['nexa-core']:HasPermission(source, 'nexa.example.use') then
     return false, 'NO_PERMISSION'
 end
 

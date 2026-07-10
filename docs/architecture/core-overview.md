@@ -20,7 +20,7 @@ Der Core soll die serverautoritative Basis liefern, auf der Gameplay-, UI-, Admi
 - Charaktere laden, erstellen, auswaehlen und aktualisieren.
 - Charakterbesitz serverseitig pruefen.
 - Core-Callbacks und Core-Events bereitstellen.
-- Einfache Permission-Fallbacks ueber ACE und `nexa_permissions`-Tabelle anbieten.
+- Technische Permission-Foundation mit Rollen, Vererbung, Allow/Deny, Cache, Audit und optionalem ACE-Fallback bereitstellen.
 - Eine interne `Nexa.Database`-Abstraktion ueber `oxmysql` kapseln.
 
 `nexa_core` ist damit Session- und Character-Core, nicht Gameplay-Core.
@@ -182,7 +182,8 @@ Nexa ist serverautoritativ auszubauen. Der aktuelle Core liefert dafuer bereits 
 - Clientdaten werden nicht als autoritative Identitaet oder Permission akzeptiert.
 - Core-Callbacks haben Request-IDs, Pending-Status, Timeout und Cooldown.
 - `nexa_security` stellt Rate-Limits, Source-Validierung, Rejects, Reports, Ban-Status und Recent-Reports bereit.
-- `nexa_permissions` prueft Rollen, Regeln, Wildcards und ACE-Fallbacks.
+- `nexa-core` prueft Core-Permissions serverseitig mit Rollen, Regeln, Wildcards, Deny-Vorrang und ACE-Fallback.
+- `nexa_permissions` bleibt als dedizierte Permission-Resource erhalten, bis die Zielarchitektur vollstaendig vereinheitlicht ist.
 - Sicherheitsrelevante Ereignisse sollen an `nexa_audit` und `nexa_logs` gehen.
 - Core-Logs laufen ueber `Nexa.Logger` mit strukturierten Entries, Sanitizing und Adapter-Schnittstelle.
 
@@ -219,7 +220,21 @@ Die Core-Dokumentation nennt:
 
 Details stehen in `docs/architecture/core-database.md`.
 
-### Permission Tabellen
+### Core Permission Tabellen
+
+`nexa-core` besitzt jetzt eine technische Permission-Foundation:
+
+- `nexa_permission_roles`
+- `nexa_permission_role_permissions`
+- `nexa_permission_role_inheritance`
+- `nexa_permission_subject_roles`
+- `nexa_permission_subject_permissions`
+
+Die alte Core-Tabelle `nexa_permissions` bleibt als Legacy-Account-Fallback erhalten.
+
+Details stehen in `docs/architecture/core-permissions.md`.
+
+### Dedizierte Permission-Resource
 
 `nexa_permissions` besitzt eigene Tabellen und nutzt direkt `oxmysql`, weil die Core-DB-Abstraktion nicht allgemein exportiert ist:
 

@@ -102,7 +102,11 @@ function Nexa.Players.Register(source)
 
     Nexa.Players.bySource[source] = player
     Nexa.Players.byIdentifier[player.identifier] = player
-    Nexa.Permissions.Load(player.id)
+    Nexa.Permissions.Load({
+        type = 'account',
+        id = player.id,
+        source = source
+    })
     Nexa.Audit('player.session_started', source, {
         player_id = player.id
     })
@@ -135,7 +139,11 @@ function Nexa.Players.Drop(source, reason)
         reason = reason
     })
 
-    Nexa.Permissions.cache[player.id] = nil
+    Nexa.Permissions.Invalidate({
+        type = 'account',
+        id = player.id,
+        source = source
+    })
     Nexa.Players.byIdentifier[player.identifier] = nil
     Nexa.Players.bySource[source] = nil
 
