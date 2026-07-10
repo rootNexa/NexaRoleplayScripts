@@ -1,153 +1,78 @@
 # nexa_inventory
 
-Foundation fuer ein serverautoratives Nexa Inventar-System.
+Server-authoritative Nexa inventory foundation.
 
-## Ziel
+## Scope
 
-`nexa_inventory` verwaltet Inventare und Inventar-Items als Backend-Grundlage. Die Resource ist bewusst klein gehalten und nutzt `nexa_items` als Quelle fuer Item-Definitionen.
+`nexa_inventory` owns inventories, slots, item instances, stack amounts, weight, quickslots, containers, drops, locks, transfers and audit. It does not own item definitions; `nexa_items` remains the preferred definition source.
 
-Diese Phase baut noch keine UI, kein Drag and Drop, keinen Shop-Kauf, kein Crafting, kein Loot, kein Drop-System und keine Item-Benutzung. Mutationen laufen serverseitig ueber Exports und Nexa-Callbacks.
+No UI, no drag and drop, no item use, no shops, no crafting and no weapon gameplay are implemented in this chapter.
 
-## Grenzen
+## Defaults
 
-- keine UI
-- kein Inventory-Frontend
-- kein Drag and Drop
-- kein Shop-Kauf
-- kein Crafting
-- kein Loot
-- kein Drop-System
-- keine Item-Benutzung
-- keine QBCore/Qbox/ESX-Bridges
-- keine fremde Inventory-Resource
+- Character inventory: 30 slots.
+- Character carrying capacity: 30,000 grams.
+- Quickslots: 5.
+- Drop lifetime: 300 seconds.
+- Container nesting: forbidden.
 
-## Owner Types
+## Tables
 
-Erlaubte `owner_type` Werte:
+Migration `060_inventory_foundation` creates:
 
-- `player`
-- `character`
-- `vehicle`
-- `organization`
-- `storage`
-- `shop`
-- `drop`
-- `container`
-- `custom`
+- `nexa_inventories`
+- `nexa_inventory_items`
+- `nexa_inventory_quickslots`
+- `nexa_inventory_audit`
 
-Der Owner beschreibt, wem oder welchem System ein Inventar gehoert. Fuer Spielerinventare soll langfristig `character` bevorzugt werden, damit Inventare sauber an Charaktere statt an technische Player-Sessions gebunden sind.
+Legacy tables `inventories` and `inventory_items` are not deleted or migrated automatically.
 
-## Tabellen
+## Item Definitions
 
-`inventories`
+When `nexa_items` is started, item definitions are resolved through `exports.nexa_items:GetItem(name)`.
 
-- `id`
-- `owner_type`
-- `owner_id`
-- `label`
-- `max_weight`
-- `max_slots`
-- `metadata_json`
-- `created_at`
-- `updated_at`
+If `nexa_items` is unavailable, a tiny internal transition catalog is available for `water`, `bread` and `radio`. This fallback is documented migration debt and must not grow into a second item system.
 
-`inventory_items`
+## Exports
 
-- `id`
-- `inventory_id`
-- `item_name`
-- `slot`
-- `amount`
-- `metadata_json`
-- `created_at`
-- `updated_at`
+- `GetInventory(inventoryIdOrType, ownerType, ownerId)`
+- `GetCharacterInventory(characterIdOrSource)`
+- `GetItem(inventoryId, slot)` or `GetItem(inventoryItemId)`
+- `GetItems(inventoryId)`
+- `HasItem(inventoryId, itemName, amount)`
+- `CanCarry(inventoryId, itemName, amount, metadata)`
+- `AddItem(inventoryId, itemName, amount, metadata, context)`
+- `RemoveItem(inventoryId, itemReference, amount, context)`
+- `MoveItem(inventoryId, fromSlot, toSlot, amount, context)`
+- `TransferItem(sourceInventoryId, targetInventoryId, itemReference, amount, context)`
+- `GetWeight(inventoryId)`
+- `GetLimits(inventoryId)`
+- `AssignQuickslot(characterId, quickslot, itemReference, context)`
+- `ClearQuickslot(characterId, quickslot, context)`
+- `CreateContainer(itemInstance, definition, context)`
+- `CreateDrop(sourceInventoryId, itemReference, amount, position, context)`
 
-## Item-Quelle
+Legacy foundation exports remain as delegating compatibility:
 
-`item_name` wird gegen `nexa_items:GetItem(item_name)` geprueft, falls `nexa_items` gestartet ist. Damit bleibt `nexa_items` die zentrale Quelle fuer Item-Definitionen, waehrend `nexa_inventory` nur Besitz, Menge, Slot und Instanz-Metadaten speichert.
+- `CreateInventory`
+- `ListInventoryItems`
+- `SetItemAmount`
+- `ClearInventory`
 
-## JSON Felder
+## Security
 
-`inventories.metadata_json` speichert Inventar-Eigenschaften.
+Clients do not create items, choose authoritative amounts, define weights, set arbitrary metadata, or open foreign inventories by ID. Network callbacks bind to the actual FiveM source and resolve the active character server-side.
 
-Beispiele:
+Mutations require a context with reason/correlation data and write audit entries to `nexa_inventory_audit`.
 
-- Storage-Typ
-- Zugriffskontext
-- Organisationsbezug
-- Fahrzeugdaten
-- Custom Flags
+## Runtime Tests
 
-`inventory_items.metadata_json` speichert Instanzdaten eines Items.
+Development-only runtime tests live in `[nexa-tests]/nexa-inventory-runtime-tests`.
 
-Beispiele:
+Command:
 
-- Seriennummer
-- Haltbarkeit
-- Qualitaet
-- Besitzer
-- Dokumentdaten
-- Custom JSON
+```text
+nexa_test_inventory_runtime [suite]
+```
 
-## Server Exports
-
-- `GetInventory(ownerType, ownerId)`
-- `CreateInventory(payload)`
-- `ListInventoryItems(inventoryId)`
-- `AddItem(payload)`
-- `RemoveItem(payload)`
-- `SetItemAmount(inventoryItemId, amount)`
-- `MoveItem(payload)`
-- `ClearInventory(inventoryId)`
-
-Alle Antworten enthalten `ok`, `success`, `code`, `message`, `data` und `meta`.
-
-## Callbacks
-
-Die Callbacks werden ueber `nexa_api` registriert:
-
-- `nexa:inventory:cb:getInventory`
-- `nexa:inventory:cb:listItems`
-- `nexa:inventory:cb:addItem`
-- `nexa:inventory:cb:removeItem`
-- `nexa:inventory:cb:moveItem`
-
-Clients duerfen damit keine vertrauenswuerdigen Aenderungen erzwingen. Spaetere Gameplay-Ressourcen muessen serverseitig entscheiden, ob eine Mutation erlaubt ist.
-
-## Payloads
-
-`CreateInventory(payload)` erwartet:
-
-- `owner_type`: Pflicht, erlaubter Owner Type
-- `owner_id`: Pflicht, String
-- `label`: optional, String
-- `max_weight`: optional, Zahl >= 0
-- `max_slots`: optional, Zahl >= 0
-- `metadata`: optional, Tabelle, wird als JSON gespeichert
-
-`AddItem(payload)` erwartet:
-
-- `inventory_id`: Pflicht
-- `item_name`: Pflicht, wird gegen `nexa_items` geprueft, falls verfuegbar
-- `slot`: optional, Zahl >= 1
-- `amount`: optional, Zahl >= 1
-- `metadata`: optional, Tabelle, wird als JSON gespeichert
-
-`RemoveItem(payload)` erwartet:
-
-- `inventory_item_id` oder `id`: Pflicht
-- `amount`: Pflicht, Zahl >= 1
-
-`MoveItem(payload)` erwartet:
-
-- `inventory_item_id` oder `id`: Pflicht
-- `target_inventory_id` oder `inventory_id`: Pflicht
-- `slot`: optional, Zahl >= 1
-
-## Permission Vorbereitung
-
-Mutierende Callback-Aktionen koennen ueber `NexaInventoryConfig.requireAdminPermissionForMutations` abgesichert werden. Die vorbereitete Permission ist:
-
-- `nexa.inventory.manage`
-
-Direkte Server-Exports bleiben serverseitige Integrationspunkte und muessen von aufrufenden Ressourcen verantwortungsvoll genutzt werden.
+Live FXServer suites are documented as open unless actually executed in a running server.

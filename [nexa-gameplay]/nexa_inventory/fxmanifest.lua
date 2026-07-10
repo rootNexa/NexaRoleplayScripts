@@ -4,14 +4,16 @@ lua54 'yes'
 
 name 'nexa_inventory'
 author 'Nexa Roleplay'
-description 'Foundation fuer serverautoritative Inventare'
-version '0.1.0'
+description 'Server-authoritative Nexa inventory foundation'
+version '0.2.0'
 
 dependencies {
-    'oxmysql',
-    'nexa_api',
-    'nexa_logs',
-    'nexa_items'
+    'nexa-core',
+    'nexa_identity',
+    'nexa_characters',
+    'nexa_playerstate',
+    'nexa_permissions',
+    'nexa_api'
 }
 
 shared_scripts {
@@ -20,7 +22,31 @@ shared_scripts {
 }
 
 server_scripts {
-    '@oxmysql/lib/MySQL.lua',
     'server/database.lua',
     'server/main.lua'
+}
+
+server_exports {
+    'GetInventory',
+    'GetCharacterInventory',
+    'GetItem',
+    'GetItems',
+    'HasItem',
+    'CanCarry',
+    'AddItem',
+    'RemoveItem',
+    'MoveItem',
+    'TransferItem',
+    'GetWeight',
+    'GetLimits',
+    'AssignQuickslot',
+    'ClearQuickslot',
+    'CreateContainer',
+    'CreateDrop',
+    'CreateInventory',
+    'ListInventoryItems',
+    'SetItemAmount',
+    'ClearInventory',
+    'CheckInventory',
+    'RecalculateWeight'
 }
