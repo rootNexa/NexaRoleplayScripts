@@ -8,3 +8,5 @@ Known real Nexa diagnostics from this chapter:
 - no `nexa_crafting` resource existed
 
 The fix is resource-level architecture cleanup, not global warning suppression.
+
+Workspace settings now declare common FiveM globals for Lua diagnostics. This reduces false positives in Nexa resources while keeping undefined project symbols and real syntax/manifest issues visible. Built-in `[cfx]` resources remain untouched.
