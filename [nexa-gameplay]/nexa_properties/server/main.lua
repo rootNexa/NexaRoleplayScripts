@@ -13,6 +13,7 @@ PropertyStorage = {}
 PropertyWardrobes = {}
 PropertyGarages = {}
 Furniture = {}
+local FurnitureDefinitions = {}
 PropertyAdmin = {}
 PropertyCreator = {}
 
@@ -188,7 +189,8 @@ function PropertyWardrobes.CanAccess(actor, propertyId, wardrobeKey) return ok({
 function PropertyGarages.Get(propertyId) local property = Properties.Get(propertyId); return property.ok and ok({ property_id = propertyId, garage_id = property.data.garage_id }, 'Property garage loaded.') or property end
 function PropertyGarages.ListVehicles(actor, propertyId) local garage = PropertyGarages.Get(propertyId); if not garage.ok or not garage.data.garage_id then return ok({}, 'Property has no garage.') end; return exports['nexa_garages']:GetStoredVehicles(garage.data.garage_id) end
 
-function Furniture.Place(source, propertyId, furnitureName, transform, context) context = actorContext(context or { source = source }, 'property.furniture.place'); transform = type(transform) == 'table' and transform or {}; local id, err = NexaPropertiesDatabase.InsertFurniture({ property_id = normalizeId(propertyId), model = normalizeString(furnitureName, 64), position = transform.position or {}, rotation = transform.rotation or {}, scale = transform.scale or {}, state = {}, placed_by = context.actor_character_id, status = 'active', metadata = transform.metadata or {} }); if err then return fail(NEXA_PROPERTY_ERRORS.databaseError, 'Furniture could not be placed.', err) end; local result = ok({ furniture_id = id, property_id = normalizeId(propertyId) }, 'Furniture placed.'); audit('property.furniture.place', context, result, { property_id = normalizeId(propertyId) }); return result end
+function Furniture.RegisterDefinition(definition, actor) definition = type(definition) == 'table' and definition or {}; local name = normalizeString(definition.name or definition.model, 64); if not name then return fail(NEXA_PROPERTY_ERRORS.invalidInput, 'Furniture definition is invalid.') end; FurnitureDefinitions[name] = { name = name, model = normalizeString(definition.model or name, 64), label = normalizeString(definition.label or name, 128), category = normalizeString(definition.category or 'custom', 64), bounds = definition.bounds or {}, status = definition.status or 'active', metadata = definition.metadata or {} }; return ok(FurnitureDefinitions[name], 'Furniture definition registered.') end
+function Furniture.Place(source, propertyId, furnitureName, transform, context) context = actorContext(context or { source = source }, 'property.furniture.place'); transform = type(transform) == 'table' and transform or {}; local definition = FurnitureDefinitions[furnitureName] or { model = furnitureName }; local id, err = NexaPropertiesDatabase.InsertFurniture({ property_id = normalizeId(propertyId), model = normalizeString(definition.model, 64), position = transform.position or {}, rotation = transform.rotation or {}, scale = transform.scale or {}, state = {}, placed_by = context.actor_character_id, status = 'active', metadata = transform.metadata or {} }); if err then return fail(NEXA_PROPERTY_ERRORS.databaseError, 'Furniture could not be placed.', err) end; local result = ok({ furniture_id = id, property_id = normalizeId(propertyId) }, 'Furniture placed.'); audit('property.furniture.place', context, result, { property_id = normalizeId(propertyId) }); return result end
 function Furniture.Move(source, propertyId, furnitureId, transform, context) context = actorContext(context or { source = source }, 'property.furniture.move'); NexaPropertiesDatabase.UpdateFurniture(normalizeId(furnitureId), transform or {}); local result = ok({ furniture_id = normalizeId(furnitureId), property_id = normalizeId(propertyId) }, 'Furniture moved.'); audit('property.furniture.move', context, result, { property_id = normalizeId(propertyId) }); return result end
 function Furniture.Remove(source, propertyId, furnitureId, reason) local context = actorContext({ source = source, reason = reason }, 'property.furniture.remove'); NexaPropertiesDatabase.RemoveFurniture(normalizeId(furnitureId)); local result = ok({ furniture_id = normalizeId(furnitureId) }, 'Furniture removed.'); audit('property.furniture.remove', context, result, { property_id = normalizeId(propertyId) }); return result end
 function Furniture.List(propertyId) local rows, err = NexaPropertiesDatabase.ListFurniture(normalizeId(propertyId)); return err and fail(NEXA_PROPERTY_ERRORS.databaseError, 'Furniture could not be listed.', err) or ok(rows or {}, 'Furniture listed.') end
@@ -228,6 +230,7 @@ function GetPropertyWardrobes(...) return PropertyWardrobes.Get(...) end
 function CanUsePropertyWardrobe(...) return PropertyWardrobes.CanAccess(...) end
 function GetPropertyGarage(...) return PropertyGarages.Get(...) end
 function ListPropertyVehicles(...) return PropertyGarages.ListVehicles(...) end
+function RegisterFurnitureDefinition(...) return Furniture.RegisterDefinition(...) end
 function PlaceFurniture(...) return Furniture.Place(...) end
 function MoveFurniture(...) return Furniture.Move(...) end
 function RemoveFurniture(...) return Furniture.Remove(...) end
@@ -274,6 +277,7 @@ exports('GetPropertyWardrobes', GetPropertyWardrobes)
 exports('CanUsePropertyWardrobe', CanUsePropertyWardrobe)
 exports('GetPropertyGarage', GetPropertyGarage)
 exports('ListPropertyVehicles', ListPropertyVehicles)
+exports('RegisterFurnitureDefinition', RegisterFurnitureDefinition)
 exports('PlaceFurniture', PlaceFurniture)
 exports('MoveFurniture', MoveFurniture)
 exports('RemoveFurniture', RemoveFurniture)

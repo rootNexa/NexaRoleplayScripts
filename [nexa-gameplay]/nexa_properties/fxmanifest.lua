@@ -59,6 +59,7 @@ server_exports {
     'CanUsePropertyWardrobe',
     'GetPropertyGarage',
     'ListPropertyVehicles',
+    'RegisterFurnitureDefinition',
     'PlaceFurniture',
     'MoveFurniture',
     'RemoveFurniture',

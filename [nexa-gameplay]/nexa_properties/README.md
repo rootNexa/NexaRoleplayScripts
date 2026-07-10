@@ -7,3 +7,5 @@ No UI is included. Money movement must go through `nexa_economy`, inventory stor
 Sales, lease and rent APIs expose quotes, buy/sell, lease creation/termination, rent payment, due processing and overdue marking. The foundation records the economy dependency and keeps money mutation outside this resource.
 
 Storage, wardrobe and garage APIs resolve server-owned links only. Storage access is prepared for `nexa_inventory`, garages call `nexa_garages`, and wardrobe access validates the property permission boundary.
+
+Furniture foundation supports in-memory furniture definitions plus persisted placed furniture transforms. Bounds validation is represented by definition metadata and can be tightened when visual placement UI arrives.
