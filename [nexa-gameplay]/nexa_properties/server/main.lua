@@ -195,9 +195,11 @@ function Furniture.Move(source, propertyId, furnitureId, transform, context) con
 function Furniture.Remove(source, propertyId, furnitureId, reason) local context = actorContext({ source = source, reason = reason }, 'property.furniture.remove'); NexaPropertiesDatabase.RemoveFurniture(normalizeId(furnitureId)); local result = ok({ furniture_id = normalizeId(furnitureId) }, 'Furniture removed.'); audit('property.furniture.remove', context, result, { property_id = normalizeId(propertyId) }); return result end
 function Furniture.List(propertyId) local rows, err = NexaPropertiesDatabase.ListFurniture(normalizeId(propertyId)); return err and fail(NEXA_PROPERTY_ERRORS.databaseError, 'Furniture could not be listed.', err) or ok(rows or {}, 'Furniture listed.') end
 
-function PropertyAdmin.SetStatus(actor, propertyId, status, reason) return Properties.UpdateStatus(propertyId, status, actor, reason) end
+function PropertyAdmin.SetStatus(actor, propertyId, status, reason) if not normalizeString(reason or (type(actor) == 'table' and actor.reason), 255) then return fail(NEXA_PROPERTY_ERRORS.reasonRequired, 'Reason is required.') end; return Properties.UpdateStatus(propertyId, status, actor, reason) end
 function PropertyCreator.CreateDefinition(definition, actor) return PropertyDefinitions.Create(definition, actor) end
 function PropertyCreator.PublishDefinition(id, actor) return PropertyDefinitions.Activate(id, actor) end
+function PropertyCreator.DisableDefinition(id, actor, reason) if not normalizeString(reason or (type(actor) == 'table' and actor.reason), 255) then return fail(NEXA_PROPERTY_ERRORS.reasonRequired, 'Reason is required.') end; return PropertyDefinitions.Disable(id, actor, reason) end
+function PropertyCreator.ArchiveDefinition(id, actor, reason) if not normalizeString(reason or (type(actor) == 'table' and actor.reason), 255) then return fail(NEXA_PROPERTY_ERRORS.reasonRequired, 'Reason is required.') end; return PropertyDefinitions.Archive(id, actor, reason) end
 
 function GetProperty(...) return Properties.Get(...) end
 function GetPropertyByNumber(...) return Properties.GetByNumber(...) end
@@ -238,6 +240,8 @@ function ListFurniture(...) return Furniture.List(...) end
 function AdminSetPropertyStatus(...) return PropertyAdmin.SetStatus(...) end
 function CreatorCreateDefinition(...) return PropertyCreator.CreateDefinition(...) end
 function CreatorPublishDefinition(...) return PropertyCreator.PublishDefinition(...) end
+function CreatorDisableDefinition(...) return PropertyCreator.DisableDefinition(...) end
+function CreatorArchiveDefinition(...) return PropertyCreator.ArchiveDefinition(...) end
 
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
@@ -285,5 +289,7 @@ exports('ListFurniture', ListFurniture)
 exports('AdminSetPropertyStatus', AdminSetPropertyStatus)
 exports('CreatorCreateDefinition', CreatorCreateDefinition)
 exports('CreatorPublishDefinition', CreatorPublishDefinition)
+exports('CreatorDisableDefinition', CreatorDisableDefinition)
+exports('CreatorArchiveDefinition', CreatorArchiveDefinition)
 exports('getStatus', function() return { resourceName = NEXA_PROPERTIES.resourceName, version = NEXA_PROPERTIES.version, migrated = migrated, propertyTypes = PropertyTypes.List() } end)
 exports('getSchema', NexaPropertiesDatabase.GetSchema)

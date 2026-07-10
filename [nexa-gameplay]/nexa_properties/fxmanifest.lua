@@ -67,6 +67,8 @@ server_exports {
     'AdminSetPropertyStatus',
     'CreatorCreateDefinition',
     'CreatorPublishDefinition',
+    'CreatorDisableDefinition',
+    'CreatorArchiveDefinition',
     'getStatus',
     'getSchema'
 }
