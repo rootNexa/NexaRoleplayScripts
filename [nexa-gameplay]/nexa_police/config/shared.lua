@@ -1,10 +1,11 @@
 NexaPoliceConfig = {
     autoMigrate = true,
     defaultSearchReason = 'police_action',
+    maxSentenceMinutes = 720,
     agencies = {
-        lspd = 'LSPD',
-        sheriff = 'Sheriff',
-        government = 'Government',
-        fbi = 'Federal Bureau'
+        police = 'San Andreas Police',
+        sheriff = 'San Andreas Sheriff',
+        government = 'Government Security',
+        federal = 'Federal Investigations'
     }
 }
