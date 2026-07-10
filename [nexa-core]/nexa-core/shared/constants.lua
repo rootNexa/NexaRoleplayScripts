@@ -9,6 +9,13 @@ NEXA_CONSTANTS = {
     serverEvents = {
         selectCharacter = 'nexa:core:server:selectCharacter'
     },
+    internalEvents = {
+        coreReady = 'nexa:internal:core:ready',
+        coreFailed = 'nexa:internal:core:failed',
+        coreStopping = 'nexa:internal:core:stopping',
+        sessionCreated = 'nexa:internal:session:created',
+        sessionRemoved = 'nexa:internal:session:removed'
+    },
     callbacks = {
         getSession = 'nexa:core:cb:getSession',
         getCharacters = 'nexa:core:cb:getCharacters',

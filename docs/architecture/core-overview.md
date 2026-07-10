@@ -244,6 +244,7 @@ Aktuelle Muster:
 
 - Core Client Events: `nexa:core:client:playerLoaded`, `nexa:core:client:characterSelected`, `nexa:core:client:characterUnloaded`
 - Core Server Events: `nexa:core:server:selectCharacter`
+- Interne Server-Events: `nexa:internal:<bereich>:<ereignis>` ueber `Nexa.EventBus`
 - Moderne Callbacks: `nexa:<resource>:cb:<action>`
 - Resource Events: `nexa:<domain>:<side>:<action>` oder Konstanten in `shared/constants.lua`
 - NUI Callbacks in UI-Ressourcen fuer lokale Browserinteraktion
@@ -254,6 +255,8 @@ Unerwuenschte Altlasten:
 - `QBCore:Client:OnPlayerLoaded`
 - Qbox Spawn-/Apartment-Events in der Kompatibilitaetsresource
 - ox_lib Callback-Registrierung und Await-Calls
+
+Der interne Event-Bus ersetzt keine FiveM-Netzwerk-Events. Details stehen in `docs/architecture/core-eventbus.md`.
 
 ## Abhaengigkeitsregeln
 

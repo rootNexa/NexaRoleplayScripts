@@ -107,6 +107,16 @@ function Nexa.Players.Register(source)
         player_id = player.id
     })
 
+    if Nexa.EventBus then
+        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.sessionCreated, {
+            source = source,
+            player = sanitizePlayer(player)
+        }, {
+            module = 'players',
+            source = source
+        })
+    end
+
     TriggerClientEvent(Nexa.Constants.events.playerLoaded, source, sanitizePlayer(player))
     return player, nil
 end
@@ -128,6 +138,17 @@ function Nexa.Players.Drop(source, reason)
     Nexa.Permissions.cache[player.id] = nil
     Nexa.Players.byIdentifier[player.identifier] = nil
     Nexa.Players.bySource[source] = nil
+
+    if Nexa.EventBus then
+        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.sessionRemoved, {
+            source = source,
+            playerId = player.id,
+            reason = reason
+        }, {
+            module = 'players',
+            source = source
+        })
+    end
 end
 
 function Nexa.Players.Get(source)

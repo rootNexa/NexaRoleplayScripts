@@ -129,6 +129,15 @@ local function fail(reason, context)
         Nexa.Lifecycle.failureReason = reason
     end
 
+    if Nexa.EventBus then
+        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.coreFailed, {
+            reason = reason,
+            context = context
+        }, {
+            module = 'lifecycle'
+        })
+    end
+
     runHooks(states.failed)
     return false, reason
 end
@@ -364,6 +373,16 @@ function Nexa.Bootstrap.Start()
         return fail('READY_HOOK_FAILED', hookErr)
     end
 
+    if Nexa.EventBus then
+        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.coreReady, {
+            version = Nexa.Version,
+            environment = Nexa.Config.GetEnvironment(),
+            startTimestamp = Nexa.Lifecycle.GetStartTimestamp()
+        }, {
+            module = 'lifecycle'
+        })
+    end
+
     Nexa.Log('info', 'Nexa Framework Foundation gestartet.', {
         version = Nexa.Version,
         environment = Nexa.Config.environment,
@@ -388,6 +407,14 @@ function Nexa.Bootstrap.Stop(reason)
 
     if not transitioned then
         return false, transitionErr
+    end
+
+    if Nexa.EventBus then
+        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.coreStopping, {
+            reason = reason
+        }, {
+            module = 'lifecycle'
+        })
     end
 
     local hooksOk, hookErr = runHooks(states.stopping)

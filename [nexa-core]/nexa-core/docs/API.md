@@ -159,6 +159,19 @@ Intern stellt `nexa-core` `Nexa.Database` bereit:
 
 Alle Queries muessen parameterisiert sein. Fehler werden als stabile Fehlerobjekte erzeugt und nicht ungefiltert an Clients weitergegeben. Migrationen laufen beim Bootstrap ueber `Nexa.Database.RunMigrations()`.
 
+## Internal Event Bus
+
+Intern stellt `nexa-core` `Nexa.EventBus` fuer serverinterne Kommunikation bereit:
+
+- `Nexa.EventBus.On(name, callback, options)`
+- `Nexa.EventBus.Once(name, callback, options)`
+- `Nexa.EventBus.Off(subscriptionId)`
+- `Nexa.EventBus.Emit(name, payload, context)`
+- `Nexa.EventBus.HasListeners(name)`
+- `Nexa.EventBus.GetListenerCount(name)`
+
+Interne Events muessen dem Muster `nexa:internal:<bereich>:<ereignis>` folgen. Der Event-Bus ersetzt keine Client/Server-Netzwerk-Events.
+
 ## Exports
 
 ### `GetPlayer(source)`
