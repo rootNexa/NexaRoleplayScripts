@@ -224,6 +224,8 @@ function RemoveResident(...) return Residents.Remove(...) end
 function UpdateResidentPermissions(...) return Residents.UpdatePermissions(...) end
 function GetPropertyStorage(...) return PropertyStorage.Get(...) end
 function OpenPropertyStorage(...) return PropertyStorage.Open(...) end
+function GetPropertyWardrobes(...) return PropertyWardrobes.Get(...) end
+function CanUsePropertyWardrobe(...) return PropertyWardrobes.CanAccess(...) end
 function GetPropertyGarage(...) return PropertyGarages.Get(...) end
 function ListPropertyVehicles(...) return PropertyGarages.ListVehicles(...) end
 function PlaceFurniture(...) return Furniture.Place(...) end
@@ -268,6 +270,8 @@ exports('RemoveResident', RemoveResident)
 exports('UpdateResidentPermissions', UpdateResidentPermissions)
 exports('GetPropertyStorage', GetPropertyStorage)
 exports('OpenPropertyStorage', OpenPropertyStorage)
+exports('GetPropertyWardrobes', GetPropertyWardrobes)
+exports('CanUsePropertyWardrobe', CanUsePropertyWardrobe)
 exports('GetPropertyGarage', GetPropertyGarage)
 exports('ListPropertyVehicles', ListPropertyVehicles)
 exports('PlaceFurniture', PlaceFurniture)

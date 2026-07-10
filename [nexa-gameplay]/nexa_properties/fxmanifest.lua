@@ -55,6 +55,8 @@ server_exports {
     'UpdateResidentPermissions',
     'GetPropertyStorage',
     'OpenPropertyStorage',
+    'GetPropertyWardrobes',
+    'CanUsePropertyWardrobe',
     'GetPropertyGarage',
     'ListPropertyVehicles',
     'PlaceFurniture',
