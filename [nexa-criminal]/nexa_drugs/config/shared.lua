@@ -1,21 +1,8 @@
 NexaDrugsConfig = {
-    featureFlag = 'phase9c.drugs',
-    crops = {
-        weed = 'Gruene Pflanze'
-    },
-    recipes = {
-        weed_bag = 'Abgepackte Ware'
-    },
-    buyers = {
-        {
-            buyerId = 'southside_contact',
-            label = 'Southside Kontakt',
-            items = { 'weed_bag' }
-        },
-        {
-            buyerId = 'sandy_contact',
-            label = 'Sandy Kontakt',
-            items = { 'weed_bag' }
-        }
-    }
+    autoMigrate = true,
+    autoRegisterDefaults = true,
+    defaultGrowSeconds = 3600,
+    defaultProcessingSeconds = 900,
+    qualityMin = 1,
+    qualityMax = 100
 }

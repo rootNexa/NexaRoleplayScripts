@@ -1,3 +1,0 @@
-NexaDrugsClient = {
-    enableOxContext = true
-}
