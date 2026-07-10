@@ -44,6 +44,8 @@ server_exports {
     'RegisterCraftingStation',
     'GrantRecipeKnowledge',
     'RevokeRecipeKnowledge',
+    'CalculateCraftingQuality',
+    'ValidateCraftingTools',
     'getStatus',
     'getSchema'
 }

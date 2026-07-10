@@ -113,6 +113,8 @@ function UpdateRecipe(...) return Recipes.Update(...) end
 function RegisterCraftingStation(...) return CraftingStations.Register(...) end
 function GrantRecipeKnowledge(...) return RecipeKnowledge.Grant(...) end
 function RevokeRecipeKnowledge(...) return RecipeKnowledge.Revoke(...) end
+function CalculateCraftingQuality(...) return CraftingQuality.Calculate(...) end
+function ValidateCraftingTools(...) return CraftingTools.Validate(...) end
 
 AddEventHandler('onResourceStart', function(resourceName) if resourceName ~= GetCurrentResourceName() then return end; registerDefaultTypes(); if NexaCraftingConfig.autoMigrate then migrated = NexaCraftingDatabase.Migrate() == true end; log('Info', 'crafting.start', 'nexa_crafting started.', { migrated = migrated }) end)
 
@@ -131,5 +133,7 @@ exports('UpdateRecipe', UpdateRecipe)
 exports('RegisterCraftingStation', RegisterCraftingStation)
 exports('GrantRecipeKnowledge', GrantRecipeKnowledge)
 exports('RevokeRecipeKnowledge', RevokeRecipeKnowledge)
+exports('CalculateCraftingQuality', CalculateCraftingQuality)
+exports('ValidateCraftingTools', ValidateCraftingTools)
 exports('getStatus', function() return { resourceName = NEXA_CRAFTING.resourceName, version = NEXA_CRAFTING.version, migrated = migrated, craftingTypes = CraftingTypes.List() } end)
 exports('getSchema', NexaCraftingDatabase.GetSchema)
