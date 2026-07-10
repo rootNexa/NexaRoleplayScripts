@@ -113,6 +113,23 @@ Diese Funktionen sind bewusst interne Core-Schnittstellen und noch keine eigenst
 
 Wenn der Core nicht `ready` ist, geben geschuetzte Exports keine fachlichen Daten zurueck. Schreibende Exports liefern dann `nil, 'CORE_NOT_READY'`; Permission-Checks liefern `false`.
 
+## Logging
+
+Intern stellt `nexa-core` `Nexa.Logger` bereit:
+
+- `Nexa.Logger.Debug(category, message, context)`
+- `Nexa.Logger.Info(category, message, context)`
+- `Nexa.Logger.Warn(category, message, context)`
+- `Nexa.Logger.Error(category, message, context)`
+- `Nexa.Logger.Audit(category, message, context)`
+- `Nexa.Logger.Security(category, message, context)`
+- `Nexa.Logger.WithContext(context)`
+- `Nexa.Logger.SetLevel(level)`
+
+Der Logger erzeugt strukturierte Eintraege mit Zeitstempel, Level, Resource, Modul, Kategorie, Nachricht und optionalen Metadaten. Sensitive Werte wie Passwoerter, Tokens, Secrets, Authorization-Daten und vollstaendige IP-Adressen werden maskiert. Zyklische oder sehr grosse Tabellen werden begrenzt.
+
+`Nexa.Log(level, message, context)` bleibt als kompatibler Kurzweg erhalten.
+
 ## Exports
 
 ### `GetPlayer(source)`

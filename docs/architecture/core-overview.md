@@ -184,8 +184,17 @@ Nexa ist serverautoritativ auszubauen. Der aktuelle Core liefert dafuer bereits 
 - `nexa_security` stellt Rate-Limits, Source-Validierung, Rejects, Reports, Ban-Status und Recent-Reports bereit.
 - `nexa_permissions` prueft Rollen, Regeln, Wildcards und ACE-Fallbacks.
 - Sicherheitsrelevante Ereignisse sollen an `nexa_audit` und `nexa_logs` gehen.
+- Core-Logs laufen ueber `Nexa.Logger` mit strukturierten Entries, Sanitizing und Adapter-Schnittstelle.
 
 Wichtig: Einige Legacy-Ressourcen nutzen noch ox_lib-Callbacks, direkte Events oder QBCore-Kompatibilitaetsereignisse. Diese muessen auf `nexa_api` und serverseitige Validierung migriert werden.
+
+## Loggingmodell
+
+`nexa-core` stellt intern `Nexa.Logger` bereit. Unterstuetzt werden `debug`, `info`, `warn`, `error`, `audit` und `security`. Jeder Eintrag enthaelt Zeitstempel, Level, Resource, Modul, Kategorie, Nachricht, optionalen Kontext, optionale Source, Character-ID und Correlation-ID.
+
+Sensitive Daten werden maskiert, Tabellen werden begrenzt serialisiert, zyklische Strukturen werden abgefangen und Adapterfehler werden isoliert. Der bestehende Kurzweg `Nexa.Log(level, message, context)` bleibt fuer Core-Module kompatibel und schreibt ebenfalls strukturierte Eintraege.
+
+Details stehen in `docs/architecture/core-logging.md`.
 
 ## Datenbankmodell
 
