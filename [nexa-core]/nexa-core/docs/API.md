@@ -51,11 +51,8 @@ Callbacks verwenden ein einheitliches Response-Objekt:
 
 ```lua
 {
-    success = true,
-    code = 'OK',
-    message = 'Session geladen.',
-    data = {},
-    meta = nil
+    ok = true,
+    data = {}
 }
 ```
 
@@ -63,11 +60,11 @@ Fehlerbeispiel:
 
 ```lua
 {
-    success = false,
-    code = 'NOT_FOUND',
-    message = 'Spieler nicht geladen.',
-    data = nil,
-    meta = nil
+    ok = false,
+    error = {
+        code = 'NOT_FOUND',
+        message = 'Spieler nicht geladen.'
+    }
 }
 ```
 
@@ -171,6 +168,21 @@ Intern stellt `nexa-core` `Nexa.EventBus` fuer serverinterne Kommunikation berei
 - `Nexa.EventBus.GetListenerCount(name)`
 
 Interne Events muessen dem Muster `nexa:internal:<bereich>:<ereignis>` folgen. Der Event-Bus ersetzt keine Client/Server-Netzwerk-Events.
+
+## Callback System
+
+Intern stellt `nexa-core` `Nexa.Callbacks` bereit:
+
+- `Nexa.Callbacks.Register(name, handler, options)`
+- `Nexa.Callbacks.Unregister(name)`
+- `Nexa.Callbacks.Call(name, payload, context)`
+- `Nexa.Callbacks.CallAwait(name, payload, context)`
+- `Nexa.Callbacks.Has(name)`
+- `Nexa.Callbacks.RegisterNetwork(name, handler, options)`
+- `Nexa.Callbacks.TriggerClient(source, name, payload, cb, options)`
+- `Nexa.Callbacks.TriggerClientAwait(source, name, payload, options)`
+
+Neue Callback-Antworten nutzen `{ ok = true, data = ... }` oder `{ ok = false, error = { code = '...', message = '...' } }`. Netzwerkfehler werden vor der Antwort an Clients sanitisiert.
 
 ## Exports
 

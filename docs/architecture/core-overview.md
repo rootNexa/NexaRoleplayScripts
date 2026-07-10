@@ -258,6 +258,8 @@ Unerwuenschte Altlasten:
 
 Der interne Event-Bus ersetzt keine FiveM-Netzwerk-Events. Details stehen in `docs/architecture/core-eventbus.md`.
 
+Core-Callbacks sind in interne Servercallbacks und Netzwerkcallbacks getrennt. Details stehen in `docs/architecture/core-callbacks.md`.
+
 ## Abhaengigkeitsregeln
 
 Zielregeln fuer neue und migrierte Ressourcen:

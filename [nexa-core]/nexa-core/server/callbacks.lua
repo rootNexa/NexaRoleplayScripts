@@ -1,22 +1,79 @@
 Nexa.Callbacks = {
     handlers = {},
-    pending = {},
-    lastCall = {}
+    networkHandlers = {},
+    pendingClient = {},
+    lastCall = {},
+    requestCounter = 0
 }
 
-local nextRequestId = 0
+local CALLBACK_NAME_PATTERN = '^nexa:[%w_%-]+:cb:[%w_%-:]+$'
 
-local function makeRequestId(source, name)
-    nextRequestId = nextRequestId + 1
-    return ('%s:%s:%s'):format(source, GetGameTimer(), nextRequestId)
+local function makeResponse(data)
+    return {
+        ok = true,
+        data = data
+    }
 end
 
-local function canCall(source, name)
+local function makeError(code, message, details)
+    return {
+        ok = false,
+        error = {
+            code = code or 'INTERNAL_ERROR',
+            message = message or 'Der Vorgang konnte nicht abgeschlossen werden.',
+            details = details
+        }
+    }
+end
+
+local function publicError(code, message)
+    return makeError(code, message)
+end
+
+local function isValidCallbackName(name)
+    return type(name) == 'string' and name:match(CALLBACK_NAME_PATTERN) ~= nil
+end
+
+local function validatePayload(payload, validator)
+    if validator == nil then
+        return true, nil
+    end
+
+    if type(validator) ~= 'function' then
+        return false, 'INVALID_VALIDATOR'
+    end
+
+    local ok, result, err = pcall(validator, payload)
+
+    if not ok then
+        return false, 'VALIDATOR_FAILED'
+    end
+
+    if result ~= true then
+        return false, err or 'INVALID_PAYLOAD'
+    end
+
+    return true, nil
+end
+
+local function makeRequestId(prefix, source, name)
+    Nexa.Callbacks.requestCounter = Nexa.Callbacks.requestCounter + 1
+    return ('%s:%s:%s:%s:%s'):format(prefix, source or 0, GetGameTimer(), Nexa.Callbacks.requestCounter, name)
+end
+
+local function canCall(source, name, options)
+    options = options or {}
+    local cooldownMs = tonumber(options.rateLimitMs) or Nexa.Config.callbacks.defaultCooldownMs
+
+    if cooldownMs <= 0 then
+        return true
+    end
+
     local key = ('%s:%s'):format(source, name)
     local now = GetGameTimer()
     local last = Nexa.Callbacks.lastCall[key] or 0
 
-    if last > 0 and now - last < Nexa.Config.callbacks.defaultCooldownMs then
+    if last > 0 and now - last < cooldownMs then
         return false
     end
 
@@ -24,129 +81,295 @@ local function canCall(source, name)
     return true
 end
 
-function Nexa.Callbacks.Register(name, handler)
-    if type(name) ~= 'string' or name == '' or type(handler) ~= 'function' then
-        Nexa.Log('error', 'Callback-Registrierung ungueltig.', {
-            name = name
+local function normalizeHandlerResponse(ok, result, err)
+    if not ok then
+        return makeError('HANDLER_ERROR', 'Interner Callback-Handler fehlgeschlagen.', {
+            error = tostring(result)
         })
-        return false
     end
 
-    Nexa.Callbacks.handlers[name] = handler
-    return true
+    if type(result) == 'table' and result.ok ~= nil then
+        return result
+    end
+
+    if err ~= nil then
+        return makeError(tostring(err), 'Der Vorgang konnte nicht abgeschlossen werden.')
+    end
+
+    return makeResponse(result)
 end
 
-function Nexa.Callbacks.Trigger(source, name, payload, cb)
-    source = tonumber(source)
-
-    if not source or source <= 0 or type(name) ~= 'string' then
-        if cb then
-            cb(Nexa.Response.fail('INVALID_INPUT', 'Callback konnte nicht gesendet werden.'))
-        end
-
-        return false
+local function sanitizeForClient(response)
+    if type(response) ~= 'table' then
+        return publicError('INTERNAL_ERROR', 'Der Vorgang konnte nicht abgeschlossen werden.')
     end
 
-    local requestId = makeRequestId(source, name)
+    if response.ok == true then
+        return {
+            ok = true,
+            data = response.data
+        }
+    end
+
+    local errorData = type(response.error) == 'table' and response.error or {}
+
+    return {
+        ok = false,
+        error = {
+            code = errorData.code or 'INTERNAL_ERROR',
+            message = errorData.message or 'Der Vorgang konnte nicht abgeschlossen werden.'
+        }
+    }
+end
+
+function Nexa.Callbacks.Register(name, handler, options)
+    if not isValidCallbackName(name) or type(handler) ~= 'function' then
+        Nexa.Logger.Error('callbacks.register', 'Interne Callback-Registrierung ungueltig.', {
+            name = name
+        })
+        return false, 'INVALID_INPUT'
+    end
+
+    Nexa.Callbacks.handlers[name] = {
+        handler = handler,
+        options = options or {},
+        registeredAt = os.time()
+    }
+
+    return true, nil
+end
+
+function Nexa.Callbacks.RegisterNetwork(name, handler, options)
+    if not isValidCallbackName(name) or type(handler) ~= 'function' then
+        Nexa.Logger.Error('callbacks.network.register', 'Netzwerk-Callback-Registrierung ungueltig.', {
+            name = name
+        })
+        return false, 'INVALID_INPUT'
+    end
+
+    Nexa.Callbacks.networkHandlers[name] = {
+        handler = handler,
+        options = options or {},
+        registeredAt = os.time()
+    }
+
+    return true, nil
+end
+
+function Nexa.Callbacks.Unregister(name)
+    if not isValidCallbackName(name) then
+        return false, 'INVALID_INPUT'
+    end
+
+    Nexa.Callbacks.handlers[name] = nil
+    Nexa.Callbacks.networkHandlers[name] = nil
+    return true, nil
+end
+
+function Nexa.Callbacks.Has(name)
+    return Nexa.Callbacks.handlers[name] ~= nil or Nexa.Callbacks.networkHandlers[name] ~= nil
+end
+
+function Nexa.Callbacks.Call(name, payload, context)
+    local entry = Nexa.Callbacks.handlers[name]
+
+    if not entry then
+        return makeError('NOT_FOUND', 'Callback nicht registriert.')
+    end
+
+    local valid, validationErr = validatePayload(payload, entry.options.validate)
+
+    if not valid then
+        return makeError('INVALID_PAYLOAD', 'Payload ist ungueltig.', {
+            reason = validationErr
+        })
+    end
+
+    return normalizeHandlerResponse(pcall(entry.handler, payload, context or {}))
+end
+
+function Nexa.Callbacks.TriggerClient(source, name, payload, cb, options)
+    source = tonumber(source)
+    options = options or {}
+
+    if not source or source <= 0 or not isValidCallbackName(name) then
+        if cb then
+            cb(publicError('INVALID_INPUT', 'Callback konnte nicht gesendet werden.'))
+        end
+
+        return false, 'INVALID_INPUT'
+    end
+
+    local requestId = makeRequestId('server', source, name)
+    local timeoutMs = tonumber(options.timeoutMs) or Nexa.Config.callbacks.timeoutMs
 
     if cb then
-        Nexa.Callbacks.pending[requestId] = {
+        Nexa.Callbacks.pendingClient[requestId] = {
             source = source,
-            cb = cb
+            name = name,
+            cb = cb,
+            createdAt = os.time()
         }
 
-        SetTimeout(Nexa.Config.callbacks.timeoutMs, function()
-            local pending = Nexa.Callbacks.pending[requestId]
+        SetTimeout(timeoutMs, function()
+            local pending = Nexa.Callbacks.pendingClient[requestId]
 
             if not pending then
                 return
             end
 
-            Nexa.Callbacks.pending[requestId] = nil
-            pending.cb(Nexa.Response.fail('TIMEOUT', 'Callback-Zeitlimit erreicht.'))
+            Nexa.Callbacks.pendingClient[requestId] = nil
+            pending.cb(publicError('TIMEOUT', 'Callback-Zeitlimit erreicht.'), source)
         end)
     end
 
     TriggerClientEvent(Nexa.Constants.callbacks.serverRequest, source, requestId, name, payload)
-    return true
+    return true, requestId
+end
+
+function Nexa.Callbacks.TriggerClientAwait(source, name, payload, options)
+    if not promise or not Citizen or not Citizen.Await then
+        return publicError('AWAIT_UNAVAILABLE', 'Await ist in diesem Kontext nicht verfuegbar.')
+    end
+
+    local pending = promise.new()
+    local sent = Nexa.Callbacks.TriggerClient(source, name, payload, function(response)
+        pending:resolve(response)
+    end, options)
+
+    if not sent then
+        return publicError('INVALID_INPUT', 'Callback konnte nicht gesendet werden.')
+    end
+
+    return Citizen.Await(pending)
+end
+
+function Nexa.Callbacks.CallAwait(name, payload, context)
+    return Nexa.Callbacks.Call(name, payload, context)
+end
+
+function Nexa.Callbacks.Trigger(source, name, payload, cb)
+    return Nexa.Callbacks.TriggerClient(source, name, payload, cb)
 end
 
 RegisterNetEvent(Nexa.Constants.callbacks.clientRequest, function(requestId, name, payload)
-    local source = source
+    local requestSource = source
 
-    if type(source) ~= 'number' or source <= 0 or type(requestId) ~= 'string' or type(name) ~= 'string' then
+    if type(requestSource) ~= 'number' or requestSource <= 0 or type(requestId) ~= 'string' or not isValidCallbackName(name) then
         return
     end
 
     local ready, readyErr = Nexa.Lifecycle.RequireReady(('callback:%s'):format(name))
 
     if not ready then
-        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, source, requestId, Nexa.Response.fail(readyErr, 'Core ist noch nicht bereit.'))
+        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, requestSource, requestId, publicError(readyErr, 'Core ist noch nicht bereit.'))
         return
     end
 
-    local handler = Nexa.Callbacks.handlers[name]
+    local entry = Nexa.Callbacks.networkHandlers[name]
 
-    if not handler then
-        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, source, requestId, Nexa.Response.fail('NOT_FOUND', 'Callback nicht registriert.'))
+    if not entry then
+        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, requestSource, requestId, publicError('NOT_FOUND', 'Callback nicht registriert.'))
         return
     end
 
-    if not canCall(source, name) then
-        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, source, requestId, Nexa.Response.fail('RATE_LIMITED', 'Bitte warte kurz.'))
+    if not canCall(requestSource, name, entry.options) then
+        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, requestSource, requestId, publicError('RATE_LIMITED', 'Bitte warte kurz.'))
         return
     end
 
-    local ok, response = pcall(handler, source, payload)
+    local valid, validationErr = validatePayload(payload, entry.options.validate)
 
-    if not ok then
-        Nexa.Log('error', 'Callback fehlgeschlagen.', {
+    if not valid then
+        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, requestSource, requestId, publicError('INVALID_PAYLOAD', 'Payload ist ungueltig.'))
+        Nexa.Logger.Warn('callbacks.network.payload', 'Ungueltige Callback-Payload blockiert.', {
             name = name,
-            source = source,
-            error = response
+            source = requestSource,
+            reason = validationErr
         })
-
-        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, source, requestId, Nexa.Response.fail('INTERNAL_ERROR', 'Der Vorgang konnte nicht abgeschlossen werden.'))
         return
     end
 
-    TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, source, requestId, response)
+    local context = {
+        source = requestSource,
+        requestId = requestId,
+        network = true
+    }
+
+    local response = normalizeHandlerResponse(pcall(entry.handler, requestSource, payload, context))
+
+    if response.ok ~= true then
+        Nexa.Logger.Warn('callbacks.network.error', 'Netzwerk-Callback lieferte Fehlerantwort.', {
+            name = name,
+            source = requestSource,
+            code = response.error and response.error.code or 'UNKNOWN'
+        })
+    end
+
+    TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, requestSource, requestId, sanitizeForClient(response))
 end)
 
 RegisterNetEvent(Nexa.Constants.callbacks.serverResponse, function(requestId, response)
-    local source = source
-    local pending = Nexa.Callbacks.pending[requestId]
+    local responseSource = source
 
-    if not pending or pending.source ~= source then
+    if type(requestId) ~= 'string' then
         return
     end
 
-    Nexa.Callbacks.pending[requestId] = nil
-    pending.cb(response, source)
+    local pending = Nexa.Callbacks.pendingClient[requestId]
+
+    if not pending then
+        Nexa.Logger.Warn('callbacks.client_response.unknown', 'Unbekannte Callback-Response ignoriert.', {
+            requestId = requestId,
+            source = responseSource
+        })
+        return
+    end
+
+    if pending.source ~= responseSource then
+        Nexa.Logger.Security('callbacks.client_response.source', 'Callback-Response mit falscher Source blockiert.', {
+            requestId = requestId,
+            expectedSource = pending.source,
+            source = responseSource
+        })
+        return
+    end
+
+    Nexa.Callbacks.pendingClient[requestId] = nil
+    pending.cb(sanitizeForClient(response), responseSource)
 end)
 
-Nexa.Callbacks.Register(Nexa.Constants.callbacks.getSession, function(source)
+AddEventHandler('playerDropped', function()
+    local droppedSource = source
+
+    for requestId, pending in pairs(Nexa.Callbacks.pendingClient) do
+        if pending.source == droppedSource then
+            Nexa.Callbacks.pendingClient[requestId] = nil
+            pending.cb(publicError('DISCONNECTED', 'Spieler nicht mehr verbunden.'), droppedSource)
+        end
+    end
+end)
+
+Nexa.Callbacks.RegisterNetwork(Nexa.Constants.callbacks.getSession, function(source)
     local player = Nexa.Players.GetPublic(source)
     local character = Nexa.Characters.GetActive(source)
 
     if not player then
-        return Nexa.Response.fail('NOT_FOUND', 'Spieler nicht geladen.')
+        return publicError('NOT_FOUND', 'Spieler nicht geladen.')
     end
 
-    return Nexa.Response.ok({
+    return makeResponse({
         player = player,
         character = character
-    }, nil, 'Session geladen.')
+    })
 end)
 
-Nexa.Callbacks.Register(Nexa.Constants.callbacks.getCharacters, function(source)
+Nexa.Callbacks.RegisterNetwork(Nexa.Constants.callbacks.getCharacters, function(source)
     local characters, err = Nexa.Characters.List(source)
 
     if err then
-        return Nexa.Response.fail(err, 'Charaktere konnten nicht geladen werden.')
+        return publicError(err, 'Charaktere konnten nicht geladen werden.')
     end
 
-    return Nexa.Response.ok(characters, {
-        count = #characters
-    }, 'Charaktere geladen.')
+    return makeResponse(characters)
 end)
