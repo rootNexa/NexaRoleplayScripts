@@ -1,4 +1,4 @@
 NexaEvidenceConfig = {
-    featureFlag = 'phase9f.evidence',
-    defaultEvidenceType = 'generic'
+    autoMigrate = true,
+    defaultStatus = 'collected'
 }

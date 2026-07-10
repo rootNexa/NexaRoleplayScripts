@@ -1,20 +1,5 @@
 # nexa_evidence
 
-Phase 9F stellt die serverseitige Evidence-Grundlage bereit:
+`nexa_evidence` ist die serverautoritative Foundation fuer Fingerabdruecke, DNA-Hooks, Patronenhuelsen, Blutspuren, Werkzeugspuren, Fahrzeugspuren, Drogenchargen und Evidence Locker.
 
-- DNA
-- Fingerabdruecke
-- Huelsen
-- Blut
-- generische Beweismittel
-- Beweiskette ueber Metadaten und Audit
-- Police API als zentrale Schreibschicht
-
-Grenzen:
-
-- Kein Polizei-Gameplay.
-- Keine Ermittlungs-UI.
-- Keine Cliententscheidung ueber Typ, Status, Storage oder Audit.
-- Keine direkten DB-Zugriffe in dieser Fachresource.
-
-Persistenz und Audit laufen ueber `nexa_api.police` und `nexa_audit`. Evidence-Stashes werden der jeweiligen Evidence-Nummer zugeordnet.
+Die Resource nutzt Nexa Inventory/Items als spaetere Integrationsgrenze und besitzt keine externe Inventar-Abhaengigkeit.

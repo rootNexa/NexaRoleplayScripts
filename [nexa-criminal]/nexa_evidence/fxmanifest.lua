@@ -4,35 +4,33 @@ lua54 'yes'
 
 name 'nexa_evidence'
 author 'Nexa Roleplay'
-description 'Evidence Core fuer forensische Beweismittel'
-version '0.9.0'
+description 'Server-authoritative forensic evidence hooks traces and locker foundation'
+version '1.0.0'
 
 dependencies {
-    'ox_lib',
-    'ox_inventory',
-    'nexa_api',
-    'nexa_featureflags',
-    'nexa_security',
-    'nexa_permissions',
-    'nexa_audit',
-    'nexa_logs'
+    'nexa-core',
+    'nexa_items',
+    'nexa_inventory',
+    'nexa_crime'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
 
-client_scripts {
-    'config/client.lua',
-    'client/main.lua'
+server_scripts {
+    'server/database.lua',
+    'server/main.lua'
 }
 
-server_scripts {
-    'config/server.lua',
-    'server/validators.lua',
-    'server/main.lua',
-    'server/callbacks.lua',
-    'server/events.lua'
+server_exports {
+    'CollectEvidence',
+    'ListEvidence',
+    'UpdateEvidenceStatus',
+    'RegisterEvidenceHook',
+    'CreateTrace',
+    'StoreEvidenceLocker',
+    'getStatus',
+    'getSchema'
 }
