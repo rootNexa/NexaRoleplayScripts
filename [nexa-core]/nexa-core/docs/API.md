@@ -49,6 +49,23 @@ Intern stellt `nexa-core` `Nexa.Cache` fuer kontrolliertes Runtime-Caching berei
 
 Der Cache ist nicht persistent und darf keine Secrets, Clientobjekte oder autoritativen Gameplay-Transaktionen halten. Details stehen in `docs/architecture/core-cache.md`.
 
+## Fehlercodes
+
+Zentrale Core-Fehlercodes:
+
+- `OK`
+- `INVALID_INPUT`
+- `NOT_FOUND`
+- `NO_PERMISSION`
+- `DATABASE_ERROR`
+- `SECURITY_REJECTED`
+- `CHARACTER_NOT_LOADED`
+- `CORE_NOT_READY`
+- `LIFECYCLE_ERROR`
+- `INTERNAL_ERROR`
+
+Spezialisierte Subsysteme verwenden zusaetzliche Codes, zum Beispiel `DB_TIMEOUT`, `DB_MIGRATION_CHECKSUM_MISMATCH`, `TIMEOUT`, `RATE_LIMITED`, `INVALID_PAYLOAD`, `MISSING_LICENSE`, `ROLE_INHERITANCE_CYCLE` oder `SECRET_CACHE_BLOCKED`. Details und Abschlussstatus stehen in `docs/architecture/core-chapter01-validation.md`.
+
 ## Player und Character
 
 Ein Player steht fuer Verbindung, Account-Identifier und Session.
