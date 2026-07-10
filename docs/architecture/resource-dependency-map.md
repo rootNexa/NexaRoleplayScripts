@@ -32,6 +32,7 @@ ensure nexa_characters
 ensure nexa_playerstate
 ensure nexa_items
 ensure nexa_inventory
+ensure nexa_economy
 ensure nexa-character
 ensure nexa-identity
 ensure nexa_config
@@ -69,6 +70,7 @@ ensure nexa_security
 ensure nexa_ui
 ensure nexa_items
 ensure nexa_inventory
+ensure nexa_economy
 ensure nexa_jobscreator
 ensure nexa_shops
 ```
@@ -115,6 +117,7 @@ Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat
 | `[nexa-gameplay]/nexa_jobscreator` | `oxmysql`, `nexa_api`, `nexa_logs` | `nexa-core` | Erhalten. Neue Organisations-, Grade-, Member- und Module-Foundation. |
 | `[nexa-gameplay]/nexa_items` | `nexa-core`, `nexa_permissions`, `nexa_api`, `nexa_ui` | MariaDB ueber Core-Database | Erhalten. Zentrale Item Registry und Item Studio Domain Foundation ohne direkte oxmysql-Nutzung. |
 | `[nexa-gameplay]/nexa_inventory` | `nexa-core`, `nexa_identity`, `nexa_characters`, `nexa_playerstate`, `nexa_permissions`, `nexa_api`, `nexa_items` | `nexa_items` als Itemdefinitionsquelle | Erhalten. Serverautoritative Inventory-Foundation ohne direkte oxmysql-Nutzung. |
+| `[nexa-gameplay]/nexa_economy` | `nexa-core`, `nexa_api`, `nexa_characters`, `nexa_playerstate`, `nexa_items`, `nexa_inventory` | `nexa_items`/`nexa_inventory` fuer Cash und Dirty Cash | Erhalten. Serverautoritative Accounts-, Ledger-, Transaction- und Cash-Integration ohne direkte oxmysql-Nutzung. |
 | `[nexa-gameplay]/nexa_shops` | `oxmysql`, `nexa_api`, `nexa_logs` | `nexa_items` fachlich vorbereitet | Erhalten. Shop-Foundation. |
 | `[nexa-gameplay]/nexa_banking` | `ox_lib`, `nexa_api`, `nexa_audit`, `nexa_security` | Nexa Foundation | Migrieren. |
 | `[nexa-gameplay]/nexa_business` | `ox_lib`, `nexa_jobs_core`, `nexa_api`, `nexa_audit` | Legacy Jobs | Migrieren auf `nexa_jobscreator`. |
