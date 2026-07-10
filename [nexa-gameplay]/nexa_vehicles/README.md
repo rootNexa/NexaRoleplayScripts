@@ -38,3 +38,7 @@ Clients may request actions through dedicated gameplay resources, but ownership,
 ## Persistence
 
 Migration `110_vehicles_foundation` creates definitions, persisted vehicles, insurance and audit tables. Related domains such as keys, garages and impound have their own resources.
+
+## State Foundation
+
+Vehicle state snapshots are clamped server-side. Fuel, mileage, engine health, body health and tank health are persisted through the Core database layer. Damage state is derived from submitted health snapshots and never accepted as an ownership or lifecycle authority.

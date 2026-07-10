@@ -230,7 +230,8 @@ function VehicleState.Update(actor, vehicleId, snapshot)
     snapshot = type(snapshot) == 'table' and snapshot or {}
     local context = actorContext(actor, 'vehicle.state.update')
     local vehicle = Vehicles.Get(vehicleId); if not vehicle.ok then return vehicle end
-    local state = { fuel = math.max(0, math.min(NexaVehicleConfig.maxFuel, tonumber(snapshot.fuel or vehicle.data.fuel) or vehicle.data.fuel)), mileage = math.max(0, tonumber(snapshot.mileage or vehicle.data.mileage) or vehicle.data.mileage), engine_health = math.max(0, math.min(1000, tonumber(snapshot.engine_health or vehicle.data.engine_health) or vehicle.data.engine_health)), body_health = math.max(0, math.min(1000, tonumber(snapshot.body_health or vehicle.data.body_health) or vehicle.data.body_health)), tank_health = math.max(0, math.min(1000, tonumber(snapshot.tank_health or vehicle.data.tank_health) or vehicle.data.tank_health)), damage_state = normalizeString(snapshot.damage_state or vehicle.data.damage_state, 32) or NEXA_VEHICLE_DAMAGE_STATE.none, state = snapshot.state or vehicle.data.state or {} }
+    local maxHealth = NexaVehicleConfig.maxHealth or 1000
+    local state = { fuel = math.max(0, math.min(NexaVehicleConfig.maxFuel, tonumber(snapshot.fuel or vehicle.data.fuel) or vehicle.data.fuel)), mileage = math.max(0, tonumber(snapshot.mileage or vehicle.data.mileage) or vehicle.data.mileage), engine_health = math.max(0, math.min(maxHealth, tonumber(snapshot.engine_health or vehicle.data.engine_health) or vehicle.data.engine_health)), body_health = math.max(0, math.min(maxHealth, tonumber(snapshot.body_health or vehicle.data.body_health) or vehicle.data.body_health)), tank_health = math.max(0, math.min(maxHealth, tonumber(snapshot.tank_health or vehicle.data.tank_health) or vehicle.data.tank_health)), damage_state = normalizeString(snapshot.damage_state or vehicle.data.damage_state, 32) or NEXA_VEHICLE_DAMAGE_STATE.none, state = snapshot.state or vehicle.data.state or {} }
     NexaVehiclesDatabase.UpdateState(vehicle.data.id, state)
     local result = ok({ vehicle_id = vehicle.data.id, state = state }, 'Vehicle state updated.')
     audit('vehicle.state.update', context, result, { vehicle_id = vehicle.data.id, before_state = vehicle.data, after_state = state })
@@ -250,7 +251,8 @@ function VehicleDamage.Evaluate(snapshot)
     snapshot = type(snapshot) == 'table' and snapshot or {}
     local engine = tonumber(snapshot.engine_health or snapshot.engineHealth or 1000) or 1000
     local body = tonumber(snapshot.body_health or snapshot.bodyHealth or 1000) or 1000
-    if engine <= 100 or body <= 100 then return NEXA_VEHICLE_DAMAGE_STATE.wrecked end
+    local minDriveable = NexaVehicleConfig.minDriveableHealth or 100
+    if engine <= minDriveable or body <= minDriveable then return NEXA_VEHICLE_DAMAGE_STATE.wrecked end
     if engine <= 350 or body <= 350 then return NEXA_VEHICLE_DAMAGE_STATE.heavy end
     if engine < 900 or body < 900 then return NEXA_VEHICLE_DAMAGE_STATE.light end
     return NEXA_VEHICLE_DAMAGE_STATE.none
