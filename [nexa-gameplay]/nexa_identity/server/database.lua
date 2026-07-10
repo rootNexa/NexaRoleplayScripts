@@ -142,14 +142,15 @@ function NexaIdentity.Database.UpsertAccount(primaryLicense, metadata)
     end
 
     local accountId, insertErr = db.Insert([[
-        INSERT INTO nexa_accounts (primary_license, status, metadata_json, last_login_at)
-        VALUES (?, 'active', ?, CURRENT_TIMESTAMP)
+        INSERT INTO nexa_accounts (primary_license, status, metadata_json, legacy_player_id, last_login_at)
+        VALUES (?, 'active', ?, (SELECT id FROM nexa_players WHERE identifier = ? LIMIT 1), CURRENT_TIMESTAMP)
         ON DUPLICATE KEY UPDATE
             id = LAST_INSERT_ID(id),
+            legacy_player_id = COALESCE(legacy_player_id, VALUES(legacy_player_id)),
             last_login_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP,
             version = version + 1
-    ]], { primaryLicense, json.encode(metadata or {}) }, {
+    ]], { primaryLicense, json.encode(metadata or {}), primaryLicense }, {
         category = 'identity.account_upsert'
     })
 
