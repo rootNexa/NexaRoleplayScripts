@@ -1,10 +1,39 @@
 NEXA_ADMIN = {
     resourceName = 'nexa_admin',
-    version = '0.11.0'
-}
-
-NEXA_ADMIN_EVENTS = {
-    refresh = 'nexa:admin:client:refresh',
-    applyControl = 'nexa:admin:client:applyControl',
-    applyUtility = 'nexa:admin:client:applyUtility'
+    version = '1.0.0',
+    events = {
+        applyControl = 'nexa:admin:client:applyControl',
+        applyTeleport = 'nexa:admin:client:applyTeleport',
+        applyRecovery = 'nexa:admin:client:applyRecovery',
+        applySpectate = 'nexa:admin:client:applySpectate',
+        applyNoclip = 'nexa:admin:client:applyNoclip'
+    },
+    errors = {
+        actionNotFound = 'ADMIN_ACTION_NOT_FOUND',
+        notOnDuty = 'ADMIN_NOT_ON_DUTY',
+        suspended = 'ADMIN_SUSPENDED',
+        targetNotFound = 'ADMIN_TARGET_NOT_FOUND',
+        targetOffline = 'ADMIN_TARGET_OFFLINE',
+        targetProtected = 'ADMIN_TARGET_PROTECTED',
+        selfActionForbidden = 'ADMIN_SELF_ACTION_FORBIDDEN',
+        hierarchyForbidden = 'ADMIN_HIERARCHY_FORBIDDEN',
+        reasonRequired = 'ADMIN_REASON_REQUIRED',
+        invalidDuration = 'ADMIN_INVALID_DURATION',
+        rateLimited = 'ADMIN_ACTION_RATE_LIMITED',
+        warningNotFound = 'WARNING_NOT_FOUND',
+        warningAlreadyRevoked = 'WARNING_ALREADY_REVOKED',
+        banNotFound = 'BAN_NOT_FOUND',
+        banAlreadyRevoked = 'BAN_ALREADY_REVOKED',
+        banAlreadyActive = 'BAN_ALREADY_ACTIVE',
+        banExpired = 'BAN_EXPIRED',
+        teleportPositionMissing = 'TELEPORT_POSITION_MISSING',
+        teleportInvalidCoords = 'TELEPORT_INVALID_COORDS',
+        freezeStateInvalid = 'FREEZE_STATE_INVALID',
+        spectateAlreadyActive = 'SPECTATE_ALREADY_ACTIVE',
+        spectateNotActive = 'SPECTATE_NOT_ACTIVE',
+        noclipAlreadyActive = 'NOCLIP_ALREADY_ACTIVE',
+        noclipNotActive = 'NOCLIP_NOT_ACTIVE',
+        noteNotFound = 'NOTE_NOT_FOUND',
+        noteVisibilityForbidden = 'NOTE_VISIBILITY_FORBIDDEN'
+    }
 }

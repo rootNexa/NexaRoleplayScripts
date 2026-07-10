@@ -4,21 +4,18 @@ lua54 'yes'
 
 name 'nexa_admin'
 author 'Nexa Roleplay'
-description 'Admin-Core-Grundstruktur fuer Nexa Roleplay'
-version '0.11.0'
+description 'Server-authoritative admin foundation for Nexa Roleplay'
+version '1.0.0'
 
 dependencies {
-    'ox_lib',
-    'nexa_api',
-    'nexa_featureflags',
-    'nexa_security',
+    'nexa-core',
+    'nexa_identity',
+    'nexa_characters',
     'nexa_permissions',
-    'nexa_audit',
-    'nexa_logs'
+    'nexa_api'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
@@ -33,4 +30,27 @@ server_scripts {
     'server/validators.lua',
     'server/main.lua',
     'server/callbacks.lua'
+}
+
+server_exports {
+    'WarnPlayer',
+    'KickPlayer',
+    'BanPlayer',
+    'UnbanPlayer',
+    'GoToPlayer',
+    'BringPlayer',
+    'ReturnPlayer',
+    'SetPlayerFrozen',
+    'HealPlayer',
+    'RevivePlayer',
+    'StartSpectate',
+    'StopSpectate',
+    'StartNoclip',
+    'StopNoclip',
+    'CreateAdminNote',
+    'ListAdminNotes',
+    'GetAdminActionState',
+    'ResolveConnection',
+    'IsAccountBanned',
+    'ListActions'
 }

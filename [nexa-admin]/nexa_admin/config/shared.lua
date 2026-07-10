@@ -1,7 +1,8 @@
 NexaAdminConfig = {
-    featureFlag = 'phase11a.admin_core',
-    reportsFeatureFlag = 'phase11b.reports',
-    ticketsFeatureFlag = 'phase11c.tickets',
-    moderationFeatureFlag = 'phase11d.moderation_actions',
-    utilityFeatureFlag = 'phase11e.admin_utility'
+    returnPositionTtlSeconds = 900,
+    maxTempBanMinutes = 43200,
+    maxReasonLength = 512,
+    maxNoteLength = 2000,
+    maxCoordinate = 20000.0,
+    commandAce = 'nexa.admin.commands'
 }

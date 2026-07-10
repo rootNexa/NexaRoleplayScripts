@@ -1,257 +1,132 @@
-local actionIndex = {}
-local reports = {}
-local reportSequence = 0
-local tickets = {}
-local ticketSequence = 0
-local moderationActions = {}
-local moderationSequence = 0
-local moderationNotes = {}
-local utilityActions = {}
-local utilitySequence = 0
-local returnPositions = {}
+NexaAdmin = {
+    Actions = {
+        byName = {}
+    },
+    returnPositions = {},
+    freezeStates = {},
+    spectateStates = {},
+    noclipStates = {},
+    rateLimits = {}
+}
 
-local function isEnabled()
-    return GetResourceState('nexa_featureflags') ~= 'started'
-        or exports.nexa_featureflags:isEnabled(NexaAdminConfig.featureFlag)
+local RESOURCE = GetCurrentResourceName()
+
+local function response(success, code, message, data, meta)
+    return {
+        success = success == true,
+        ok = success == true,
+        code = code or (success and 'OK' or 'INTERNAL_ERROR'),
+        message = message or '',
+        data = data,
+        meta = meta
+    }
 end
 
-local function areReportsEnabled()
-    return isEnabled()
-        and (GetResourceState('nexa_featureflags') ~= 'started'
-            or exports.nexa_featureflags:isEnabled(NexaAdminConfig.reportsFeatureFlag))
+local function correlationId()
+    return ('adm:%s:%s'):format(os.time(), math.random(100000, 999999))
 end
 
-local function areTicketsEnabled()
-    return isEnabled()
-        and (GetResourceState('nexa_featureflags') ~= 'started'
-            or exports.nexa_featureflags:isEnabled(NexaAdminConfig.ticketsFeatureFlag))
+local function encode(data)
+    local ok, encoded = pcall(json.encode, data or {})
+    return ok and encoded or '{}'
 end
 
-local function areModerationActionsEnabled()
-    return isEnabled()
-        and (GetResourceState('nexa_featureflags') ~= 'started'
-            or exports.nexa_featureflags:isEnabled(NexaAdminConfig.moderationFeatureFlag))
+local function decode(value, fallback)
+    if type(value) ~= 'string' or value == '' then
+        return fallback
+    end
+
+    local ok, decoded = pcall(json.decode, value)
+    return ok and decoded or fallback
 end
 
-local function areUtilitiesEnabled()
-    return isEnabled()
-        and (GetResourceState('nexa_featureflags') ~= 'started'
-            or exports.nexa_featureflags:isEnabled(NexaAdminConfig.utilityFeatureFlag))
-end
-
-local function buildResponse(success, code, message, data, meta, auditId)
-    return exports.nexa_api:buildResponse(success, code, message, data, meta, auditId)
-end
-
-local function writeAdminAudit(action, source, metadata)
-    if GetResourceState('nexa_audit') ~= 'started' then
+local function getCore()
+    if GetResourceState('nexa-core') ~= 'started' then
         return nil
     end
 
-    local result = exports.nexa_audit:write({
-        eventType = 'admin',
-        severity = 'info',
-        action = action,
-        resourceName = NEXA_ADMIN.resourceName,
-        metadata = metadata or {
-            source = source
+    local ok, core = pcall(function()
+        return exports['nexa-core']:GetCoreObject()
+    end)
+
+    return ok and core or nil
+end
+
+local function db()
+    local core = getCore()
+    return core and core.Database or nil
+end
+
+local function log(level, category, message, context)
+    local core = getCore()
+
+    if core and core.Logger and core.Logger[level] then
+        core.Logger[level](category, message, context)
+        return
+    end
+
+    print(('[%s] [%s] %s %s'):format(RESOURCE, level, message, encode(context)))
+end
+
+local function dbQuery(method, sql, params, category)
+    local database = db()
+
+    if not database or not database[method] then
+        return nil, {
+            code = 'DATABASE_UNAVAILABLE',
+            message = 'Core database is unavailable.'
         }
-    })
-
-    return result and result.audit_id or nil
-end
-
-local function hasPermission(source, permission)
-    local result = exports.nexa_api['permission.has'](source, permission)
-
-    return result == true or (type(result) == 'table' and result.success == true)
-end
-
-local function hasAnyPermission(source, permissions)
-    for _, permission in ipairs(permissions or {}) do
-        if hasPermission(source, permission) then
-            return true
-        end
     end
 
-    return false
-end
-
-local function getRoleForSource(source)
-    local bestRole = nil
-
-    for _, role in ipairs(NexaAdminServer.roles) do
-        if hasAnyPermission(source, role.permissions) then
-            bestRole = {
-                id = role.id,
-                label = role.label
-            }
-        end
-    end
-
-    return bestRole
-end
-
-local function ensureAdminAccess(source, permission)
-    if not isEnabled() then
-        return false, buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Admin-Core ist deaktiviert.', nil, nil, nil)
-    end
-
-    if not hasPermission(source, permission) then
-        local auditId = writeAdminAudit('admin.access.denied', source, {
-            source = source,
-            permission = permission
-        })
-
-        return false, buildResponse(false, 'NO_PERMISSION', 'Du hast dafuer keine Berechtigung.', nil, nil, auditId)
-    end
-
-    return true, nil
-end
-
-local function sanitizePlayer(source)
-    local playerSource = tonumber(source)
-    local character = nil
-    local characterResponse = exports.nexa_api['character.getActive'](playerSource)
-
-    if type(characterResponse) == 'table' and characterResponse.success == true then
-        character = characterResponse.data
-    end
-
-    return {
-        source = playerSource,
-        name = GetPlayerName(playerSource) or 'Unbekannter Spieler',
-        character = character,
-        identifiersIncluded = NexaAdminServer.overview.includeIdentifiers == true
-    }
-end
-
-local function getActiveCharacter(source)
-    local response = exports.nexa_api['character.getActive'](source)
-
-    if type(response) ~= 'table' or response.success ~= true or response.data == nil then
-        return nil
-    end
-
-    return response.data.character
-end
-
-local function getActorSnapshot(source)
-    local character = getActiveCharacter(source)
-
-    if character == nil then
-        return nil
-    end
-
-    return {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Unbekannter Spieler',
-        characterId = character.id,
-        citizenid = character.citizenid,
-        displayName = ((character.firstname or '') .. ' ' .. (character.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')
-    }
-end
-
-local function getTargetSnapshot(targetSource)
-    local playerSource = tonumber(targetSource)
-
-    if playerSource == nil or GetPlayerName(playerSource) == nil then
-        return nil
-    end
-
-    local character = getActiveCharacter(playerSource)
-
-    return {
-        source = playerSource,
-        name = GetPlayerName(playerSource) or 'Unbekannter Spieler',
-        characterId = character and character.id or nil,
-        citizenid = character and character.citizenid or nil,
-        displayName = character and (((character.firstname or '') .. ' ' .. (character.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')) or nil
-    }
-end
-
-local function nextModerationId(prefix)
-    moderationSequence = moderationSequence + 1
-
-    return ('%s-%06d'):format(prefix, moderationSequence)
-end
-
-local function recordModerationAction(actionType, actor, target, metadata)
-    local actionId = nextModerationId('MOD')
-
-    moderationActions[actionId] = {
-        id = actionId,
-        type = actionType,
-        actor = actor,
-        target = target,
-        metadata = metadata or {},
-        createdAt = os.time()
-    }
-
-    return moderationActions[actionId]
-end
-
-local function ensureModerationAccess(source, permission)
-    if not areModerationActionsEnabled() then
-        return false, buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Moderation ist deaktiviert.', nil, nil, nil)
-    end
-
-    return ensureAdminAccess(source, permission)
-end
-
-local function ensureModerationTarget(source, targetSource)
-    local actor = getActorSnapshot(source) or {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Admin'
-    }
-    local target = getTargetSnapshot(targetSource)
-
-    if target == nil then
-        return nil, nil, buildResponse(false, 'NOT_FOUND', 'Spieler wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    return actor, target, nil
-end
-
-local function writeModerationLog(action, record)
-    exports.nexa_logs:info(NEXA_ADMIN.resourceName, 'Moderationsaktion ausgefuehrt.', {
-        action = action,
-        actionId = record and record.id or nil,
-        actorSource = record and record.actor and record.actor.source or nil,
-        targetSource = record and record.target and record.target.source or nil
+    return database[method](sql, params or {}, {
+        category = category or ('admin.%s'):format(method:lower())
     })
 end
 
-local function sanitizeModerationRecord(record)
-    return {
-        id = record.id,
-        type = record.type,
-        actor = record.actor,
-        target = record.target,
-        metadata = record.metadata,
-        createdAt = record.createdAt
-    }
-end
+local function getAccountId(source)
+    source = NexaAdminNormalizeSource(source)
 
-local function ensureUtilityAccess(source, permission)
-    if not areUtilitiesEnabled() then
-        return false, buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Admin-Utility ist deaktiviert.', nil, nil, nil)
+    if not source then
+        return nil
     end
 
-    return ensureAdminAccess(source, permission)
+    local ok, accountId = pcall(function()
+        return exports['nexa_identity']:GetAccountId(source)
+    end)
+
+    return ok and NexaAdminNormalizeId(accountId) or nil
 end
 
-local function getServerCoords(source)
-    local ped = GetPlayerPed(tonumber(source))
+local function getCharacterId(source)
+    source = NexaAdminNormalizeSource(source)
 
-    if ped == nil or ped == 0 then
+    if not source or GetResourceState('nexa_characters') ~= 'started' then
+        return nil
+    end
+
+    local ok, result = pcall(function()
+        return exports['nexa_characters']:GetActiveCharacter(source)
+    end)
+
+    if not ok or type(result) ~= 'table' then
+        return nil
+    end
+
+    local data = result.data or result
+    local character = data.character or data
+    return NexaAdminNormalizeId(character and character.id)
+end
+
+local function getCoords(source)
+    local ped = GetPlayerPed(source)
+
+    if not ped or ped == 0 then
         return nil
     end
 
     local coords = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped) or 0.0
 
-    if coords == nil then
+    if not coords then
         return nil
     end
 
@@ -259,1373 +134,1300 @@ local function getServerCoords(source)
         x = coords.x,
         y = coords.y,
         z = coords.z,
-        heading = heading
+        heading = GetEntityHeading(ped) or 0.0,
+        bucket = GetPlayerRoutingBucket(source) or 0
     }
 end
 
-local function nextUtilityId(prefix)
-    utilitySequence = utilitySequence + 1
-
-    return ('%s-%06d'):format(prefix, utilitySequence)
+local function targetOnline(source)
+    source = NexaAdminNormalizeSource(source)
+    return source and GetPlayerName(source) ~= nil
 end
 
-local function recordUtilityAction(actionType, actor, target, metadata)
-    local actionId = nextUtilityId('UTL')
-
-    utilityActions[actionId] = {
-        id = actionId,
-        type = actionType,
-        actor = actor,
-        target = target,
-        metadata = metadata or {},
-        createdAt = os.time()
-    }
-
-    return utilityActions[actionId]
+local function hasPermission(source, permission)
+    local result = exports.nexa_permissions:Has(source, permission)
+    return type(result) == 'table' and result.ok == true and result.data and result.data.allowed == true
 end
 
-local function sanitizeUtilityRecord(record)
-    return {
-        id = record.id,
-        type = record.type,
-        actor = record.actor,
-        target = record.target,
-        metadata = record.metadata,
-        createdAt = record.createdAt
-    }
-end
-
-local function writeUtilityLog(action, record)
-    exports.nexa_logs:info(NEXA_ADMIN.resourceName, 'Admin-Utility ausgefuehrt.', {
-        action = action,
-        actionId = record and record.id or nil,
-        actorSource = record and record.actor and record.actor.source or nil,
-        targetSource = record and record.target and record.target.source or nil
-    })
-end
-
-local function sendUtilityToClient(targetSource, payload)
-    TriggerClientEvent(NEXA_ADMIN_EVENTS.applyUtility, targetSource, payload)
-end
-
-local function markTeleportAllowance(targetSource, context, metadata)
-    if GetResourceState('nexa_api') ~= 'started' then
-        return
-    end
-
-    pcall(function()
-        exports.nexa_api['teleport.allow'](targetSource, context, metadata or {})
-    end)
-end
-
-local function markGodmodeException(targetSource, context, metadata)
-    if GetResourceState('nexa_api') ~= 'started' then
-        return
-    end
-
-    pcall(function()
-        exports.nexa_api['godmode.allowException'](targetSource, context, metadata or {})
-    end)
-end
-
-local function listUtilityActions(source)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.goto')
-
-    if not allowed then
-        return denied
-    end
-
-    local actions = {
-        'admin.utility.bring',
-        'admin.utility.goto',
-        'admin.utility.return',
-        'admin.utility.coords',
-        'admin.utility.heal.prepare',
-        'admin.utility.revive.prepare'
-    }
-    local auditId = writeAdminAudit('admin.utility.list', source, {
-        source = source,
-        actionCount = #actions
-    })
-
-    return buildResponse(true, 'OK', 'Admin-Utilities wurden geladen.', {
-        actions = actions
-    }, nil, auditId)
-end
-
-local function listModerationActions(source)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.warn')
-
-    if not allowed then
-        return denied
-    end
-
-    local actions = {
-        'admin.moderation.warn',
-        'admin.moderation.kick',
-        'admin.moderation.tempban.prepare',
-        'admin.moderation.freeze',
-        'admin.moderation.spectate.prepare',
-        'admin.moderation.notes.add'
-    }
-    local auditId = writeAdminAudit('admin.moderation.list', source, {
-        source = source,
-        actionCount = #actions
-    })
-
-    return buildResponse(true, 'OK', 'Moderationsaktionen wurden geladen.', {
-        actions = actions
-    }, nil, auditId)
-end
-
-local function isReportOwner(source, report)
-    local actor = getActorSnapshot(source)
-
-    return actor ~= nil
-        and report.ownerCharacterId ~= nil
-        and tonumber(report.ownerCharacterId) == tonumber(actor.characterId)
-end
-
-local function sanitizeReport(report, includeAdminFields)
-    local copy = {
-        id = report.id,
-        category = report.category,
-        categoryLabel = NexaAdminServer.reports.categories[report.category],
-        subject = report.subject,
-        message = report.message,
-        status = report.status,
-        createdAt = report.createdAt,
-        updatedAt = report.updatedAt,
-        closedAt = report.closedAt,
-        history = report.history
-    }
-
-    if includeAdminFields == true then
-        copy.ownerSource = report.ownerSource
-        copy.ownerName = report.ownerName
-        copy.ownerCharacterId = report.ownerCharacterId
-        copy.ownerDisplayName = report.ownerDisplayName
-        copy.acceptedBy = report.acceptedBy
-        copy.closedBy = report.closedBy
-        copy.closeReason = report.closeReason
-    end
-
-    return copy
-end
-
-local function addReportHistory(report, action, actor, metadata)
-    report.history[#report.history + 1] = {
-        action = action,
-        actorSource = actor and actor.source or nil,
-        actorName = actor and actor.name or nil,
-        actorCharacterId = actor and actor.characterId or nil,
-        metadata = metadata or {},
-        createdAt = os.time()
-    }
-end
-
-local function countOpenReportsForCharacter(characterId)
-    local count = 0
-
-    for _, report in pairs(reports) do
-        if tonumber(report.ownerCharacterId) == tonumber(characterId)
-            and (report.status == 'open' or report.status == 'accepted') then
-            count = count + 1
+local function hasAnyPermission(source, permissions)
+    for _, permission in ipairs(permissions or {}) do
+        if hasPermission(source, permission) then
+            return true, permission
         end
     end
 
-    return count
+    return false, nil
 end
 
-local function countReports()
-    local count = 0
+local function dutyState(source)
+    local state = exports.nexa_permissions:GetAdminDuty(source)
 
-    for _ in pairs(reports) do
-        count = count + 1
+    if type(state) == 'table' and state.state then
+        return state.state
     end
 
-    return count
+    return 'off_duty'
 end
 
-local function countOpenTicketsForCharacter(characterId)
-    local count = 0
+local function ensureDuty(source)
+    local state = dutyState(source)
 
-    for _, ticket in pairs(tickets) do
-        if tonumber(ticket.ownerCharacterId) == tonumber(characterId)
-            and (ticket.status == 'open' or ticket.status == 'assigned') then
-            count = count + 1
+    if state == 'suspended' then
+        return false, NEXA_ADMIN.errors.suspended
+    end
+
+    if state ~= 'on_duty' then
+        return false, NEXA_ADMIN.errors.notOnDuty
+    end
+
+    return true
+end
+
+local function isProtectedTarget(actorSource, targetSource)
+    if actorSource == 0 then
+        return false
+    end
+
+    if actorSource == targetSource then
+        return true, NEXA_ADMIN.errors.selfActionForbidden
+    end
+
+    local roles = exports.nexa_permissions:GetRoles(targetSource)
+
+    if type(roles) ~= 'table' or roles.ok ~= true or type(roles.data) ~= 'table' then
+        return false
+    end
+
+    for _, role in ipairs(roles.data) do
+        if (role.name == 'owner' or role.name == 'co_owner') and not hasPermission(actorSource, 'nexa.permissions.manage_owner') then
+            return true, NEXA_ADMIN.errors.targetProtected
         end
     end
 
-    return count
+    return false
 end
 
-local function countTickets()
-    local count = 0
-
-    for _ in pairs(tickets) do
-        count = count + 1
-    end
-
-    return count
-end
-
-local function addTicketHistory(ticket, action, actor, metadata)
-    ticket.history[#ticket.history + 1] = {
-        action = action,
-        actorSource = actor and actor.source or nil,
-        actorName = actor and actor.name or nil,
-        actorCharacterId = actor and actor.characterId or nil,
-        metadata = metadata or {},
-        createdAt = os.time()
-    }
-end
-
-local function sanitizeTicket(ticket)
-    return {
-        id = ticket.id,
-        reason = ticket.reason,
-        reasonLabel = NexaAdminServer.tickets.reasons[ticket.reason],
-        description = ticket.description,
-        status = ticket.status,
-        ownerSource = ticket.ownerSource,
-        ownerName = ticket.ownerName,
-        ownerCharacterId = ticket.ownerCharacterId,
-        ownerDisplayName = ticket.ownerDisplayName,
-        assignedTo = ticket.assignedTo,
-        closedBy = ticket.closedBy,
-        closeNote = ticket.closeNote,
-        createdAt = ticket.createdAt,
-        updatedAt = ticket.updatedAt,
-        closedAt = ticket.closedAt,
-        history = ticket.history
-    }
-end
-
-local function createTicket(source, payload)
-    if not areTicketsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Tickets sind deaktiviert.', nil, nil, nil)
-    end
-
-    local valid, code, sanitized = validateTicketCreatePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Ticket-Daten.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source)
-
-    if actor == nil then
-        return buildResponse(false, 'CHARACTER_NOT_LOADED', 'Kein aktiver Charakter geladen.', nil, nil, nil)
-    end
-
-    if countOpenTicketsForCharacter(actor.characterId) >= NexaAdminServer.tickets.maxOpenPerPlayer then
-        return buildResponse(false, 'CONFLICT', 'Du hast bereits zu viele offene Tickets.', nil, nil, nil)
-    end
-
-    if countTickets() >= NexaAdminServer.tickets.maxTickets then
-        return buildResponse(false, 'CONFLICT', 'Aktuell koennen keine weiteren Tickets erstellt werden.', nil, nil, nil)
-    end
-
-    ticketSequence = ticketSequence + 1
-    local ticketId = ('TCK-%06d'):format(ticketSequence)
-    local now = os.time()
-
-    tickets[ticketId] = {
-        id = ticketId,
-        ownerSource = actor.source,
-        ownerName = actor.name,
-        ownerCharacterId = actor.characterId,
-        ownerDisplayName = actor.displayName,
-        reason = sanitized.reason,
-        description = sanitized.description,
-        status = 'open',
-        history = {},
-        createdAt = now,
-        updatedAt = now
-    }
-
-    addTicketHistory(tickets[ticketId], 'ticket.created', actor, {
-        reason = sanitized.reason
-    })
-
-    local auditId = writeAdminAudit('admin.ticket.created', source, {
-        source = source,
-        ticketId = ticketId,
-        ownerCharacterId = actor.characterId,
-        reason = sanitized.reason
-    })
-
-    exports.nexa_logs:info(NEXA_ADMIN.resourceName, 'Ticket wurde erstellt.', {
-        source = source,
-        ticketId = ticketId
-    })
-
-    return buildResponse(true, 'CREATED', 'Ticket wurde erstellt.', {
-        ticket = sanitizeTicket(tickets[ticketId])
-    }, nil, auditId)
-end
-
-local function listTickets(source)
-    if not areTicketsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Tickets sind deaktiviert.', nil, nil, nil)
-    end
-
-    local allowed, denied = ensureAdminAccess(source, 'admin.tickets.view')
-
-    if not allowed then
-        return denied
-    end
-
-    local result = {}
-
-    for _, ticket in pairs(tickets) do
-        result[#result + 1] = sanitizeTicket(ticket)
-    end
-
-    local auditId = writeAdminAudit('admin.tickets.list', source, {
-        source = source,
-        count = #result
-    })
-
-    return buildResponse(true, 'OK', 'Tickets wurden geladen.', {
-        tickets = result
-    }, nil, auditId)
-end
-
-local function assignTicket(source, payload)
-    if not areTicketsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Tickets sind deaktiviert.', nil, nil, nil)
-    end
-
-    local allowed, denied = ensureAdminAccess(source, 'admin.tickets.assign')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code = validateTicketAssignPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Ticket-Anfrage.', nil, nil, nil)
-    end
-
-    local ticket = tickets[payload.ticketId]
-
-    if ticket == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Ticket wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    if ticket.status == 'closed' then
-        return buildResponse(false, 'CONFLICT', 'Geschlossenes Ticket kann nicht zugewiesen werden.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source) or {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Admin'
-    }
-    local assigneeSource = tonumber(payload.assigneeSource) or actor.source
-
-    ticket.status = 'assigned'
-    ticket.assignedTo = {
-        source = assigneeSource,
-        name = GetPlayerName(assigneeSource) or actor.name
-    }
-    ticket.updatedAt = os.time()
-
-    addTicketHistory(ticket, 'ticket.assigned', actor, {
-        assigneeSource = assigneeSource
-    })
-
-    local auditId = writeAdminAudit('admin.ticket.assigned', source, {
-        source = source,
-        ticketId = ticket.id,
-        assigneeSource = assigneeSource
-    })
-
-    return buildResponse(true, 'OK', 'Ticket wurde zugewiesen.', {
-        ticket = sanitizeTicket(ticket)
-    }, nil, auditId)
-end
-
-local function closeTicket(source, payload)
-    if not areTicketsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Tickets sind deaktiviert.', nil, nil, nil)
-    end
-
-    local allowed, denied = ensureAdminAccess(source, 'admin.tickets.close')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateTicketClosePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Ticket-Anfrage.', nil, nil, nil)
-    end
-
-    local ticket = tickets[payload.ticketId]
-
-    if ticket == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Ticket wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    if ticket.status == 'closed' then
-        return buildResponse(false, 'CONFLICT', 'Ticket ist bereits geschlossen.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source) or {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Admin'
-    }
-
-    ticket.status = 'closed'
-    ticket.closedBy = actor
-    ticket.closeNote = sanitized.note
-    ticket.closedAt = os.time()
-    ticket.updatedAt = ticket.closedAt
-
-    addTicketHistory(ticket, 'ticket.closed', actor, {
-        note = sanitized.note
-    })
-
-    local auditId = writeAdminAudit('admin.ticket.closed', source, {
-        source = source,
-        ticketId = ticket.id,
-        note = sanitized.note
-    })
-
-    return buildResponse(true, 'OK', 'Ticket wurde geschlossen.', {
-        ticket = sanitizeTicket(ticket)
-    }, nil, auditId)
-end
-
-local function warnPlayer(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.warn')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateModerationReasonPayload(payload, 240, 3)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Verwarnung.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordModerationAction('warn', actor, target, {
-        reason = sanitized.reason
-    })
-    local auditId = writeAdminAudit('admin.moderation.warned', source, sanitizeModerationRecord(record))
-
-    writeModerationLog('admin.moderation.warned', record)
-
-    return buildResponse(true, 'OK', 'Spieler wurde verwarnt.', {
-        action = sanitizeModerationRecord(record)
-    }, nil, auditId)
-end
-
-local function kickPlayer(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.kick')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateModerationReasonPayload(payload, 240, 3)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltiger Kick.', nil, nil, nil)
-    end
-
-    if tonumber(source) == tonumber(sanitized.targetSource) then
-        return buildResponse(false, 'CONFLICT', 'Du kannst dich nicht selbst kicken.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordModerationAction('kick', actor, target, {
-        reason = sanitized.reason
-    })
-    local auditId = writeAdminAudit('admin.moderation.kicked', source, sanitizeModerationRecord(record))
-
-    writeModerationLog('admin.moderation.kicked', record)
-    DropPlayer(target.source, ('Nexa Roleplay: %s'):format(sanitized.reason))
-
-    return buildResponse(true, 'OK', 'Spieler wurde gekickt.', {
-        action = sanitizeModerationRecord(record)
-    }, nil, auditId)
-end
-
-local function prepareTempban(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.tempban.prepare')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateTempbanPreparePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Tempban-Vorbereitung.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordModerationAction('tempban.prepare', actor, target, {
-        reason = sanitized.reason,
-        durationMinutes = sanitized.durationMinutes,
-        preparedOnly = NexaAdminServer.moderation.tempbanPreparedOnly == true
-    })
-    local auditId = writeAdminAudit('admin.moderation.tempban.prepared', source, sanitizeModerationRecord(record))
-
-    writeModerationLog('admin.moderation.tempban.prepared', record)
-
-    return buildResponse(true, 'OK', 'Tempban wurde vorbereitet.', {
-        action = sanitizeModerationRecord(record)
-    }, nil, auditId)
-end
-
-local function setPlayerFrozen(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.freeze')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateModerationFreezePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Freeze-Anfrage.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordModerationAction('freeze', actor, target, {
-        state = sanitized.state,
-        frozen = sanitized.frozen,
-        reason = sanitized.reason
-    })
-    local auditId = writeAdminAudit('admin.moderation.freezeChanged', source, sanitizeModerationRecord(record))
-
-    writeModerationLog('admin.moderation.freezeChanged', record)
-    TriggerClientEvent(NEXA_ADMIN_EVENTS.applyControl, target.source, {
-        frozen = sanitized.frozen,
-        reason = sanitized.reason
-    })
-
-    return buildResponse(true, 'OK', sanitized.frozen and 'Spieler wurde eingefroren.' or 'Spieler wurde freigegeben.', {
-        action = sanitizeModerationRecord(record)
-    }, nil, auditId)
-end
-
-local function prepareSpectate(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.spectate.prepare')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateModerationTargetPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Spectate-Vorbereitung.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordModerationAction('spectate.prepare', actor, target, {
-        preparedOnly = NexaAdminServer.moderation.spectatePreparedOnly == true
-    })
-    local auditId = writeAdminAudit('admin.moderation.spectate.prepared', source, sanitizeModerationRecord(record))
-
-    writeModerationLog('admin.moderation.spectate.prepared', record)
-
-    return buildResponse(true, 'OK', 'Spectate wurde vorbereitet.', {
-        action = sanitizeModerationRecord(record)
-    }, nil, auditId)
-end
-
-local function addAdminNote(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.notes.add')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateModerationNotePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Admin-Notiz.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local key = tostring(target.characterId or target.source)
-
-    moderationNotes[key] = moderationNotes[key] or {}
-
-    if #moderationNotes[key] >= NexaAdminServer.moderation.maxNotesPerTarget then
-        return buildResponse(false, 'CONFLICT', 'Zu viele Admin-Notizen fuer diesen Spieler.', nil, nil, nil)
-    end
-
-    local record = recordModerationAction('note.add', actor, target, {
-        note = sanitized.note
-    })
-    moderationNotes[key][#moderationNotes[key] + 1] = sanitizeModerationRecord(record)
-
-    local auditId = writeAdminAudit('admin.moderation.note.added', source, sanitizeModerationRecord(record))
-
-    writeModerationLog('admin.moderation.note.added', record)
-
-    return buildResponse(true, 'CREATED', 'Admin-Notiz wurde gespeichert.', {
-        note = sanitizeModerationRecord(record)
-    }, nil, auditId)
-end
-
-local function listAdminNotes(source, payload)
-    local allowed, denied = ensureModerationAccess(source, 'admin.moderation.notes.view')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateModerationTargetPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Notiz-Anfrage.', nil, nil, nil)
-    end
-
-    local _, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local key = tostring(target.characterId or target.source)
-    local notes = moderationNotes[key] or {}
-    local auditId = writeAdminAudit('admin.moderation.notes.list', source, {
-        source = source,
-        targetSource = target.source,
-        count = #notes
-    })
-
-    return buildResponse(true, 'OK', 'Admin-Notizen wurden geladen.', {
-        notes = notes
-    }, nil, auditId)
-end
-
-local function bringPlayer(source, payload)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.bring')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateUtilityTargetPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Bring-Anfrage.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local targetCoords = getServerCoords(target.source)
-    local destination = getServerCoords(source)
-
-    if destination == nil or targetCoords == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Position konnte nicht bestimmt werden.', nil, nil, nil)
-    end
-
-    returnPositions[tostring(target.source)] = targetCoords
-
-    local record = recordUtilityAction('bring', actor, target, {
-        destination = destination,
-        returnStored = true
-    })
-    local auditId = writeAdminAudit('admin.utility.brought', source, sanitizeUtilityRecord(record))
-
-    writeUtilityLog('admin.utility.brought', record)
-    markTeleportAllowance(target.source, 'admin_utility', {
-        actorSource = source,
-        action = 'bring',
-        auditId = auditId
-    })
-    sendUtilityToClient(target.source, {
-        type = 'teleport',
-        coords = destination
-    })
-
-    return buildResponse(true, 'OK', 'Spieler wurde gebracht.', {
-        action = sanitizeUtilityRecord(record)
-    }, nil, auditId)
-end
-
-local function gotoPlayer(source, payload)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.goto')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateUtilityTargetPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige GoTo-Anfrage.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local actorCoords = getServerCoords(source)
-    local destination = getServerCoords(target.source)
-
-    if destination == nil or actorCoords == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Position konnte nicht bestimmt werden.', nil, nil, nil)
-    end
-
-    returnPositions[tostring(source)] = actorCoords
-
-    local record = recordUtilityAction('goto', actor, target, {
-        destination = destination,
-        returnStored = true
-    })
-    local auditId = writeAdminAudit('admin.utility.goto', source, sanitizeUtilityRecord(record))
-
-    writeUtilityLog('admin.utility.goto', record)
-    markTeleportAllowance(source, 'admin_utility', {
-        actorSource = source,
-        action = 'goto',
-        auditId = auditId
-    })
-    sendUtilityToClient(source, {
-        type = 'teleport',
-        coords = destination
-    })
-
-    return buildResponse(true, 'OK', 'Du wurdest zum Spieler teleportiert.', {
-        action = sanitizeUtilityRecord(record)
-    }, nil, auditId)
-end
-
-local function returnPlayer(source, payload)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.return')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateUtilityTargetPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Return-Anfrage.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local key = tostring(target.source)
-    local destination = returnPositions[key]
-
-    if destination == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Keine Rueckkehrposition gespeichert.', nil, nil, nil)
-    end
-
-    returnPositions[key] = nil
-
-    local record = recordUtilityAction('return', actor, target, {
-        destination = destination
-    })
-    local auditId = writeAdminAudit('admin.utility.returned', source, sanitizeUtilityRecord(record))
-
-    writeUtilityLog('admin.utility.returned', record)
-    markTeleportAllowance(target.source, 'admin_utility', {
-        actorSource = source,
-        action = 'return',
-        auditId = auditId
-    })
-    sendUtilityToClient(target.source, {
-        type = 'teleport',
-        coords = destination
-    })
-
-    return buildResponse(true, 'OK', 'Spieler wurde zurueckgesetzt.', {
-        action = sanitizeUtilityRecord(record)
-    }, nil, auditId)
-end
-
-local function teleportToCoords(source, payload)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.coords')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateUtilityCoordsPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Koordinaten.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source) or {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Admin'
-    }
-    local actorCoords = getServerCoords(source)
-
-    if actorCoords ~= nil then
-        returnPositions[tostring(source)] = actorCoords
-    end
-
-    local record = recordUtilityAction('coords', actor, actor, {
-        destination = sanitized,
-        returnStored = actorCoords ~= nil
-    })
-    local auditId = writeAdminAudit('admin.utility.coords', source, sanitizeUtilityRecord(record))
-
-    writeUtilityLog('admin.utility.coords', record)
-    markTeleportAllowance(source, 'admin_teleport', {
-        actorSource = source,
-        action = 'coords',
-        auditId = auditId
-    })
-    sendUtilityToClient(source, {
-        type = 'teleport',
-        coords = sanitized
-    })
-
-    return buildResponse(true, 'OK', 'Koordinaten-Teleport wurde ausgefuehrt.', {
-        action = sanitizeUtilityRecord(record)
-    }, nil, auditId)
-end
-
-local function prepareAdminHeal(source, payload)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.heal.prepare')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateUtilityPreparedPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Heal-Vorbereitung.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordUtilityAction('heal.prepare', actor, target, {
-        reason = sanitized.reason,
-        preparedOnly = NexaAdminServer.utility.healPreparedOnly == true
-    })
-    local auditId = writeAdminAudit('admin.utility.heal.prepared', source, sanitizeUtilityRecord(record))
-
-    writeUtilityLog('admin.utility.heal.prepared', record)
-    markGodmodeException(target.source, 'admin_heal', {
-        actorSource = source,
-        action = 'heal.prepare',
-        auditId = auditId
-    })
-    sendUtilityToClient(target.source, {
-        type = 'heal_prepare',
-        reason = sanitized.reason
-    })
-
-    return buildResponse(true, 'OK', 'Admin-Heal wurde vorbereitet.', {
-        action = sanitizeUtilityRecord(record)
-    }, nil, auditId)
-end
-
-local function prepareAdminRevive(source, payload)
-    local allowed, denied = ensureUtilityAccess(source, 'admin.utility.revive.prepare')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateUtilityPreparedPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Revive-Vorbereitung.', nil, nil, nil)
-    end
-
-    local actor, target, targetError = ensureModerationTarget(source, sanitized.targetSource)
-
-    if targetError ~= nil then
-        return targetError
-    end
-
-    local record = recordUtilityAction('revive.prepare', actor, target, {
-        reason = sanitized.reason,
-        preparedOnly = NexaAdminServer.utility.revivePreparedOnly == true,
-        emsOverride = false
-    })
-    local auditId = writeAdminAudit('admin.utility.revive.prepared', source, sanitizeUtilityRecord(record))
-
-    writeUtilityLog('admin.utility.revive.prepared', record)
-    markGodmodeException(target.source, 'admin_revive', {
-        actorSource = source,
-        action = 'revive.prepare',
-        auditId = auditId
-    })
-    sendUtilityToClient(target.source, {
-        type = 'revive_prepare',
-        reason = sanitized.reason
-    })
-
-    return buildResponse(true, 'OK', 'Admin-Revive wurde vorbereitet.', {
-        action = sanitizeUtilityRecord(record)
-    }, nil, auditId)
-end
-
-local function createReport(source, payload)
-    if not areReportsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Reports sind deaktiviert.', nil, nil, nil)
-    end
-
-    local valid, code, sanitized = validateReportCreatePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Report-Daten.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source)
-
-    if actor == nil then
-        return buildResponse(false, 'CHARACTER_NOT_LOADED', 'Kein aktiver Charakter geladen.', nil, nil, nil)
-    end
-
-    if countOpenReportsForCharacter(actor.characterId) >= NexaAdminServer.reports.maxOpenPerPlayer then
-        return buildResponse(false, 'CONFLICT', 'Du hast bereits zu viele offene Reports.', nil, nil, nil)
-    end
-
-    if countReports() >= NexaAdminServer.reports.maxReports then
-        return buildResponse(false, 'CONFLICT', 'Aktuell koennen keine weiteren Reports erstellt werden.', nil, nil, nil)
-    end
-
-    reportSequence = reportSequence + 1
-    local reportId = ('RPT-%06d'):format(reportSequence)
-    local now = os.time()
-
-    reports[reportId] = {
-        id = reportId,
-        ownerSource = actor.source,
-        ownerName = actor.name,
-        ownerCharacterId = actor.characterId,
-        ownerDisplayName = actor.displayName,
-        category = sanitized.category,
-        subject = sanitized.subject,
-        message = sanitized.message,
-        status = 'open',
-        history = {},
-        createdAt = now,
-        updatedAt = now
-    }
-
-    addReportHistory(reports[reportId], 'report.created', actor, {
-        category = sanitized.category
-    })
-
-    local auditId = writeAdminAudit('admin.report.created', source, {
-        source = source,
-        reportId = reportId,
-        ownerCharacterId = actor.characterId,
-        category = sanitized.category
-    })
-
-    exports.nexa_logs:info(NEXA_ADMIN.resourceName, 'Report wurde erstellt.', {
-        source = source,
-        reportId = reportId
-    })
-
-    return buildResponse(true, 'CREATED', 'Report wurde erstellt.', {
-        report = sanitizeReport(reports[reportId], false)
-    }, nil, auditId)
-end
-
-local function listOwnReports(source)
-    if not areReportsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Reports sind deaktiviert.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source)
-
-    if actor == nil then
-        return buildResponse(false, 'CHARACTER_NOT_LOADED', 'Kein aktiver Charakter geladen.', nil, nil, nil)
-    end
-
-    local ownReports = {}
-
-    for _, report in pairs(reports) do
-        if tonumber(report.ownerCharacterId) == tonumber(actor.characterId) then
-            ownReports[#ownReports + 1] = sanitizeReport(report, false)
-        end
-    end
-
-    return buildResponse(true, 'OK', 'Deine Reports wurden geladen.', {
-        reports = ownReports
-    }, nil, nil)
-end
-
-local function listReports(source)
-    local allowed, denied = ensureAdminAccess(source, 'admin.reports.view')
-
-    if not allowed then
-        return denied
-    end
-
-    if not areReportsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Reports sind deaktiviert.', nil, nil, nil)
-    end
-
-    local result = {}
-
-    for _, report in pairs(reports) do
-        result[#result + 1] = sanitizeReport(report, true)
-    end
-
-    local auditId = writeAdminAudit('admin.reports.list', source, {
-        source = source,
-        count = #result
-    })
-
-    return buildResponse(true, 'OK', 'Reports wurden geladen.', {
-        reports = result
-    }, nil, auditId)
-end
-
-local function getReportHistory(source, payload)
-    if not areReportsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Reports sind deaktiviert.', nil, nil, nil)
-    end
-
-    local valid, code = validateReportIdPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Report-Anfrage.', nil, nil, nil)
-    end
-
-    local report = reports[payload.reportId]
-
-    if report == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Report wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    local includeAdminFields = false
-
-    if isReportOwner(source, report) then
-        includeAdminFields = false
-    elseif hasPermission(source, 'admin.reports.view') then
-        includeAdminFields = true
-    else
-        local auditId = writeAdminAudit('admin.report.history.denied', source, {
-            source = source,
-            reportId = payload.reportId
+local function auditAction(actionName, actorSource, target, reason, result, errorCode, correlation, metadata)
+    local actorAccountId = actorSource ~= 0 and getAccountId(actorSource) or nil
+    local _, err = dbQuery('Insert', [[
+        INSERT INTO nexa_admin_actions (
+            actor_account_id,
+            target_account_id,
+            target_character_id,
+            action_name,
+            reason,
+            result,
+            error_code,
+            correlation_id,
+            source_resource,
+            metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ]], {
+        actorAccountId,
+        target and target.accountId or nil,
+        target and target.characterId or nil,
+        actionName,
+        reason or '',
+        result,
+        errorCode,
+        correlation,
+        GetInvokingResource() or RESOURCE,
+        encode(metadata or {})
+    }, 'admin.audit')
+
+    if err then
+        log('Error', 'admin.audit', 'Admin action audit failed.', {
+            action = actionName,
+            error = err.code
         })
-
-        return buildResponse(false, 'NO_PERMISSION', 'Du hast dafuer keine Berechtigung.', nil, nil, auditId)
     end
-
-    return buildResponse(true, 'OK', 'Report-Historie wurde geladen.', {
-        report = sanitizeReport(report, includeAdminFields)
-    }, nil, nil)
 end
 
-local function acceptReport(source, payload)
-    if not areReportsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Reports sind deaktiviert.', nil, nil, nil)
-    end
-
-    local allowed, denied = ensureAdminAccess(source, 'admin.reports.accept')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code = validateReportIdPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Report-Anfrage.', nil, nil, nil)
-    end
-
-    local report = reports[payload.reportId]
-
-    if report == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Report wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    if report.status ~= 'open' then
-        return buildResponse(false, 'CONFLICT', 'Report kann nicht angenommen werden.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source) or {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Admin'
-    }
-
-    report.status = 'accepted'
-    report.acceptedBy = actor
-    report.updatedAt = os.time()
-    addReportHistory(report, 'report.accepted', actor, {})
-
-    local auditId = writeAdminAudit('admin.report.accepted', source, {
-        source = source,
-        reportId = report.id
+local function fail(actionName, actorSource, target, reason, code, message, correlation, metadata)
+    auditAction(actionName, actorSource, target, reason, 'failed', code, correlation, metadata)
+    return response(false, code, message, nil, {
+        correlationId = correlation
     })
-
-    return buildResponse(true, 'OK', 'Report wurde angenommen.', {
-        report = sanitizeReport(report, true)
-    }, nil, auditId)
 end
 
-local function closeReport(source, payload)
-    if not areReportsEnabled() then
-        return buildResponse(false, 'RESOURCE_UNAVAILABLE', 'Reports sind deaktiviert.', nil, nil, nil)
-    end
-
-    local allowed, denied = ensureAdminAccess(source, 'admin.reports.close')
-
-    if not allowed then
-        return denied
-    end
-
-    local valid, code, sanitized = validateReportClosePayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Report-Anfrage.', nil, nil, nil)
-    end
-
-    local report = reports[payload.reportId]
-
-    if report == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Report wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    if report.status == 'closed' then
-        return buildResponse(false, 'CONFLICT', 'Report ist bereits geschlossen.', nil, nil, nil)
-    end
-
-    local actor = getActorSnapshot(source) or {
-        source = tonumber(source),
-        name = GetPlayerName(source) or 'Admin'
-    }
-
-    report.status = 'closed'
-    report.closedBy = actor
-    report.closeReason = sanitized.reason
-    report.closedAt = os.time()
-    report.updatedAt = report.closedAt
-    addReportHistory(report, 'report.closed', actor, {
-        reason = sanitized.reason
+local function ok(actionName, actorSource, target, reason, message, data, correlation, metadata)
+    auditAction(actionName, actorSource, target, reason, 'success', nil, correlation, metadata)
+    return response(true, 'OK', message, data, {
+        correlationId = correlation
     })
-
-    local auditId = writeAdminAudit('admin.report.closed', source, {
-        source = source,
-        reportId = report.id,
-        reason = sanitized.reason
-    })
-
-    return buildResponse(true, 'OK', 'Report wurde geschlossen.', {
-        report = sanitizeReport(report, true)
-    }, nil, auditId)
 end
 
-local function listPlayers(source)
-    local allowed, denied = ensureAdminAccess(source, 'admin.players.view')
+local function resolveOnlineTarget(value)
+    local source = NexaAdminNormalizeSource(value)
 
-    if not allowed then
-        return denied
+    if not source or not targetOnline(source) then
+        return nil
     end
 
-    local players = {}
-
-    for _, playerSource in ipairs(GetPlayers()) do
-        if #players >= NexaAdminServer.overview.maxPlayers then
-            break
-        end
-
-        players[#players + 1] = sanitizePlayer(playerSource)
-    end
-
-    local auditId = writeAdminAudit('admin.players.list', source, {
-        source = source,
-        count = #players
-    })
-
-    exports.nexa_logs:info(NEXA_ADMIN.resourceName, 'Admin-Spieleruebersicht wurde serverseitig geladen.', {
-        source = source,
-        count = #players
-    })
-
-    return buildResponse(true, 'OK', 'Spieleruebersicht wurde geladen.', {
-        players = players
-    }, nil, auditId)
-end
-
-local function getMenu(source)
-    local allowed, denied = ensureAdminAccess(source, 'admin.menu')
-
-    if not allowed then
-        return denied
-    end
-
-    local role = getRoleForSource(source)
-    local actions = {}
-
-    for _, action in ipairs(NexaAdminServer.actions) do
-        if hasPermission(source, action.permission) then
-            actions[#actions + 1] = {
-                id = action.id,
-                label = action.label,
-                contract = action.contract
-            }
-        end
-    end
-
-    local auditId = writeAdminAudit('admin.menu.open', source, {
-        source = source,
-        role = role and role.id or nil,
-        actionCount = #actions
-    })
-
-    return buildResponse(true, 'OK', 'Admin-Menue wurde geladen.', {
-        role = role,
-        actions = actions
-    }, nil, auditId)
-end
-
-local function validateAction(source, payload)
-    local valid, code = validateAdminActionPayload(payload)
-
-    if not valid then
-        return buildResponse(false, code, 'Ungueltige Admin-Anfrage.', nil, nil, nil)
-    end
-
-    local action = actionIndex[payload.actionId]
-
-    if action == nil then
-        return buildResponse(false, 'NOT_FOUND', 'Admin-Aktion wurde nicht gefunden.', nil, nil, nil)
-    end
-
-    local allowed, denied = ensureAdminAccess(source, action.permission)
-
-    if not allowed then
-        return denied
-    end
-
-    local auditId = writeAdminAudit('admin.action.contractValidated', source, {
-        source = source,
-        actionId = action.id,
-        targetSource = payload.targetSource,
-        contract = action.contract
-    })
-
-    return buildResponse(true, 'OK', 'Admin-Aktion wurde serverseitig validiert.', {
-        actionId = action.id,
-        contract = action.contract,
-        allowed = true
-    }, nil, auditId)
-end
-
-local function getStatus()
     return {
-        resourceName = NEXA_ADMIN.resourceName,
-        version = NEXA_ADMIN.version,
-        enabled = isEnabled(),
-        actionCount = #NexaAdminServer.actions
+        source = source,
+        accountId = getAccountId(source),
+        characterId = getCharacterId(source),
+        name = GetPlayerName(source)
     }
 end
 
-local function rebuildActionIndex()
-    actionIndex = {}
+local function resolveTarget(payload)
+    payload = payload or {}
 
-    for _, action in ipairs(NexaAdminServer.actions) do
-        actionIndex[action.id] = action
+    if payload.targetSource then
+        return resolveOnlineTarget(payload.targetSource)
+    end
+
+    local accountId = NexaAdminNormalizeId(payload.accountId or payload.targetAccountId)
+
+    if accountId then
+        return {
+            accountId = accountId,
+            characterId = NexaAdminNormalizeId(payload.characterId or payload.targetCharacterId)
+        }
+    end
+
+    return nil
+end
+
+local function checkRateLimit(actorSource, actionName)
+    if actorSource == 0 then
+        return true
+    end
+
+    local key = ('%s:%s'):format(actorSource, actionName)
+    local now = os.time()
+    local previous = NexaAdmin.rateLimits[key]
+
+    if previous and now - previous < NexaAdminServer.actionRateLimitSeconds then
+        return false
+    end
+
+    NexaAdmin.rateLimits[key] = now
+    return true
+end
+
+function NexaAdmin.Actions.Register(definition)
+    if type(definition) ~= 'table' or type(definition.name) ~= 'string' or type(definition.handler) ~= 'function' then
+        return false
+    end
+
+    NexaAdmin.Actions.byName[definition.name] = definition
+    return true
+end
+
+function NexaAdmin.Actions.Get(actionName)
+    return NexaAdmin.Actions.byName[actionName]
+end
+
+function NexaAdmin.Actions.List()
+    local result = {}
+
+    for _, action in pairs(NexaAdmin.Actions.byName) do
+        result[#result + 1] = {
+            name = action.name,
+            permission = action.permission,
+            permissions = action.permissions,
+            duty = action.duty == true,
+            targetType = action.targetType,
+            reasonRequired = action.reasonRequired == true
+        }
+    end
+
+    table.sort(result, function(a, b)
+        return a.name < b.name
+    end)
+
+    return result
+end
+
+function NexaAdmin.Actions.Validate(actorSource, actionName, payload)
+    actorSource = NexaAdminNormalizeSource(actorSource)
+
+    if not actorSource then
+        return false, NEXA_ADMIN.errors.targetNotFound
+    end
+
+    local action = NexaAdmin.Actions.Get(actionName)
+
+    if not action then
+        return false, NEXA_ADMIN.errors.actionNotFound
+    end
+
+    if not checkRateLimit(actorSource, actionName) then
+        return false, NEXA_ADMIN.errors.rateLimited
+    end
+
+    if action.duty == true then
+        local dutyOk, dutyErr = ensureDuty(actorSource)
+
+        if not dutyOk then
+            return false, dutyErr
+        end
+    end
+
+    local permissionOk = false
+
+    if action.permissions then
+        permissionOk = hasAnyPermission(actorSource, action.permissions)
+    elseif action.permission then
+        permissionOk = hasPermission(actorSource, action.permission)
+    end
+
+    if not permissionOk then
+        return false, 'ACTOR_NOT_AUTHORIZED'
+    end
+
+    if action.reasonRequired == true and not NexaAdminNormalizeReason(payload and payload.reason, true) then
+        return false, NEXA_ADMIN.errors.reasonRequired
+    end
+
+    return true
+end
+
+function NexaAdmin.Actions.Execute(actorSource, actionName, payload)
+    payload = payload or {}
+    actorSource = NexaAdminNormalizeSource(actorSource)
+    local correlation = correlationId()
+    local target = resolveTarget(payload)
+    local reason = NexaAdminNormalizeReason(payload.reason, false)
+    local valid, validationErr = NexaAdmin.Actions.Validate(actorSource, actionName, payload)
+
+    if not valid then
+        return fail(actionName, actorSource or 0, target, reason, validationErr, 'Admin action denied.', correlation, {
+            payloadKeys = type(payload) == 'table' and true or false
+        })
+    end
+
+    local action = NexaAdmin.Actions.Get(actionName)
+
+    if action.targetType == 'online' and not target then
+        return fail(actionName, actorSource, nil, reason, NEXA_ADMIN.errors.targetOffline, 'Target is offline.', correlation)
+    end
+
+    if target and target.source then
+        local protected, protectErr = isProtectedTarget(actorSource, target.source)
+
+        if protected then
+            return fail(actionName, actorSource, target, reason, protectErr, 'Target is protected.', correlation)
+        end
+    end
+
+    local okHandler, result = pcall(action.handler, actorSource, payload, target, correlation, reason)
+
+    if not okHandler then
+        return fail(actionName, actorSource, target, reason, 'ADMIN_INTERNAL_ERROR', 'Admin action failed.', correlation, {
+            error = result
+        })
+    end
+
+    if type(result) == 'table' and result.success == false then
+        auditAction(actionName, actorSource, target, reason, 'failed', result.code, correlation, result.meta)
+        result.meta = result.meta or {}
+        result.meta.correlationId = result.meta.correlationId or correlation
+        return result
+    end
+
+    return ok(actionName, actorSource, target, reason, result and result.message or 'Admin action executed.', result and result.data or result, correlation)
+end
+
+function NexaAdmin.Actions.Cancel(actorSource, actionName, context)
+    return response(true, 'OK', 'Admin action cancellation acknowledged.', {
+        action = actionName,
+        context = context
+    })
+end
+
+local Warnings = {}
+local Bans = {}
+local Teleport = {}
+local Freeze = {}
+local Recovery = {}
+local Spectate = {}
+local Noclip = {}
+local Notes = {}
+
+function Warnings.Create(actor, target, payload)
+    local reason = NexaAdminNormalizeReason(payload.reason, true)
+
+    if not reason then
+        return response(false, NEXA_ADMIN.errors.reasonRequired, 'Reason is required.')
+    end
+
+    local warningId, err = dbQuery('Insert', [[
+        INSERT INTO nexa_admin_warnings (
+            target_account_id,
+            target_character_id,
+            actor_account_id,
+            reason,
+            category,
+            severity,
+            status,
+            expires_at,
+            correlation_id,
+            metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, 'active', DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE), ?, ?)
+    ]], {
+        target.accountId,
+        target.characterId,
+        getAccountId(actor),
+        reason,
+        NexaAdminNormalizeText(payload.category or 'general', 32, false) or 'general',
+        NexaAdminNormalizeText(payload.severity or 'normal', 32, false) or 'normal',
+        payload.expiresInMinutes and NexaAdminNormalizeDurationMinutes(payload.expiresInMinutes) or nil,
+        payload.correlationId,
+        encode({
+            targetSource = target.source
+        })
+    }, 'admin.warnings.create')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Warning could not be saved.')
+    end
+
+    return response(true, 'OK', 'Warning created.', {
+        warningId = warningId
+    })
+end
+
+function Warnings.Get(warningId)
+    warningId = NexaAdminNormalizeId(warningId)
+
+    if not warningId then
+        return response(false, NEXA_ADMIN.errors.warningNotFound, 'Warning not found.')
+    end
+
+    local row, err = dbQuery('Single', 'SELECT * FROM nexa_admin_warnings WHERE id = ? LIMIT 1', { warningId }, 'admin.warnings.get')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Warning could not be loaded.')
+    end
+
+    if not row then
+        return response(false, NEXA_ADMIN.errors.warningNotFound, 'Warning not found.')
+    end
+
+    return response(true, 'OK', 'Warning loaded.', row)
+end
+
+function Warnings.ListForAccount(accountId, filters)
+    accountId = NexaAdminNormalizeId(accountId)
+
+    if not accountId then
+        return response(false, NEXA_ADMIN.errors.targetNotFound, 'Account not found.')
+    end
+
+    local rows, err = dbQuery('Query', [[
+        SELECT *
+        FROM nexa_admin_warnings
+        WHERE target_account_id = ?
+          AND (? IS NULL OR category = ?)
+        ORDER BY created_at DESC
+        LIMIT 100
+    ]], { accountId, filters and filters.category or nil, filters and filters.category or nil }, 'admin.warnings.list_account')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Warnings could not be loaded.')
+    end
+
+    return response(true, 'OK', 'Warnings loaded.', {
+        warnings = rows or {}
+    })
+end
+
+function Warnings.ListForCharacter(characterId, filters)
+    characterId = NexaAdminNormalizeId(characterId)
+
+    if not characterId then
+        return response(false, NEXA_ADMIN.errors.targetNotFound, 'Character not found.')
+    end
+
+    local rows, err = dbQuery('Query', [[
+        SELECT *
+        FROM nexa_admin_warnings
+        WHERE target_character_id = ?
+          AND (? IS NULL OR category = ?)
+        ORDER BY created_at DESC
+        LIMIT 100
+    ]], { characterId, filters and filters.category or nil, filters and filters.category or nil }, 'admin.warnings.list_character')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Warnings could not be loaded.')
+    end
+
+    return response(true, 'OK', 'Warnings loaded.', {
+        warnings = rows or {}
+    })
+end
+
+function Warnings.Revoke(actor, warningId, reason)
+    local loaded = Warnings.Get(warningId)
+
+    if not loaded.success then
+        return loaded
+    end
+
+    if loaded.data.status == 'revoked' then
+        return response(false, NEXA_ADMIN.errors.warningAlreadyRevoked, 'Warning already revoked.')
+    end
+
+    local normalizedReason = NexaAdminNormalizeReason(reason, true)
+
+    if not normalizedReason then
+        return response(false, NEXA_ADMIN.errors.reasonRequired, 'Reason is required.')
+    end
+
+    local _, err = dbQuery('Update', [[
+        UPDATE nexa_admin_warnings
+        SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP, revoked_by = ?, revoked_reason = ?
+        WHERE id = ?
+    ]], { getAccountId(actor), normalizedReason, warningId }, 'admin.warnings.revoke')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Warning could not be revoked.')
+    end
+
+    return response(true, 'OK', 'Warning revoked.')
+end
+
+function Bans.GetActiveForAccount(accountId)
+    accountId = NexaAdminNormalizeId(accountId)
+
+    if not accountId then
+        return nil
+    end
+
+    local row = dbQuery('Single', [[
+        SELECT *
+        FROM nexa_admin_bans
+        WHERE target_account_id = ?
+          AND active = 1
+          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+        ORDER BY created_at DESC
+        LIMIT 1
+    ]], { accountId }, 'admin.bans.active')
+
+    return row
+end
+
+function Bans.IsAccountBanned(accountId)
+    return Bans.GetActiveForAccount(accountId) ~= nil
+end
+
+function Bans.GetById(banId)
+    banId = NexaAdminNormalizeId(banId)
+
+    if not banId then
+        return response(false, NEXA_ADMIN.errors.banNotFound, 'Ban not found.')
+    end
+
+    local row, err = dbQuery('Single', 'SELECT * FROM nexa_admin_bans WHERE id = ? LIMIT 1', { banId }, 'admin.bans.get')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Ban could not be loaded.')
+    end
+
+    if not row then
+        return response(false, NEXA_ADMIN.errors.banNotFound, 'Ban not found.')
+    end
+
+    return response(true, 'OK', 'Ban loaded.', row)
+end
+
+function Bans.ListForAccount(accountId)
+    accountId = NexaAdminNormalizeId(accountId)
+
+    if not accountId then
+        return response(false, NEXA_ADMIN.errors.targetNotFound, 'Account not found.')
+    end
+
+    local rows, err = dbQuery('Query', 'SELECT * FROM nexa_admin_bans WHERE target_account_id = ? ORDER BY created_at DESC LIMIT 100', { accountId }, 'admin.bans.list')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Bans could not be loaded.')
+    end
+
+    return response(true, 'OK', 'Bans loaded.', {
+        bans = rows or {}
+    })
+end
+
+local function createBan(actor, target, banType, durationMinutes, reason, correlation)
+    if Bans.IsAccountBanned(target.accountId) then
+        return response(false, NEXA_ADMIN.errors.banAlreadyActive, 'Account already has an active ban.')
+    end
+
+    if banType == 'temporary' and not durationMinutes then
+        return response(false, NEXA_ADMIN.errors.invalidDuration, 'Duration is invalid.')
+    end
+
+    local banId, err = dbQuery('Insert', [[
+        INSERT INTO nexa_admin_bans (
+            target_account_id,
+            target_identifier_ref,
+            actor_account_id,
+            ban_type,
+            reason,
+            starts_at,
+            expires_at,
+            active,
+            correlation_id,
+            metadata_json
+        ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CASE WHEN ? IS NULL THEN NULL ELSE DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE) END, 1, ?, ?)
+    ]], {
+        target.accountId,
+        target.source and ('source:%s'):format(target.source) or nil,
+        getAccountId(actor),
+        banType,
+        reason,
+        durationMinutes,
+        durationMinutes,
+        correlation,
+        encode({
+            targetSource = target.source
+        })
+    }, 'admin.bans.create')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Ban could not be saved.')
+    end
+
+    if target.source then
+        DropPlayer(target.source, NexaAdminServer.banRejectMessage)
+    end
+
+    return response(true, 'OK', 'Ban created.', {
+        banId = banId
+    })
+end
+
+function Bans.CreateTemporary(actor, target, duration, reason, correlation)
+    return createBan(actor, target, 'temporary', duration, reason, correlation)
+end
+
+function Bans.CreatePermanent(actor, target, reason, correlation)
+    return createBan(actor, target, 'permanent', nil, reason, correlation)
+end
+
+function Bans.Revoke(actor, banId, reason)
+    local loaded = Bans.GetById(banId)
+
+    if not loaded.success then
+        return loaded
+    end
+
+    if loaded.data.active ~= 1 and loaded.data.active ~= true then
+        return response(false, NEXA_ADMIN.errors.banAlreadyRevoked, 'Ban already revoked.')
+    end
+
+    local normalizedReason = NexaAdminNormalizeReason(reason, true)
+
+    if not normalizedReason then
+        return response(false, NEXA_ADMIN.errors.reasonRequired, 'Reason is required.')
+    end
+
+    local _, err = dbQuery('Update', [[
+        UPDATE nexa_admin_bans
+        SET active = 0, revoked_at = CURRENT_TIMESTAMP, revoked_by = ?, revoked_reason = ?
+        WHERE id = ?
+    ]], { getAccountId(actor), normalizedReason, banId }, 'admin.bans.revoke')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Ban could not be revoked.')
+    end
+
+    return response(true, 'OK', 'Ban revoked.')
+end
+
+function Bans.ResolveConnection(identityContext)
+    local accountId = NexaAdminNormalizeId(identityContext and (identityContext.accountId or identityContext.account_id))
+    local activeBan = accountId and Bans.GetActiveForAccount(accountId) or nil
+
+    if activeBan then
+        return response(false, 'ACCOUNT_BANNED', NexaAdminServer.banRejectMessage, {
+            banId = activeBan.id,
+            expiresAt = activeBan.expires_at
+        })
+    end
+
+    return response(true, 'OK', 'No active ban.')
+end
+
+function Teleport.GoTo(actorSource, targetSource)
+    local actorCoords = getCoords(actorSource)
+    local targetCoords = getCoords(targetSource)
+
+    if not actorCoords or not targetCoords then
+        return response(false, NEXA_ADMIN.errors.teleportPositionMissing, 'Position missing.')
+    end
+
+    NexaAdmin.returnPositions[actorSource] = {
+        coords = actorCoords,
+        expiresAt = os.time() + NexaAdminConfig.returnPositionTtlSeconds
+    }
+    SetPlayerRoutingBucket(actorSource, targetCoords.bucket or 0)
+    TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, actorSource, {
+        coords = targetCoords
+    })
+    return response(true, 'OK', 'Teleported to player.')
+end
+
+function Teleport.Bring(actorSource, targetSource)
+    local actorCoords = getCoords(actorSource)
+    local targetCoords = getCoords(targetSource)
+
+    if not actorCoords or not targetCoords then
+        return response(false, NEXA_ADMIN.errors.teleportPositionMissing, 'Position missing.')
+    end
+
+    NexaAdmin.returnPositions[targetSource] = {
+        coords = targetCoords,
+        expiresAt = os.time() + NexaAdminConfig.returnPositionTtlSeconds
+    }
+    SetPlayerRoutingBucket(targetSource, actorCoords.bucket or 0)
+    TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, targetSource, {
+        coords = actorCoords
+    })
+    return response(true, 'OK', 'Player brought.')
+end
+
+function Teleport.Return(actorSource, targetSource)
+    local target = targetSource or actorSource
+    local stored = NexaAdmin.returnPositions[target]
+
+    if not stored or stored.expiresAt < os.time() then
+        NexaAdmin.returnPositions[target] = nil
+        return response(false, NEXA_ADMIN.errors.teleportPositionMissing, 'Return position missing.')
+    end
+
+    SetPlayerRoutingBucket(target, stored.coords.bucket or 0)
+    TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, target, {
+        coords = stored.coords
+    })
+    NexaAdmin.returnPositions[target] = nil
+    return response(true, 'OK', 'Player returned.')
+end
+
+function Teleport.ToCoords(actorSource, coords)
+    coords = NexaAdminNormalizeCoords(coords)
+
+    if not coords then
+        return response(false, NEXA_ADMIN.errors.teleportInvalidCoords, 'Coordinates are invalid.')
+    end
+
+    local previous = getCoords(actorSource)
+
+    if previous then
+        NexaAdmin.returnPositions[actorSource] = {
+            coords = previous,
+            expiresAt = os.time() + NexaAdminConfig.returnPositionTtlSeconds
+        }
+    end
+
+    TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, actorSource, {
+        coords = coords
+    })
+    return response(true, 'OK', 'Teleported to coordinates.')
+end
+
+function Freeze.Set(actorSource, targetSource, state, reason)
+    if state ~= true and state ~= false then
+        return response(false, NEXA_ADMIN.errors.freezeStateInvalid, 'Freeze state is invalid.')
+    end
+
+    NexaAdmin.freezeStates[targetSource] = state == true and {
+        frozen = true,
+        actorSource = actorSource,
+        reason = reason,
+        createdAt = os.time()
+    } or nil
+    TriggerClientEvent(NEXA_ADMIN.events.applyControl, targetSource, {
+        frozen = state == true
+    })
+    return response(true, 'OK', state and 'Player frozen.' or 'Player unfrozen.')
+end
+
+function Freeze.Get(targetSource)
+    return NexaAdmin.freezeStates[targetSource]
+end
+
+function Freeze.Clear(targetSource)
+    NexaAdmin.freezeStates[targetSource] = nil
+    TriggerClientEvent(NEXA_ADMIN.events.applyControl, targetSource, {
+        frozen = false
+    })
+    return response(true, 'OK', 'Freeze cleared.')
+end
+
+function Recovery.Heal(actorSource, targetSource)
+    TriggerClientEvent(NEXA_ADMIN.events.applyRecovery, targetSource, {
+        type = 'heal',
+        actorSource = actorSource
+    })
+    return response(true, 'OK', 'Player healed.')
+end
+
+function Recovery.Revive(actorSource, targetSource)
+    TriggerClientEvent(NEXA_ADMIN.events.applyRecovery, targetSource, {
+        type = 'revive',
+        actorSource = actorSource
+    })
+    return response(true, 'OK', 'Player revived.')
+end
+
+function Spectate.Start(actorSource, targetSource)
+    if NexaAdmin.spectateStates[actorSource] then
+        return response(false, NEXA_ADMIN.errors.spectateAlreadyActive, 'Spectate already active.')
+    end
+
+    NexaAdmin.spectateStates[actorSource] = {
+        targetSource = targetSource,
+        original = getCoords(actorSource),
+        createdAt = os.time()
+    }
+    TriggerClientEvent(NEXA_ADMIN.events.applySpectate, actorSource, {
+        active = true,
+        targetSource = targetSource
+    })
+    return response(true, 'OK', 'Spectate started.')
+end
+
+function Spectate.Stop(actorSource)
+    local state = NexaAdmin.spectateStates[actorSource]
+
+    if not state then
+        return response(false, NEXA_ADMIN.errors.spectateNotActive, 'Spectate not active.')
+    end
+
+    NexaAdmin.spectateStates[actorSource] = nil
+    TriggerClientEvent(NEXA_ADMIN.events.applySpectate, actorSource, {
+        active = false
+    })
+
+    if state.original then
+        TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, actorSource, {
+            coords = state.original
+        })
+    end
+
+    return response(true, 'OK', 'Spectate stopped.')
+end
+
+function Spectate.SwitchTarget(actorSource, targetSource)
+    if not NexaAdmin.spectateStates[actorSource] then
+        return response(false, NEXA_ADMIN.errors.spectateNotActive, 'Spectate not active.')
+    end
+
+    NexaAdmin.spectateStates[actorSource].targetSource = targetSource
+    TriggerClientEvent(NEXA_ADMIN.events.applySpectate, actorSource, {
+        active = true,
+        targetSource = targetSource
+    })
+    return response(true, 'OK', 'Spectate target switched.')
+end
+
+function Spectate.GetState(actorSource)
+    return NexaAdmin.spectateStates[actorSource]
+end
+
+function Noclip.Start(actorSource)
+    if NexaAdmin.noclipStates[actorSource] then
+        return response(false, NEXA_ADMIN.errors.noclipAlreadyActive, 'Noclip already active.')
+    end
+
+    NexaAdmin.noclipStates[actorSource] = {
+        speedLevel = 1,
+        createdAt = os.time()
+    }
+    TriggerClientEvent(NEXA_ADMIN.events.applyNoclip, actorSource, {
+        active = true,
+        speed = NexaAdminServer.noclipSpeeds[1]
+    })
+    return response(true, 'OK', 'Noclip started.')
+end
+
+function Noclip.Stop(actorSource)
+    if not NexaAdmin.noclipStates[actorSource] then
+        return response(false, NEXA_ADMIN.errors.noclipNotActive, 'Noclip not active.')
+    end
+
+    NexaAdmin.noclipStates[actorSource] = nil
+    TriggerClientEvent(NEXA_ADMIN.events.applyNoclip, actorSource, {
+        active = false
+    })
+    return response(true, 'OK', 'Noclip stopped.')
+end
+
+function Noclip.SetSpeed(actorSource, level)
+    level = tonumber(level)
+
+    if not level or level < 1 or level > NexaAdminServer.maxNoclipSpeedLevel or not NexaAdmin.noclipStates[actorSource] then
+        return response(false, NEXA_ADMIN.errors.noclipNotActive, 'Noclip not active.')
+    end
+
+    NexaAdmin.noclipStates[actorSource].speedLevel = level
+    TriggerClientEvent(NEXA_ADMIN.events.applyNoclip, actorSource, {
+        active = true,
+        speed = NexaAdminServer.noclipSpeeds[level]
+    })
+    return response(true, 'OK', 'Noclip speed changed.')
+end
+
+function Noclip.GetState(actorSource)
+    return NexaAdmin.noclipStates[actorSource]
+end
+
+function Notes.Create(actor, target, payload)
+    local content = NexaAdminNormalizeText(payload.content or payload.note or payload.reason, NexaAdminConfig.maxNoteLength, true)
+
+    if not content then
+        return response(false, NEXA_ADMIN.errors.reasonRequired, 'Note content is required.')
+    end
+
+    local visibility = payload.visibility or 'support'
+
+    if not NexaAdminIsValidVisibility(visibility) then
+        return response(false, NEXA_ADMIN.errors.noteVisibilityForbidden, 'Note visibility is invalid.')
+    end
+
+    local noteId, err = dbQuery('Insert', [[
+        INSERT INTO nexa_admin_notes (
+            target_account_id,
+            target_character_id,
+            actor_account_id,
+            content,
+            category,
+            visibility,
+            correlation_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ]], {
+        target.accountId,
+        target.characterId,
+        getAccountId(actor),
+        content,
+        NexaAdminNormalizeText(payload.category or 'general', 32, false) or 'general',
+        visibility,
+        payload.correlationId
+    }, 'admin.notes.create')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Note could not be saved.')
+    end
+
+    return response(true, 'OK', 'Note created.', {
+        noteId = noteId
+    })
+end
+
+function Notes.List(actor, target)
+    local rows, err = dbQuery('Query', [[
+        SELECT *
+        FROM nexa_admin_notes
+        WHERE deleted_at IS NULL
+          AND (? IS NULL OR target_account_id = ?)
+          AND (? IS NULL OR target_character_id = ?)
+        ORDER BY created_at DESC
+        LIMIT 100
+    ]], { target.accountId, target.accountId, target.characterId, target.characterId }, 'admin.notes.list')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Notes could not be loaded.')
+    end
+
+    return response(true, 'OK', 'Notes loaded.', {
+        notes = rows or {}
+    })
+end
+
+function Notes.Update(actor, noteId, changes)
+    noteId = NexaAdminNormalizeId(noteId)
+    local content = NexaAdminNormalizeText(changes and changes.content, NexaAdminConfig.maxNoteLength, true)
+
+    if not noteId or not content then
+        return response(false, NEXA_ADMIN.errors.noteNotFound, 'Note not found.')
+    end
+
+    local _, err = dbQuery('Update', 'UPDATE nexa_admin_notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL', { content, noteId }, 'admin.notes.update')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Note could not be updated.')
+    end
+
+    return response(true, 'OK', 'Note updated.')
+end
+
+function Notes.Delete(actor, noteId, reason)
+    noteId = NexaAdminNormalizeId(noteId)
+
+    if not noteId then
+        return response(false, NEXA_ADMIN.errors.noteNotFound, 'Note not found.')
+    end
+
+    local normalizedReason = NexaAdminNormalizeReason(reason, true)
+
+    if not normalizedReason then
+        return response(false, NEXA_ADMIN.errors.reasonRequired, 'Reason is required.')
+    end
+
+    local _, err = dbQuery('Update', 'UPDATE nexa_admin_notes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL', { noteId }, 'admin.notes.delete')
+
+    if err then
+        return response(false, err.code or 'DATABASE_ERROR', 'Note could not be deleted.')
+    end
+
+    return response(true, 'OK', 'Note deleted.')
+end
+
+local function registerActions()
+    local function reg(def)
+        NexaAdmin.Actions.Register(def)
+    end
+
+    reg({ name = 'admin.warn', permission = 'nexa.admin.warn', duty = true, targetType = 'online', reasonRequired = true, handler = function(actor, payload, target, correlation, reason) payload.correlationId = correlation return Warnings.Create(actor, target, payload) end })
+    reg({ name = 'admin.kick', permission = 'nexa.admin.kick', duty = true, targetType = 'online', reasonRequired = true, handler = function(actor, payload, target) DropPlayer(target.source, ('Nexa Admin: %s'):format(payload.reason)) return response(true, 'OK', 'Player kicked.') end })
+    reg({ name = 'admin.ban.temp', permission = 'nexa.admin.ban.temp', duty = true, targetType = 'account', reasonRequired = true, handler = function(actor, payload, target, correlation, reason) return Bans.CreateTemporary(actor, target, NexaAdminNormalizeDurationMinutes(payload.durationMinutes), reason, correlation) end })
+    reg({ name = 'admin.ban.permanent', permission = 'nexa.admin.ban.permanent', duty = true, targetType = 'account', reasonRequired = true, handler = function(actor, payload, target, correlation, reason) return Bans.CreatePermanent(actor, target, reason, correlation) end })
+    reg({ name = 'admin.unban', permission = 'nexa.admin.unban', duty = false, targetType = 'ban', reasonRequired = true, handler = function(actor, payload) return Bans.Revoke(actor, payload.banId, payload.reason) end })
+    reg({ name = 'admin.goto', permissions = { 'nexa.admin.teleport', 'nexa.support.teleport' }, duty = true, targetType = 'online', reasonRequired = false, handler = function(actor, payload, target) return Teleport.GoTo(actor, target.source) end })
+    reg({ name = 'admin.bring', permissions = { 'nexa.admin.teleport', 'nexa.support.teleport' }, duty = true, targetType = 'online', reasonRequired = false, handler = function(actor, payload, target) return Teleport.Bring(actor, target.source) end })
+    reg({ name = 'admin.return', permissions = { 'nexa.admin.teleport', 'nexa.support.teleport' }, duty = true, targetType = 'online', reasonRequired = false, handler = function(actor, payload, target) return Teleport.Return(actor, target and target.source or actor) end })
+    reg({ name = 'admin.teleport.coords', permission = 'nexa.admin.teleport', duty = true, targetType = 'coords', reasonRequired = true, handler = function(actor, payload) return Teleport.ToCoords(actor, payload) end })
+    reg({ name = 'admin.freeze', permissions = { 'nexa.admin.freeze', 'nexa.support.freeze' }, duty = true, targetType = 'online', reasonRequired = true, handler = function(actor, payload, target, correlation, reason) return Freeze.Set(actor, target.source, payload.state == true or payload.state == 'frozen', reason) end })
+    reg({ name = 'admin.heal', permission = 'nexa.admin.heal', duty = true, targetType = 'online', reasonRequired = true, handler = function(actor, payload, target) return Recovery.Heal(actor, target.source) end })
+    reg({ name = 'admin.revive', permissions = { 'nexa.admin.revive', 'nexa.support.revive' }, duty = true, targetType = 'online', reasonRequired = true, handler = function(actor, payload, target) return Recovery.Revive(actor, target.source) end })
+    reg({ name = 'admin.spectate.start', permission = 'nexa.admin.spectate', duty = true, targetType = 'online', reasonRequired = false, handler = function(actor, payload, target) return Spectate.Start(actor, target.source) end })
+    reg({ name = 'admin.spectate.stop', permission = 'nexa.admin.spectate', duty = true, targetType = 'self', reasonRequired = false, handler = function(actor) return Spectate.Stop(actor) end })
+    reg({ name = 'admin.noclip.start', permission = 'nexa.admin.noclip', duty = true, targetType = 'self', reasonRequired = false, handler = function(actor) return Noclip.Start(actor) end })
+    reg({ name = 'admin.noclip.stop', permission = 'nexa.admin.noclip', duty = true, targetType = 'self', reasonRequired = false, handler = function(actor) return Noclip.Stop(actor) end })
+    reg({ name = 'admin.note.create', permission = 'nexa.support.notes.create', duty = false, targetType = 'account', reasonRequired = true, handler = function(actor, payload, target, correlation) payload.correlationId = correlation return Notes.Create(actor, target, payload) end })
+    reg({ name = 'admin.note.view', permission = 'nexa.support.notes.view', duty = false, targetType = 'account', reasonRequired = false, handler = function(actor, payload, target) return Notes.List(actor, target) end })
+end
+
+local function registerMigration()
+    local core = getCore()
+
+    if not core or not core.Database then
+        return false
+    end
+
+    core.Database.RegisterMigration({
+        id = '040_admin_foundation',
+        description = 'Create admin warnings, bans, notes and action audit tables',
+        transaction = false,
+        statements = {
+            [[CREATE TABLE IF NOT EXISTS nexa_admin_warnings (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                target_account_id BIGINT UNSIGNED NOT NULL,
+                target_character_id BIGINT UNSIGNED NULL,
+                actor_account_id BIGINT UNSIGNED NULL,
+                reason VARCHAR(512) NOT NULL,
+                category VARCHAR(32) NOT NULL DEFAULT 'general',
+                severity VARCHAR(32) NOT NULL DEFAULT 'normal',
+                status VARCHAR(32) NOT NULL DEFAULT 'active',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NULL DEFAULT NULL,
+                revoked_at TIMESTAMP NULL DEFAULT NULL,
+                revoked_by BIGINT UNSIGNED NULL,
+                revoked_reason VARCHAR(512) NULL,
+                correlation_id VARCHAR(96) NULL,
+                metadata_json LONGTEXT NULL,
+                PRIMARY KEY (id),
+                KEY idx_nexa_admin_warnings_account (target_account_id),
+                KEY idx_nexa_admin_warnings_character (target_character_id),
+                KEY idx_nexa_admin_warnings_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            [[CREATE TABLE IF NOT EXISTS nexa_admin_bans (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                target_account_id BIGINT UNSIGNED NOT NULL,
+                target_identifier_ref VARCHAR(128) NULL,
+                actor_account_id BIGINT UNSIGNED NULL,
+                ban_type VARCHAR(32) NOT NULL,
+                reason VARCHAR(512) NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                starts_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NULL DEFAULT NULL,
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                revoked_at TIMESTAMP NULL DEFAULT NULL,
+                revoked_by BIGINT UNSIGNED NULL,
+                revoked_reason VARCHAR(512) NULL,
+                correlation_id VARCHAR(96) NULL,
+                metadata_json LONGTEXT NULL,
+                PRIMARY KEY (id),
+                KEY idx_nexa_admin_bans_account_active (target_account_id, active),
+                KEY idx_nexa_admin_bans_expires (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            [[CREATE TABLE IF NOT EXISTS nexa_admin_notes (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                target_account_id BIGINT UNSIGNED NOT NULL,
+                target_character_id BIGINT UNSIGNED NULL,
+                actor_account_id BIGINT UNSIGNED NULL,
+                content TEXT NOT NULL,
+                category VARCHAR(32) NOT NULL DEFAULT 'general',
+                visibility VARCHAR(32) NOT NULL DEFAULT 'support',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL DEFAULT NULL,
+                deleted_at TIMESTAMP NULL DEFAULT NULL,
+                correlation_id VARCHAR(96) NULL,
+                PRIMARY KEY (id),
+                KEY idx_nexa_admin_notes_account (target_account_id),
+                KEY idx_nexa_admin_notes_character (target_character_id),
+                KEY idx_nexa_admin_notes_deleted (deleted_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            [[CREATE TABLE IF NOT EXISTS nexa_admin_actions (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                actor_account_id BIGINT UNSIGNED NULL,
+                target_account_id BIGINT UNSIGNED NULL,
+                target_character_id BIGINT UNSIGNED NULL,
+                action_name VARCHAR(96) NOT NULL,
+                reason VARCHAR(512) NOT NULL,
+                result VARCHAR(32) NOT NULL,
+                error_code VARCHAR(64) NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                correlation_id VARCHAR(96) NOT NULL,
+                source_resource VARCHAR(64) NOT NULL,
+                metadata_json LONGTEXT NULL,
+                PRIMARY KEY (id),
+                KEY idx_nexa_admin_actions_actor (actor_account_id),
+                KEY idx_nexa_admin_actions_target_account (target_account_id),
+                KEY idx_nexa_admin_actions_name (action_name),
+                KEY idx_nexa_admin_actions_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
+        }
+    })
+
+    local ok, err = core.Database.RunMigrations()
+
+    if not ok then
+        log('Error', 'admin.migration', 'Admin migrations failed.', {
+            error = err
+        })
+    end
+
+    return ok
+end
+
+local function cleanupSource(source, reason)
+    source = tonumber(source)
+
+    if not source then
+        return
+    end
+
+    NexaAdmin.returnPositions[source] = nil
+    NexaAdmin.freezeStates[source] = nil
+
+    if NexaAdmin.spectateStates[source] then
+        Spectate.Stop(source)
+    end
+
+    if NexaAdmin.noclipStates[source] then
+        Noclip.Stop(source)
     end
 end
+
+local function execute(action, source, payload)
+    return NexaAdmin.Actions.Execute(source, action, payload or {})
+end
+
+function WarnPlayer(actorSource, targetSource, reason)
+    return execute('admin.warn', actorSource, { targetSource = targetSource, reason = reason })
+end
+
+function KickPlayer(actorSource, targetSource, reason)
+    return execute('admin.kick', actorSource, { targetSource = targetSource, reason = reason })
+end
+
+function BanPlayer(actorSource, targetSourceOrAccountId, reason, durationMinutes)
+    local payload = { reason = reason, durationMinutes = durationMinutes }
+
+    if targetOnline(tonumber(targetSourceOrAccountId)) then
+        payload.targetSource = targetSourceOrAccountId
+    else
+        payload.accountId = targetSourceOrAccountId
+    end
+
+    return execute(durationMinutes and 'admin.ban.temp' or 'admin.ban.permanent', actorSource, payload)
+end
+
+function UnbanPlayer(actorSource, banId, reason)
+    return execute('admin.unban', actorSource, { banId = banId, reason = reason })
+end
+
+function GoToPlayer(actorSource, targetSource)
+    return execute('admin.goto', actorSource, { targetSource = targetSource })
+end
+
+function BringPlayer(actorSource, targetSource)
+    return execute('admin.bring', actorSource, { targetSource = targetSource })
+end
+
+function ReturnPlayer(actorSource, targetSource)
+    return execute('admin.return', actorSource, { targetSource = targetSource or actorSource })
+end
+
+function SetPlayerFrozen(actorSource, targetSource, state, reason)
+    return execute('admin.freeze', actorSource, { targetSource = targetSource, state = state, reason = reason })
+end
+
+function HealPlayer(actorSource, targetSource, reason)
+    return execute('admin.heal', actorSource, { targetSource = targetSource, reason = reason or 'Admin recovery heal' })
+end
+
+function RevivePlayer(actorSource, targetSource, reason)
+    return execute('admin.revive', actorSource, { targetSource = targetSource, reason = reason or 'Admin recovery revive' })
+end
+
+function StartSpectate(actorSource, targetSource)
+    return execute('admin.spectate.start', actorSource, { targetSource = targetSource })
+end
+
+function StopSpectate(actorSource)
+    return execute('admin.spectate.stop', actorSource, {})
+end
+
+function StartNoclip(actorSource)
+    return execute('admin.noclip.start', actorSource, {})
+end
+
+function StopNoclip(actorSource)
+    return execute('admin.noclip.stop', actorSource, {})
+end
+
+function CreateAdminNote(actorSource, target, payload)
+    payload = payload or {}
+
+    if type(target) == 'table' then
+        for key, value in pairs(target) do
+            payload[key] = value
+        end
+    else
+        payload.targetSource = target
+    end
+
+    return execute('admin.note.create', actorSource, payload)
+end
+
+function ListAdminNotes(actorSource, target)
+    local payload = type(target) == 'table' and target or { targetSource = target }
+    return execute('admin.note.view', actorSource, payload)
+end
+
+function GetAdminActionState(source)
+    source = tonumber(source)
+
+    return response(true, 'OK', 'Admin state loaded.', {
+        freeze = source and NexaAdmin.freezeStates[source] or nil,
+        spectate = source and NexaAdmin.spectateStates[source] or nil,
+        noclip = source and NexaAdmin.noclipStates[source] or nil,
+        returnPosition = source and NexaAdmin.returnPositions[source] or nil,
+        actions = NexaAdmin.Actions.List()
+    })
+end
+
+function ResolveConnection(identityContext)
+    return Bans.ResolveConnection(identityContext)
+end
+
+function IsAccountBanned(accountId)
+    return Bans.IsAccountBanned(accountId)
+end
+
+function ListActions()
+    return response(true, 'OK', 'Actions loaded.', {
+        actions = NexaAdmin.Actions.List()
+    })
+end
+
+local function registerCommands()
+    if not NexaAdminServer.commandsEnabled then
+        return
+    end
+
+    RegisterCommand('warn', function(source, args) print(json.encode(WarnPlayer(source, args[1], table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('kick', function(source, args) print(json.encode(KickPlayer(source, args[1], table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('tempban', function(source, args) print(json.encode(BanPlayer(source, args[1], table.concat(args, ' ', 3), args[2]))) end, false)
+    RegisterCommand('ban', function(source, args) print(json.encode(BanPlayer(source, args[1], table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('unban', function(source, args) print(json.encode(UnbanPlayer(source, args[1], table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('goto', function(source, args) print(json.encode(GoToPlayer(source, args[1]))) end, false)
+    RegisterCommand('bring', function(source, args) print(json.encode(BringPlayer(source, args[1]))) end, false)
+    RegisterCommand('return', function(source, args) print(json.encode(ReturnPlayer(source, args[1] or source))) end, false)
+    RegisterCommand('freeze', function(source, args) print(json.encode(SetPlayerFrozen(source, args[1], true, table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('unfreeze', function(source, args) print(json.encode(SetPlayerFrozen(source, args[1], false, table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('heal', function(source, args) print(json.encode(HealPlayer(source, args[1], table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('revive', function(source, args) print(json.encode(RevivePlayer(source, args[1], table.concat(args, ' ', 2)))) end, false)
+    RegisterCommand('spectate', function(source, args) print(json.encode(StartSpectate(source, args[1]))) end, false)
+    RegisterCommand('specoff', function(source) print(json.encode(StopSpectate(source))) end, false)
+    RegisterCommand('noclip', function(source) print(json.encode(NexaAdmin.noclipStates[source] and StopNoclip(source) or StartNoclip(source))) end, false)
+    RegisterCommand('adminduty', function(source, args)
+        local state = args[1] == 'off' and 'off_duty' or 'on_duty'
+        print(json.encode(exports.nexa_permissions:SetAdminDuty(source, state, source, 'Admin duty command')))
+    end, false)
+end
+
+AddEventHandler('playerDropped', function(reason)
+    cleanupSource(source, reason)
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= RESOURCE then
+        return
+    end
+
+    for playerSource in pairs(NexaAdmin.freezeStates) do
+        Freeze.Clear(playerSource, 'Resource stopped')
+    end
+
+    for playerSource in pairs(NexaAdmin.spectateStates) do
+        Spectate.Stop(playerSource, 'Resource stopped')
+    end
+
+    for playerSource in pairs(NexaAdmin.noclipStates) do
+        Noclip.Stop(playerSource, 'Resource stopped')
+    end
+end)
 
 AddEventHandler('onResourceStart', function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then
+    if resourceName ~= RESOURCE then
         return
     end
 
-    rebuildActionIndex()
-
-    exports.nexa_logs:info(NEXA_ADMIN.resourceName, 'Admin-Core gestartet.', {
+    registerMigration()
+    registerActions()
+    registerCommands()
+    log('Info', 'admin.start', 'nexa_admin started.', {
         version = NEXA_ADMIN.version,
-        featureFlag = NexaAdminConfig.featureFlag
+        actions = #NexaAdmin.Actions.List()
     })
 end)
 
-rebuildActionIndex()
+registerActions()
 
-exports('getStatus', getStatus)
-exports('admin.getMenu', getMenu)
-exports('admin.listPlayers', listPlayers)
-exports('admin.validateAction', validateAction)
-exports('admin.reports.create', createReport)
-exports('admin.reports.listOwn', listOwnReports)
-exports('admin.reports.list', listReports)
-exports('admin.reports.history', getReportHistory)
-exports('admin.reports.accept', acceptReport)
-exports('admin.reports.close', closeReport)
-exports('admin.tickets.create', createTicket)
-exports('admin.tickets.list', listTickets)
-exports('admin.tickets.assign', assignTicket)
-exports('admin.tickets.close', closeTicket)
-exports('admin.moderation.list', listModerationActions)
-exports('admin.moderation.warn', warnPlayer)
-exports('admin.moderation.kick', kickPlayer)
-exports('admin.moderation.tempban.prepare', prepareTempban)
-exports('admin.moderation.freeze', setPlayerFrozen)
-exports('admin.moderation.spectate.prepare', prepareSpectate)
-exports('admin.moderation.notes.add', addAdminNote)
-exports('admin.moderation.notes.list', listAdminNotes)
-exports('admin.utility.list', listUtilityActions)
-exports('admin.utility.bring', bringPlayer)
-exports('admin.utility.goto', gotoPlayer)
-exports('admin.utility.return', returnPlayer)
-exports('admin.utility.coords', teleportToCoords)
-exports('admin.utility.heal.prepare', prepareAdminHeal)
-exports('admin.utility.revive.prepare', prepareAdminRevive)
+exports('WarnPlayer', WarnPlayer)
+exports('KickPlayer', KickPlayer)
+exports('BanPlayer', BanPlayer)
+exports('UnbanPlayer', UnbanPlayer)
+exports('GoToPlayer', GoToPlayer)
+exports('BringPlayer', BringPlayer)
+exports('ReturnPlayer', ReturnPlayer)
+exports('SetPlayerFrozen', SetPlayerFrozen)
+exports('HealPlayer', HealPlayer)
+exports('RevivePlayer', RevivePlayer)
+exports('StartSpectate', StartSpectate)
+exports('StopSpectate', StopSpectate)
+exports('StartNoclip', StartNoclip)
+exports('StopNoclip', StopNoclip)
+exports('CreateAdminNote', CreateAdminNote)
+exports('ListAdminNotes', ListAdminNotes)
+exports('GetAdminActionState', GetAdminActionState)
+exports('ResolveConnection', ResolveConnection)
+exports('IsAccountBanned', IsAccountBanned)
+exports('ListActions', ListActions)
+
+exports('admin.moderation.warn', function(source, payload) return execute('admin.warn', source, payload) end)
+exports('admin.moderation.kick', function(source, payload) return execute('admin.kick', source, payload) end)
+exports('admin.moderation.tempban.prepare', function(source, payload) return execute('admin.ban.temp', source, payload) end)
+exports('admin.moderation.freeze', function(source, payload) return execute('admin.freeze', source, payload) end)
+exports('admin.utility.bring', function(source, payload) return execute('admin.bring', source, payload) end)
+exports('admin.utility.goto', function(source, payload) return execute('admin.goto', source, payload) end)
+exports('admin.utility.return', function(source, payload) return execute('admin.return', source, payload) end)

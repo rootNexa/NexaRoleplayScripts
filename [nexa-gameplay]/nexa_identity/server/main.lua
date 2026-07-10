@@ -478,6 +478,30 @@ function NexaIdentity.ResolveAccount(session)
         return response(false, statusErr, 'Account ist nicht aktiv.')
     end
 
+    if GetResourceState('nexa_admin') == 'started' then
+        local banOk, banResult = pcall(function()
+            return exports['nexa_admin']:ResolveConnection({
+                source = source,
+                accountId = accountId,
+                identifiers = identifiers
+            })
+        end)
+
+        if banOk and type(banResult) == 'table' and banResult.success == false then
+            emitInternal(NEXA_IDENTITY.events.rejected, {
+                source = source,
+                accountId = accountId,
+                reason = banResult.code
+            })
+
+            if source and DropPlayer then
+                DropPlayer(source, banResult.message or 'Nexa: Account ist gebannt.')
+            end
+
+            return response(false, banResult.code or NEXA_IDENTITY.errors.accountBanned, 'Account ist gebannt.')
+        end
+    end
+
     local signals, signalErr = NexaIdentity.EvaluateMultiAccount(accountId, identifiers, {
         source = source,
         sessionId = session.id
