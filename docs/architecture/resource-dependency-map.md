@@ -30,6 +30,8 @@ ensure nexa-core
 ensure nexa_identity
 ensure nexa_characters
 ensure nexa_playerstate
+ensure nexa_items
+ensure nexa_inventory
 ensure nexa-character
 ensure nexa-identity
 ensure nexa_config
@@ -71,7 +73,7 @@ ensure nexa_jobscreator
 ensure nexa_shops
 ```
 
-Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat validiert werden. Der Dev-Stack startet `nexa_playerstate` nach `nexa_characters` und vor den Legacy-Core-Bridge-Ressourcen. `nexa-spawn` bleibt im Repository, wird aber in der Foundation-Dev-Reihenfolge nicht mehr gestartet.
+Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat validiert werden. Der Dev-Stack startet `nexa_playerstate` nach `nexa_characters`, danach `nexa_items` und `nexa_inventory`, und erst anschliessend die Legacy-Core-Bridge-Ressourcen. `nexa-spawn` bleibt im Repository, wird aber in der Foundation-Dev-Reihenfolge nicht mehr gestartet.
 
 ## Core und Foundation Ressourcen
 
@@ -112,7 +114,7 @@ Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat
 | --- | --- | --- | --- |
 | `[nexa-gameplay]/nexa_jobscreator` | `oxmysql`, `nexa_api`, `nexa_logs` | `nexa-core` | Erhalten. Neue Organisations-, Grade-, Member- und Module-Foundation. |
 | `[nexa-gameplay]/nexa_items` | `oxmysql`, `nexa_api`, `nexa_logs`, `nexa_ui` | `nexa-core` | Erhalten. Item-Foundation und Item Studio UI Foundation. |
-| `[nexa-gameplay]/nexa_inventory` | `oxmysql`, `nexa_api`, `nexa_logs`, `nexa_items` | `nexa-core` | Erhalten. Inventory-Foundation. |
+| `[nexa-gameplay]/nexa_inventory` | `nexa-core`, `nexa_identity`, `nexa_characters`, `nexa_playerstate`, `nexa_permissions`, `nexa_api` | `nexa_items` optional als Itemdefinitionsquelle | Erhalten. Serverautoritative Inventory-Foundation ohne direkte oxmysql-Nutzung. |
 | `[nexa-gameplay]/nexa_shops` | `oxmysql`, `nexa_api`, `nexa_logs` | `nexa_items` fachlich vorbereitet | Erhalten. Shop-Foundation. |
 | `[nexa-gameplay]/nexa_banking` | `ox_lib`, `nexa_api`, `nexa_audit`, `nexa_security` | Nexa Foundation | Migrieren. |
 | `[nexa-gameplay]/nexa_business` | `ox_lib`, `nexa_jobs_core`, `nexa_api`, `nexa_audit` | Legacy Jobs | Migrieren auf `nexa_jobscreator`. |
