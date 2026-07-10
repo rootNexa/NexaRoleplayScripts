@@ -15,6 +15,7 @@ Der Core soll die serverautoritative Basis liefern, auf der Gameplay-, UI-, Admi
 `[nexa-core]/nexa-core` ist die zentrale Laufzeitbasis fuer Spieler-, Identifier- und Charakterzustand. Die Resource stellt aktuell folgende Kernfunktionen bereit:
 
 - Player-Session anhand von `source` und FiveM-Identifiern registrieren.
+- Runtime-Sessions mit License-Pflicht, Source-Bindung, Reconnect-Schutz und Datenschutz-Metadaten verwalten.
 - Primaeren Identifier nach `Nexa.Config.identifierPriority` ermitteln.
 - Spieler in `nexa_players` anlegen oder aktualisieren.
 - Charaktere laden, erstellen, auswaehlen und aktualisieren.
@@ -82,10 +83,10 @@ Zur Laufzeit besitzt `nexa-core` jetzt eine eigene Lifecycle-State-Machine mit d
 Der Core-Lifecycle:
 
 1. `oxmysql` wird gestartet.
-2. `nexa-core` laedt Config, Constants, Datenbank, Permissions, Player, Characters, Callbacks, Events, Exports und Bootstrap.
+2. `nexa-core` laedt Config, Constants, Datenbank, Permissions, Sessions, Player, Characters, Callbacks, Events, Exports und Bootstrap.
 3. `Nexa.Bootstrap.Start()` prueft Pflichtabhaengigkeiten, prueft die Datenbankbereitschaft und fuehrt Lifecycle-Hooks aus.
 4. Erst im Zustand `ready` duerfen Core-Exports, Core-Callbacks, Net Events und `playerJoining` produktiv arbeiten.
-5. Beim Spielerbeitritt sammelt `nexa-core` Identifier, ermittelt den Primaer-Identifier und erstellt oder aktualisiert `nexa_players`.
+5. Beim Spielerbeitritt erstellt `nexa-core` zuerst eine Runtime-Session, prueft die License und erstellt oder aktualisiert danach `nexa_players`.
 6. Der Client kann vorhandene Charaktere abfragen.
 7. Die Charakterauswahl laeuft serverseitig ueber `nexa:core:server:selectCharacter` oder den Export `SelectCharacter`.
 8. Bei Auswahl wird der aktive Charakter gecacht und `nexa:core:client:characterSelected` gesendet.
@@ -95,6 +96,8 @@ Der Core-Lifecycle:
 `nexa_api` sitzt als spaetere API-Fassade ueber dem Core und sollte fuer neue Resources die bevorzugte Integrationsschicht sein.
 
 Details stehen in `docs/architecture/core-lifecycle.md`.
+
+Das Session-Modell ist von Account und Charakter getrennt. Details stehen in `docs/architecture/core-sessions.md`.
 
 ## Oeffentliche API-Grenzen
 

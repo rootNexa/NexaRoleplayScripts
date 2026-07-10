@@ -5,11 +5,13 @@ $eventsPath = Join-Path $repoRoot '[nexa-core]\nexa-core\server\events.lua'
 $constantsPath = Join-Path $repoRoot '[nexa-core]\nexa-core\shared\constants.lua'
 $bootstrapPath = Join-Path $repoRoot '[nexa-core]\nexa-core\server\bootstrap.lua'
 $playersPath = Join-Path $repoRoot '[nexa-core]\nexa-core\server\players.lua'
+$sessionsPath = Join-Path $repoRoot '[nexa-core]\nexa-core\server\sessions.lua'
 
 $events = Get-Content -LiteralPath $eventsPath -Raw
 $constants = Get-Content -LiteralPath $constantsPath -Raw
 $bootstrap = Get-Content -LiteralPath $bootstrapPath -Raw
 $players = Get-Content -LiteralPath $playersPath -Raw
+$sessions = if (Test-Path -LiteralPath $sessionsPath) { Get-Content -LiteralPath $sessionsPath -Raw } else { $players }
 
 function Assert-Contains {
     param(
@@ -58,7 +60,7 @@ Assert-Contains $constants 'nexa:internal:session:removed' 'Session removed inte
 Assert-Contains $bootstrap 'Nexa.Constants.internalEvents.coreReady' 'Core ready emit missing.'
 Assert-Contains $bootstrap 'Nexa.Constants.internalEvents.coreFailed' 'Core failed emit missing.'
 Assert-Contains $bootstrap 'Nexa.Constants.internalEvents.coreStopping' 'Core stopping emit missing.'
-Assert-Contains $players 'Nexa.Constants.internalEvents.sessionCreated' 'Session created emit missing.'
-Assert-Contains $players 'Nexa.Constants.internalEvents.sessionRemoved' 'Session removed emit missing.'
+Assert-Contains $sessions 'Nexa.Constants.internalEvents.sessionCreated' 'Session created emit missing.'
+Assert-Contains $sessions 'Nexa.Constants.internalEvents.sessionRemoved' 'Session removed emit missing.'
 
 Write-Host 'Core event bus validation passed.'

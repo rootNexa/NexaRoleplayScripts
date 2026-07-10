@@ -18,6 +18,22 @@ Diese API beschreibt nur Funktionen, die bereits existieren. Gameplay-Systeme wi
 - Exports sind fuer serverseitige Resource-zu-Resource-Kommunikation gedacht.
 - Client-Callbacks liefern nur Daten, die fuer den jeweiligen Spieler freigegeben sind.
 
+## Sessions
+
+Intern stellt `nexa-core` `Nexa.Sessions` fuer aktuelle Verbindungen bereit:
+
+- `Nexa.Sessions.Create(source, identifiers)`
+- `Nexa.Sessions.GetBySource(source)`
+- `Nexa.Sessions.GetById(sessionId)`
+- `Nexa.Sessions.GetByLicense(license)`
+- `Nexa.Sessions.SetState(sessionId, state)`
+- `Nexa.Sessions.Touch(sessionId)`
+- `Nexa.Sessions.Close(source, reason)`
+- `Nexa.Sessions.IsActive(source)`
+- `Nexa.Sessions.GetCount()`
+
+Eine Session ist keine Account-, Character-, Rollen- oder Gameplay-Instanz. Details stehen in `docs/architecture/core-sessions.md`.
+
 ## Player und Character
 
 Ein Player steht fuer Verbindung, Account-Identifier und Session.

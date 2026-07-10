@@ -93,6 +93,7 @@ RegisterCommand('nexa_core_status', function(source)
         ready = Nexa.Lifecycle.IsReady(),
         startTimestamp = Nexa.Lifecycle.GetStartTimestamp(),
         failureReason = Nexa.Lifecycle.GetFailureReason(),
-        players = playerCount
+        players = playerCount,
+        sessions = Nexa.Sessions and Nexa.Sessions.GetCount() or 0
     })
 end, true)

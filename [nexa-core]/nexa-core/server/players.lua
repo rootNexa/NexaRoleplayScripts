@@ -3,30 +3,6 @@ Nexa.Players = {
     byIdentifier = {}
 }
 
-local function collectIdentifiers(source)
-    local identifiers = {}
-
-    for _, value in ipairs(GetPlayerIdentifiers(source)) do
-        local key, identifier = value:match('([^:]+):(.+)')
-
-        if key and identifier then
-            identifiers[key] = value
-        end
-    end
-
-    return identifiers
-end
-
-local function getPrimaryIdentifier(identifiers)
-    for _, key in ipairs(Nexa.Config.identifierPriority) do
-        if identifiers[key] then
-            return identifiers[key], key
-        end
-    end
-
-    return nil, nil
-end
-
 local function sanitizePlayer(player)
     if not player then
         return nil
@@ -36,6 +12,7 @@ local function sanitizePlayer(player)
         id = player.id,
         source = player.source,
         identifier = player.identifier,
+        sessionId = player.sessionId,
         name = player.name,
         activeCharacterId = player.activeCharacterId,
         loaded = player.loaded
@@ -49,15 +26,27 @@ function Nexa.Players.Register(source)
         return nil, 'INVALID_SOURCE'
     end
 
-    local identifiers = collectIdentifiers(source)
-    local primaryIdentifier, identifierType = getPrimaryIdentifier(identifiers)
+    local session, sessionErr = Nexa.Sessions.Create(source)
+
+    if not session then
+        Nexa.Log('warn', 'Spieler ohne gueltige Session abgelehnt.', {
+            source = source,
+            error = sessionErr
+        })
+        DropPlayer(source, 'Nexa: Keine gueltige Session.')
+        return nil, sessionErr or 'SESSION_REJECTED'
+    end
+
+    local primaryIdentifier = session.license
+    local identifierType = primaryIdentifier and primaryIdentifier:match('^([^:]+):') or 'license'
 
     if not primaryIdentifier then
-        Nexa.Log('warn', 'Spieler ohne gueltigen Identifier abgelehnt.', {
+        Nexa.Log('warn', 'Spieler ohne gueltige License abgelehnt.', {
             source = source
         })
-        DropPlayer(source, 'Nexa: Kein gueltiger Identifier gefunden.')
-        return nil, 'MISSING_IDENTIFIER'
+        Nexa.Sessions.Close(source, 'missing_license')
+        DropPlayer(source, 'Nexa: Kein gueltiger License-Identifier gefunden.')
+        return nil, 'MISSING_LICENSE'
     end
 
     local name = GetPlayerName(source) or ('Spieler %s'):format(source)
@@ -76,6 +65,7 @@ function Nexa.Players.Register(source)
             source = source,
             identifier_type = identifierType
         })
+        Nexa.Sessions.Close(source, 'player_registration_failed')
         return nil, 'DATABASE_ERROR'
     end
 
@@ -85,15 +75,17 @@ function Nexa.Players.Register(source)
     )
 
     if not row then
+        Nexa.Sessions.Close(source, 'player_lookup_failed')
         return nil, 'DATABASE_ERROR'
     end
 
     local player = {
         id = row.id,
         source = source,
+        sessionId = session.id,
         identifier = row.identifier,
         identifierType = row.identifier_type,
-        identifiers = identifiers,
+        identifiers = session.identifiers,
         name = row.display_name,
         activeCharacterId = nil,
         loaded = true,
@@ -110,16 +102,6 @@ function Nexa.Players.Register(source)
     Nexa.Audit('player.session_started', source, {
         player_id = player.id
     })
-
-    if Nexa.EventBus then
-        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.sessionCreated, {
-            source = source,
-            player = sanitizePlayer(player)
-        }, {
-            module = 'players',
-            source = source
-        })
-    end
 
     TriggerClientEvent(Nexa.Constants.events.playerLoaded, source, sanitizePlayer(player))
     return player, nil
@@ -146,17 +128,7 @@ function Nexa.Players.Drop(source, reason)
     })
     Nexa.Players.byIdentifier[player.identifier] = nil
     Nexa.Players.bySource[source] = nil
-
-    if Nexa.EventBus then
-        Nexa.EventBus.Emit(Nexa.Constants.internalEvents.sessionRemoved, {
-            source = source,
-            playerId = player.id,
-            reason = reason
-        }, {
-            module = 'players',
-            source = source
-        })
-    end
+    Nexa.Sessions.Close(source, reason)
 end
 
 function Nexa.Players.Get(source)
