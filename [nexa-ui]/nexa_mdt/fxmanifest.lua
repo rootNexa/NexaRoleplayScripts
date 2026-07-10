@@ -39,6 +39,7 @@ client_scripts {
 
 server_scripts {
     'config/server.lua',
+    'server/database.lua',
     'server/state.lua',
     'server/callbacks.lua',
     'server/main.lua'
