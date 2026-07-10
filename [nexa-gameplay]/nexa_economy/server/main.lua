@@ -1200,7 +1200,7 @@ end
 
 AddEventHandler('nexa:playerstate:active', function(payload)
     payload = type(payload) == 'table' and payload or {}
-    local characterId = normalizeId(payload.character_id)
+    local characterId = normalizeId(payload.characterId or payload['character_id'])
 
     if characterId then
         GetCharacterBankAccount(characterId)
