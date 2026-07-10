@@ -12,7 +12,7 @@ NexaMdtServerConfig = {
         dispatch = 'dispatch.view'
     },
     mdtTypeFactionNames = {
-        police = 'lspd'
+        police = 'police'
     },
     limits = {
         maxQueryLength = 48,

@@ -24,7 +24,7 @@ Generisches MDT-Fundament fuer Organisationen, Jobs, Gangs, Fraktionen und Betri
 ## Grenzen
 
 - MDT ist Anzeige- und Workflow-System.
-- Feste Fraktionsressourcen wie `nexa_lspd` sind keine harte Abhaengigkeit.
+- Feste Fraktionsressourcen sind keine harte Abhaengigkeit.
 - Bestehende Polizeiansichten laufen als `police`-Module weiter.
 - Dispatch-Daten werden nur ueber `nexa_api['dispatch.listCalls']` angezeigt.
 - `nexa_dispatch` hat keine harte Abhaengigkeit zu `nexa_mdt`.
