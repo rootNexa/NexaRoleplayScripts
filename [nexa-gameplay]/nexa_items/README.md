@@ -1,218 +1,106 @@
 # nexa_items
 
-Foundation fuer ein generisches Nexa Item-System und das spaetere Nexa Item Studio.
+Server-authoritative item registry and Item Studio foundation.
 
-## Ziel
+## Scope
 
-`nexa_items` ist die zentrale Grundlage fuer ingame erstellbare und bearbeitbare Items. Admins sollen spaeter Items erstellen, konfigurieren, deaktivieren und fuer andere Nexa-Systeme bereitstellen koennen.
+`nexa_items` owns item definitions, item types, metadata schemas, weights, stack rules, durability config, expiration config, action handler references, asset references, versions and audit.
 
-Diese Resource baut noch kein Inventory, keine Item-Benutzung, keine Waffenlogik und keine Animationen. Sie stellt das serverseitige Datenmodell, Validierung, Exports und Nexa-Callbacks bereit.
+`nexa_inventory` owns concrete item instances, slots, amounts and transfers.
 
-## Item Studio UI Foundation
+## Tables
 
-Phase 1 enthaelt eine clientseitige Admin-UI-Foundation ueber NexaUI Context, NexaUI Input und NexaUI Notify. Die UI ist bewusst nur eine Bedienoberflaeche ohne Speicherung und ohne Backend-Mutationen.
+Migration `070_item_registry_foundation` creates:
 
-Commands:
+- `nexa_item_definitions`
+- `nexa_item_definition_versions`
+- `nexa_item_actions`
+- `nexa_item_assets`
+- `nexa_item_audit`
 
-- `/itemstudio`
-- `/nexaitems`
+Legacy table `items` is not deleted automatically.
 
-Vorhandene Bereiche:
+## Item Names
 
-- Sidebar mit Dashboard, Items, Kategorien, Import, Export und Settings
-- Itemliste mit Suche, Kategoriebaum und Toolbar
-- Toolbar mit Neu, Bearbeiten, Duplizieren, Aktivieren, Deaktivieren, Loeschen, Import und Export
-- Editor-Tabs fuer Allgemein, Typ, Metadata, Use Config und Preview
-- Rechte Editor als Vorbereitung fuer spaetere Admin-Permissions
-- Preview mit Bild, Name, Beschreibung, Stack, Gewicht und Seltenheit
+Names must be lowercase and may contain numbers and underscores. Leading/trailing underscores and double underscores are invalid.
 
-## Nicht Enthalten
+Valid examples:
 
-- keine persistente UI-Speicherung
-- kein Inventory
-- keine Item-Benutzung
-- keine Waffenlogik
-- keine Animationen
-- keine QBCore/Qbox/ESX-Bridges
-- keine externe UI-Bibliothek
+- `water`
+- `bread`
+- `radio`
+- `weapon_pistol`
+- `black_money`
 
 ## Item Types
 
-Erlaubte `item_type` Werte:
+Registered by default:
 
+- `generic`
 - `food`
 - `drink`
-- `weapon`
-- `armor`
 - `medical`
-- `tool`
+- `weapon`
+- `ammunition`
 - `document`
-- `license`
 - `key`
-- `drug`
-- `material`
 - `container`
-- `custom`
+- `currency`
+- `material`
+- `tool`
+- `radio`
+- `consumable`
 
-Der Typ beschreibt die fachliche Kategorie. Er aktiviert noch keine Benutzung und keine Speziallogik. Spaetere Systeme duerfen anhand von `item_type`, `usable`, `metadata_json` und `use_config_json` entscheiden, welche Features verfuegbar sind.
+## Status
 
-## Tabelle
+- `draft`
+- `published`
+- `disabled`
+- `deprecated`
+- `deleted`
 
-`items`
+Only `published` definitions are normal gameplay definitions. `deleted` is a soft-delete state.
 
-- `id`
-- `name`
-- `label`
-- `description`
-- `item_type`
-- `image_url`
-- `weight`
-- `stackable`
-- `max_stack`
-- `usable`
-- `tradable`
-- `droppable`
-- `enabled`
-- `metadata_json`
-- `use_config_json`
-- `created_at`
-- `updated_at`
-
-## JSON Felder
-
-`metadata_json` speichert statische Item-Eigenschaften.
-
-Beispiele:
-
-- Naehrwerte fuer Essen
-- Kaliber oder Kategorie fuer Waffen
-- Schutzwert fuer Armor
-- Dokumenttemplate fuer Dokumente
-- Container-Groesse
-- Custom Tags fuer Serverlogik
-
-`use_config_json` speichert spaetere Benutzungsregeln.
-
-Beispiele:
-
-- Dauer der Benutzung
-- Animation-Key
-- Effektwerte
-- Cooldown
-- Verbrauch nach Benutzung
-- serverseitiger Handler-Key
-
-Die Resource fuehrt diese Effekte noch nicht aus. Sie speichert nur die Konfiguration.
-
-## Server Exports
+## Exports
 
 - `CreateItem(payload)`
-- `GetItem(idOrName)`
+- `GetItem(name)`
 - `ListItems(filter)`
-- `UpdateItem(idOrName, payload)`
-- `SetItemEnabled(idOrName, enabled)`
-- `DeleteItem(idOrName)`
+- `UpdateItem(name, payload)`
+- `SetItemEnabled(name, enabled)`
+- `DeleteItem(name)`
+- `PublishItem(name, context)`
+- `DeprecateItem(name, context)`
+- `GetItemDefinition(name)`
+- `ItemExists(name)`
+- `GetItemWeight(name)`
+- `GetMaxStack(name)`
+- `IsStackable(name)`
+- `ValidateMetadata(name, metadata)`
+- `CanUse(name)`
+- `CanQuickslot(name)`
+- `CanDrop(name)`
+- `CanTrade(name)`
+- `IsContainer(name)`
+- `GetClientDefinition(name)`
+- `GetClientCatalog(filters)`
+- `RegisterItemType(definition)`
+- `RegisterActionHandler(name, definition)`
 
-Alle Antworten enthalten `ok`, `success`, `code`, `message`, `data` und `meta`.
+Legacy exports delegate to the central registry.
 
-## Callbacks
+## Actions
 
-Die Callbacks werden ueber `nexa_api` registriert:
+Item actions never execute free event names from the database. Database rows reference registered handler names only. Dynamic Lua execution from stored configuration is forbidden.
 
-- `nexa:items:cb:createItem`
-- `nexa:items:cb:getItem`
-- `nexa:items:cb:listItems`
-- `nexa:items:cb:updateItem`
-- `nexa:items:cb:setItemEnabled`
-- `nexa:items:cb:deleteItem`
+## Assets
 
-## Permission Vorbereitung
+Asset references allow local NUI/web references and controlled HTTPS URLs. HTTP, data URLs, `file://`, `javascript:`, localhost and private network hosts are rejected.
 
-Mutierende Callback-Aktionen koennen ueber `NexaItemsConfig.requireAdminPermissionForMutations` abgesichert werden. Die vorbereitete Permission ist:
+## Bootstrap Definitions
 
-- `nexa.items.manage`
+The old Inventory transition catalog is migrated into registry-owned built-in definitions if missing:
 
-Direkte Server-Exports bleiben serverseitige Integrationspunkte und muessen von aufrufenden Ressourcen verantwortungsvoll genutzt werden.
-
-## Payload
-
-`CreateItem(payload)` erwartet:
-
-- `name`: Pflicht, String-Slug
-- `label`: Pflicht, String
-- `item_type`: Pflicht, erlaubter Item Type
-- `description`: optional, String
-- `image_url`: optional, String
-- `weight`: optional, Zahl >= 0
-- `stackable`: optional, boolean
-- `max_stack`: optional, Zahl >= 1
-- `usable`: optional, boolean
-- `tradable`: optional, boolean
-- `droppable`: optional, boolean
-- `enabled`: optional, boolean
-- `metadata`: optional, Tabelle, wird als JSON gespeichert
-- `use_config`: optional, Tabelle, wird als JSON gespeichert
-
-`UpdateItem(idOrName, payload)` akzeptiert dieselben bekannten Felder als optionale Aenderungen.
-
-## Beispiele
-
-### Food
-
-- `name`: `sandwich`
-- `label`: `Sandwich`
-- `item_type`: `food`
-- `weight`: `250`
-- `stackable`: `true`
-- `max_stack`: `10`
-- `usable`: `true`
-- `metadata`: Hungerwert, Verderblichkeit, Kategorie
-- `use_config`: Nutzungsdauer, Animation-Key, Effekt
-
-### Drink
-
-- `name`: `water_bottle`
-- `label`: `Wasserflasche`
-- `item_type`: `drink`
-- `weight`: `500`
-- `stackable`: `true`
-- `max_stack`: `12`
-- `usable`: `true`
-- `metadata`: Durstwert, Flaschenart
-- `use_config`: Trinkdauer, Animation-Key, Verbrauch
-
-### Weapon
-
-- `name`: `weapon_pistol`
-- `label`: `Pistole`
-- `item_type`: `weapon`
-- `weight`: `1200`
-- `stackable`: `false`
-- `max_stack`: `1`
-- `usable`: `false`
-- `metadata`: Waffenkategorie, Kaliber, Seriennummer-Regel
-- `use_config`: spaeterer Handler-Key fuer Waffenlogik
-
-### Armor
-
-- `name`: `light_armor`
-- `label`: `Leichte Schutzweste`
-- `item_type`: `armor`
-- `weight`: `2200`
-- `stackable`: `false`
-- `max_stack`: `1`
-- `usable`: `true`
-- `metadata`: Schutzwert, Haltbarkeit
-- `use_config`: Anlegezeit, Armor-Effekt, Verbrauchsregel
-
-### Custom
-
-- `name`: `event_token`
-- `label`: `Event Token`
-- `item_type`: `custom`
-- `weight`: `0`
-- `stackable`: `true`
-- `max_stack`: `99`
-- `usable`: `false`
-- `metadata`: Event-ID, Gueltigkeit, Custom Tags
-- `use_config`: optionaler spaeterer Handler-Key
+- `water`
+- `bread`
+- `radio`

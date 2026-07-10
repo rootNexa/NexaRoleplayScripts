@@ -4,13 +4,13 @@ lua54 'yes'
 
 name 'nexa_items'
 author 'Nexa Roleplay'
-description 'Foundation fuer generische Items und Nexa Item Studio'
-version '0.1.0'
+description 'Server-authoritative item registry and Item Studio foundation'
+version '0.2.0'
 
 dependencies {
-    'oxmysql',
+    'nexa-core',
+    'nexa_permissions',
     'nexa_api',
-    'nexa_logs',
     'nexa_ui'
 }
 
@@ -20,11 +20,36 @@ shared_scripts {
 }
 
 server_scripts {
-    '@oxmysql/lib/MySQL.lua',
     'server/database.lua',
     'server/main.lua'
 }
 
 client_scripts {
     'client/main.lua'
+}
+
+server_exports {
+    'CreateItem',
+    'GetItem',
+    'ListItems',
+    'UpdateItem',
+    'SetItemEnabled',
+    'DeleteItem',
+    'PublishItem',
+    'DeprecateItem',
+    'GetItemDefinition',
+    'ItemExists',
+    'GetItemWeight',
+    'GetMaxStack',
+    'IsStackable',
+    'ValidateMetadata',
+    'CanUse',
+    'CanQuickslot',
+    'CanDrop',
+    'CanTrade',
+    'IsContainer',
+    'GetClientDefinition',
+    'GetClientCatalog',
+    'RegisterItemType',
+    'RegisterActionHandler'
 }
