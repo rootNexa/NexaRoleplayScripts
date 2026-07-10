@@ -32,9 +32,11 @@ ensure oxmysql
 ensure chat
 ensure nexa-lib
 ensure nexa-core
+ensure nexa_identity
+ensure nexa_characters
+ensure nexa_playerstate
 ensure nexa-character
 ensure nexa-identity
-ensure nexa-spawn
 ensure nexa_config
 ensure nexa_locales
 ensure nexa_audit

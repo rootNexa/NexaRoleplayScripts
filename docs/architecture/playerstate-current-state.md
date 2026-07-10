@@ -8,7 +8,7 @@
 | `[cfx]/[managers]/spawnmanager` | CFX standalone spawn helper | Not Nexa-authoritative, client-oriented default spawn flow | Not used by Nexa gameplay lifecycle |
 | `[nexa-gameplay]/nexa_identity` | Account resolution and account state | Does not own gameplay readiness | Remains identity owner |
 | `[nexa-gameplay]/nexa_characters` | Character domain and active character | Character selected is not gameplay active | Remains character owner |
-| `[nexa-admin]/nexa_admin` | Admin teleport/revive/freeze/noclip foundations | Needs integration with player-state life/position exceptions | May depend on `nexa_playerstate` later; no reverse dependency |
+| `[nexa-admin]/nexa_admin` | Admin teleport/revive/freeze/noclip foundations | Needs player-state life/position exceptions | Depends on `nexa_playerstate`; no reverse dependency |
 
 ## Findings
 
@@ -26,9 +26,9 @@
 - `nexa_api` does not depend on `nexa_admin`, `nexa_identity`, `nexa_characters`, or future `nexa_playerstate`.
 - `nexa_admin -> nexa_api` does not create a cycle with current manifests.
 - `nexa_playerstate` may depend on `nexa-core`, `nexa_identity`, and `nexa_characters`.
-- `nexa_admin -> nexa_playerstate` is allowed later for recovery/position integration.
+- `nexa_admin -> nexa_playerstate` is allowed and used for recovery/position integration.
 - `nexa-core`, `nexa_identity`, and `nexa_characters` must not depend on `nexa_playerstate`.
 
 ## Migration Decision
 
-Create `[nexa-gameplay]/nexa_playerstate` as the authoritative lifecycle owner and keep `nexa-spawn` only as a deprecated development helper until server configs are migrated.
+Create `[nexa-gameplay]/nexa_playerstate` as the authoritative lifecycle owner. Keep `nexa-spawn` only as a deprecated development helper and do not start it in the Foundation dev stack.

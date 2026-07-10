@@ -20,16 +20,18 @@ Der vendored/infrastrukturartige Ordner `[ox]/oxmysql` wird als erlaubte externe
 
 ## Foundation Startreihenfolge
 
-Aktuell dokumentiert:
+Aktuell dokumentiert fuer den Foundation-Dev-Stack:
 
 ```cfg
 ensure oxmysql
 ensure chat
 ensure nexa-lib
 ensure nexa-core
+ensure nexa_identity
+ensure nexa_characters
+ensure nexa_playerstate
 ensure nexa-character
 ensure nexa-identity
-ensure nexa-spawn
 ensure nexa_config
 ensure nexa_locales
 ensure nexa_audit
@@ -53,9 +55,11 @@ ensure nexa_locales
 ensure nexa_audit
 ensure nexa_logs
 ensure nexa-core
+ensure nexa_identity
+ensure nexa_characters
+ensure nexa_playerstate
 ensure nexa-character
 ensure nexa-identity
-ensure nexa-spawn
 ensure nexa_featureflags
 ensure nexa_permissions
 ensure nexa_api
@@ -67,7 +71,7 @@ ensure nexa_jobscreator
 ensure nexa_shops
 ```
 
-Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat validiert werden. Diese Analyse aendert keine Startdateien.
+Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat validiert werden. Der Dev-Stack startet `nexa_playerstate` nach `nexa_characters` und vor den Legacy-Core-Bridge-Ressourcen. `nexa-spawn` bleibt im Repository, wird aber in der Foundation-Dev-Reihenfolge nicht mehr gestartet.
 
 ## Core und Foundation Ressourcen
 
@@ -83,7 +87,8 @@ Die exakte Reihenfolge sollte vor Aenderung an `server.cfg` oder systemd separat
 | `[nexa-core]/nexa-core` | `oxmysql` | MariaDB | Erhalten als Session-/Identifier-/Character-Core. |
 | `[nexa-core]/nexa-character` | Core-nahe Character-Foundation | `nexa-core` fachlich | Erhalten, Manifest nochmals gegen dokumentierte Startreihenfolge pruefen. |
 | `[nexa-core]/nexa-identity` | `nexa-core`, `nexa-character` | `oxmysql` ueber core | Erhalten als Core-Identity-Schicht. |
-| `[nexa-gameplay]/nexa-spawn` | Core-nahe Spawn-Foundation | `nexa-core` fachlich | Erhalten. |
+| `[nexa-gameplay]/nexa_playerstate` | `nexa-core`, `nexa_identity`, `nexa_characters` | MariaDB ueber Core-Database | Neuer autoritativer Gameplay-Lifecycle- und Spawn-Owner. |
+| `[nexa-gameplay]/nexa-spawn` | Core-nahe Spawn-Foundation | `nexa-core` fachlich | Deprecated Dev-Helfer; nicht parallel zu `nexa_playerstate` starten. |
 | `[nexa-core]/nexa_featureflags` | `oxmysql`, `nexa_config` | MariaDB | Erhalten. |
 | `[nexa-core]/nexa_permissions` | `oxmysql`, `nexa-lib`, `nexa-core` | MariaDB | Erhalten als Rollen-/Regel-System. |
 | `[nexa-core]/nexa_api` | `nexa-lib`, `nexa-core` | `nexa_permissions` optional ueber exports | Erhalten als bevorzugte Callback-/API-Fassade. |

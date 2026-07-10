@@ -85,7 +85,31 @@ Assert-Contains $charactersMain 'NEXA_CHARACTERS.errors.notOwned' 'Ownership err
 Assert-Contains $charactersMain 'selectionLocks' 'Selection lock missing.'
 Assert-Contains $charactersMain 'activeSourceByCharacterId' 'Duplicate active character guard missing.'
 
-if ($foundation -notmatch 'ensure nexa_identity\s+ensure nexa_characters\s+ensure nexa-character') {
+$foundationLines = $foundation -split "`r?`n"
+$foundationOrder = @{}
+for ($i = 0; $i -lt $foundationLines.Count; $i++) {
+    if ($foundationLines[$i].Trim() -match '^ensure\s+(.+)$') {
+        $foundationOrder[$Matches[1]] = $i
+    }
+}
+
+if (-not $foundationOrder.ContainsKey('nexa_identity') -or -not $foundationOrder.ContainsKey('nexa_characters') -or -not $foundationOrder.ContainsKey('nexa-character')) {
+    throw 'FAIL: foundation.dev.cfg must start nexa_identity, nexa_characters and nexa-character.'
+}
+
+if ($foundationOrder['nexa_identity'] -ge $foundationOrder['nexa_characters']) {
+    throw 'FAIL: foundation.dev.cfg must start nexa_identity before nexa_characters.'
+}
+
+if ($foundationOrder.ContainsKey('nexa_playerstate')) {
+    if ($foundationOrder['nexa_characters'] -ge $foundationOrder['nexa_playerstate']) {
+        throw 'FAIL: foundation.dev.cfg must start nexa_playerstate after nexa_characters.'
+    }
+
+    if ($foundationOrder['nexa_playerstate'] -ge $foundationOrder['nexa-character']) {
+        throw 'FAIL: foundation.dev.cfg must start nexa_playerstate before legacy nexa-character.'
+    }
+} elseif ($foundationOrder['nexa_characters'] -ge $foundationOrder['nexa-character']) {
     throw 'FAIL: foundation.dev.cfg must start nexa_identity and nexa_characters before nexa-character.'
 }
 
