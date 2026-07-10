@@ -196,6 +196,14 @@ Sensitive Daten werden maskiert, Tabellen werden begrenzt serialisiert, zyklisch
 
 Details stehen in `docs/architecture/core-logging.md`.
 
+## Konfigurationsmodell
+
+`nexa-core` stellt `Nexa.Config` als validierten, immutable Snapshot bereit. Die Config unterstuetzt Defaults, Environment-Overrides, server-only Werte, client-exposed Public Snapshots, Schema-Validierung, sichere Pfadabfragen und Secret-Leak-Schutz.
+
+Der Bootstrap ruft `Nexa.Config.Validate()` auf. Fehlende Pflichtfelder, falsche Typen oder ungueltige Wertebereiche verhindern den Core-Start und setzen den Lifecycle auf `failed`.
+
+Details stehen in `docs/architecture/core-config.md`.
+
 ## Datenbankmodell
 
 ### Core Tabellen

@@ -130,6 +130,19 @@ Der Logger erzeugt strukturierte Eintraege mit Zeitstempel, Level, Resource, Mod
 
 `Nexa.Log(level, message, context)` bleibt als kompatibler Kurzweg erhalten.
 
+## Configuration
+
+Intern stellt `nexa-core` `Nexa.Config` bereit:
+
+- `Nexa.Config.Get(path, defaultValue)`
+- `Nexa.Config.Has(path)`
+- `Nexa.Config.GetSection(path)`
+- `Nexa.Config.Validate()`
+- `Nexa.Config.GetEnvironment()`
+- `Nexa.Config.GetPublicSnapshot()`
+
+Die Config ist nach dem Aufbau immutable. Serverseitige Secrets liegen in `serverOnly`-Sektionen und werden nicht in `GetPublicSnapshot()` uebernommen. Fehlerhafte Pflichtwerte, falsche Typen oder ungueltige Wertebereiche verhindern den Core-Start.
+
 ## Exports
 
 ### `GetPlayer(source)`

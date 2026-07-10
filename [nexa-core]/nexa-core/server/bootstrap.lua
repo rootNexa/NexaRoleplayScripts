@@ -155,6 +155,32 @@ local function checkDependencies()
     return true, nil
 end
 
+local function checkConfig()
+    local ok, errors, warnings = Nexa.Config.Validate()
+
+    for _, warning in ipairs(warnings or {}) do
+        Nexa.Log('warn', 'Konfigurationswarnung.', {
+            path = warning.path,
+            code = warning.code,
+            message = warning.message
+        })
+    end
+
+    if ok then
+        return true, nil
+    end
+
+    for _, configError in ipairs(errors or {}) do
+        Nexa.Log('error', 'Konfigurationsfehler.', {
+            path = configError.path,
+            code = configError.code,
+            message = configError.message
+        })
+    end
+
+    return false, 'CONFIG_INVALID'
+end
+
 function Nexa.Lifecycle.GetState()
     return Nexa.Lifecycle.state
 end
@@ -252,6 +278,12 @@ function Nexa.Bootstrap.Initialize()
 
     if not hooksOk then
         return fail('INITIALIZING_HOOK_FAILED', hookErr)
+    end
+
+    local configOk, configErr = checkConfig()
+
+    if not configOk then
+        return fail(configErr)
     end
 
     local depsOk, depsErr = checkDependencies()
