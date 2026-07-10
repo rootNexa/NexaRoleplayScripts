@@ -260,6 +260,8 @@ Der interne Event-Bus ersetzt keine FiveM-Netzwerk-Events. Details stehen in `do
 
 Core-Callbacks sind in interne Servercallbacks und Netzwerkcallbacks getrennt. Details stehen in `docs/architecture/core-callbacks.md`.
 
+Interne Core-Module werden ueber `Nexa.Modules` registriert und vom Bootstrap nach Dependency-Graph kontrolliert initialisiert, gestartet, ready markiert und gestoppt. Details stehen in `docs/architecture/core-modules.md`.
+
 ## Abhaengigkeitsregeln
 
 Zielregeln fuer neue und migrierte Ressourcen:

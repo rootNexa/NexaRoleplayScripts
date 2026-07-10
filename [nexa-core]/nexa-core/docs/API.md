@@ -184,6 +184,22 @@ Intern stellt `nexa-core` `Nexa.Callbacks` bereit:
 
 Neue Callback-Antworten nutzen `{ ok = true, data = ... }` oder `{ ok = false, error = { code = '...', message = '...' } }`. Netzwerkfehler werden vor der Antwort an Clients sanitisiert.
 
+## Module Loader
+
+Intern stellt `nexa-core` `Nexa.Modules` fuer Core-Komponenten bereit:
+
+- `Nexa.Modules.Register(definition)`
+- `Nexa.Modules.InitializeAll()`
+- `Nexa.Modules.StartAll()`
+- `Nexa.Modules.StopAll(reason)`
+- `Nexa.Modules.Get(name)`
+- `Nexa.Modules.GetStatus(name)`
+- `Nexa.Modules.GetAllStatuses()`
+- `Nexa.Modules.IsReady(name)`
+- `Nexa.Modules.GetHealth(name)`
+
+Moduldefinitionen enthalten Name, Version, harte und optionale Abhaengigkeiten sowie optionale `Initialize`, `Start`, `Ready`, `Stop` und `Health` Funktionen. Details stehen in `docs/architecture/core-modules.md`.
+
 ## Exports
 
 ### `GetPlayer(source)`

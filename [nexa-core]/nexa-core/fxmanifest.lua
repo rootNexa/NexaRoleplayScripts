@@ -26,6 +26,7 @@ server_scripts {
     'server/callbacks.lua',
     'server/events.lua',
     'server/exports.lua',
+    'server/modules.lua',
     'server/bootstrap.lua',
     'server/main.lua'
 }

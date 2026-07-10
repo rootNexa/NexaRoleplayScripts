@@ -313,6 +313,14 @@ function Nexa.Bootstrap.Initialize()
         return fail('DATABASE_MIGRATIONS_FAILED', migrationsErr)
     end
 
+    if Nexa.Modules then
+        local modulesOk, modulesErr = Nexa.Modules.InitializeAll()
+
+        if not modulesOk then
+            return fail('MODULE_INITIALIZE_FAILED', modulesErr)
+        end
+    end
+
     transitioned, transitionErr = transition(states.initialized, 'bootstrap_initialized')
 
     if not transitioned then
@@ -359,6 +367,20 @@ function Nexa.Bootstrap.Start()
 
     if not hooksOk then
         return fail('STARTING_HOOK_FAILED', hookErr)
+    end
+
+    if Nexa.Modules then
+        local modulesOk, modulesErr = Nexa.Modules.StartAll()
+
+        if not modulesOk then
+            return fail('MODULE_START_FAILED', modulesErr)
+        end
+
+        modulesOk, modulesErr = Nexa.Modules.ReadyAll()
+
+        if not modulesOk then
+            return fail('MODULE_READY_FAILED', modulesErr)
+        end
     end
 
     transitioned, transitionErr = transition(states.ready, 'bootstrap_ready')
@@ -423,6 +445,10 @@ function Nexa.Bootstrap.Stop(reason)
         Nexa.Log('error', 'Lifecycle-Stop-Hook fehlgeschlagen; Stop wird fortgesetzt.', {
             error = hookErr
         })
+    end
+
+    if Nexa.Modules then
+        Nexa.Modules.StopAll(reason)
     end
 
     transitioned, transitionErr = transition(states.stopped, reason)
