@@ -1,5 +1,6 @@
 NexaPermissionsServer = {
-    CacheTtlSeconds = 300,
     CommandsEnabled = NexaPermissionsConfig.DevMode,
-    CommandPermission = 'nexa.admin'
+    CommandPermission = 'nexa.permissions.view',
+    BootstrapOwnerEnabled = GetConvar('nexa:permissions:bootstrapOwner', 'false') == 'true',
+    BootstrapOwnerAce = NexaPermissionsConfig.BootstrapOwnerAce
 }

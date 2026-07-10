@@ -31,7 +31,7 @@ local function registerCommands()
             return
         end
 
-        printResult('nexaperms', NexaPermissions.GetPermissionCache(source))
+        printResult('nexaperms', NexaPermissions.ListRegisteredPermissions())
     end, false)
 
     RegisterCommand('nexahas', function(source, args)
@@ -55,7 +55,7 @@ local function registerCommands()
             return
         end
 
-        printResult('nexaroles', NexaPermissions.GetRoles(source))
+        printResult('nexaroles', NexaPermissions.ListRoles())
     end, false)
 
     RegisterCommand('nexaassignrole', function(source, args)
@@ -67,7 +67,19 @@ local function registerCommands()
             return
         end
 
-        printResult('nexaassignrole', NexaPermissions.AssignRoleToPlayer(args[1], args[2]))
+        printResult('nexaassignrole', NexaPermissions.AssignRole(source, args[1], args[2], table.concat(args, ' ', 3)))
+    end, false)
+
+    RegisterCommand('nexaremoverole', function(source, args)
+        if not commandAllowed(source) then
+            printResult('nexaremoverole', {
+                ok = false,
+                error = 'FORBIDDEN'
+            })
+            return
+        end
+
+        printResult('nexaremoverole', NexaPermissions.RemoveRole(source, args[1], args[2], table.concat(args, ' ', 3)))
     end, false)
 
     RegisterCommand('nexareloadperms', function(source)
@@ -109,7 +121,17 @@ AddEventHandler('playerDropped', function()
     local droppedSource = source
 
     if droppedSource then
-        NexaPermissions.cacheBySource[tonumber(droppedSource)] = nil
+        NexaPermissions.AdminDuty.Clear(tonumber(droppedSource), 'Player disconnected')
+    end
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= RESOURCE then
+        return
+    end
+
+    for source in pairs(NexaPermissions.adminDutyBySource) do
+        NexaPermissions.AdminDuty.Clear(source, 'nexa_permissions stopped')
     end
 end)
 
@@ -128,9 +150,94 @@ function HasAll(...)
     return NexaPermissions.HasAll(source, permissions)
 end
 
+function GetPermissions(...)
+    local source = normalizeExportArgs(...)
+    return NexaPermissions.GetPermissions(source)
+end
+
 function GetRoles(...)
     local source = normalizeExportArgs(...)
     return NexaPermissions.GetRoles(source)
+end
+
+function GetDecisionTrace(...)
+    local actor, target, permission = normalizeExportArgs(...)
+    return NexaPermissions.GetDecisionTrace(actor, target, permission)
+end
+
+function GetRole(...)
+    local roleName = normalizeExportArgs(...)
+    return NexaPermissions.GetRole(roleName)
+end
+
+function ListRoles(...)
+    normalizeExportArgs(...)
+    return NexaPermissions.ListRoles()
+end
+
+function ListRegisteredPermissions(...)
+    normalizeExportArgs(...)
+    return NexaPermissions.ListRegisteredPermissions()
+end
+
+function AssignRole(...)
+    local actor, target, role, reason = normalizeExportArgs(...)
+    return NexaPermissions.AssignRole(actor, target, role, reason)
+end
+
+function RemoveRole(...)
+    local actor, target, role, reason = normalizeExportArgs(...)
+    return NexaPermissions.RemoveRole(actor, target, role, reason)
+end
+
+function GrantPermission(...)
+    local actor, target, permission, reason = normalizeExportArgs(...)
+    return NexaPermissions.GrantPermission(actor, target, permission, reason)
+end
+
+function DenyPermission(...)
+    local actor, target, permission, reason = normalizeExportArgs(...)
+    return NexaPermissions.DenyPermission(actor, target, permission, reason)
+end
+
+function RevokePermission(...)
+    local actor, target, permission, reason = normalizeExportArgs(...)
+    return NexaPermissions.RevokePermission(actor, target, permission, reason)
+end
+
+function RegisterPermission(...)
+    local permission, actor, reason = normalizeExportArgs(...)
+    return NexaPermissions.RegisterPermission(permission, actor, reason)
+end
+
+function RegisterRole(...)
+    local role, actor, reason = normalizeExportArgs(...)
+    return NexaPermissions.RegisterRole(role, actor, reason)
+end
+
+function SetRoleInheritance(...)
+    local role, inheritedRole, actor, reason = normalizeExportArgs(...)
+    return NexaPermissions.SetRoleInheritance(role, inheritedRole, actor, reason)
+end
+
+function SetAdminDuty(...)
+    local source, state, actor, reason = normalizeExportArgs(...)
+    return NexaPermissions.AdminDuty.Set(source, state, actor, reason)
+end
+
+function GetAdminDuty(...)
+    local source = normalizeExportArgs(...)
+    return NexaPermissions.AdminDuty.Get(source)
+end
+
+function IsAdminOnDuty(...)
+    local source = normalizeExportArgs(...)
+    return NexaPermissions.AdminDuty.IsOnDuty(source)
+end
+
+function ClearAdminDuty(...)
+    local source, reason = normalizeExportArgs(...)
+    return NexaPermissions.AdminDuty.Clear(source, reason)
 end
 
 function AssignRoleToPlayer(...)

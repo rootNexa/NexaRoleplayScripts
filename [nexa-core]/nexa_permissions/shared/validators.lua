@@ -19,11 +19,15 @@ function NexaPermissionsNormalizePermission(permission)
         return nil
     end
 
-    if not normalized:match('^[a-z0-9_%.:%-%*]+$') then
+    if not normalized:match('^nexa%.[a-z0-9_%-]+%.[a-z0-9_%.%-%*]+$') then
         return nil
     end
 
     if normalized:find('%.%.', 1, true) then
+        return nil
+    end
+
+    if normalized:find('%*') and not normalized:match('%.%*$') then
         return nil
     end
 

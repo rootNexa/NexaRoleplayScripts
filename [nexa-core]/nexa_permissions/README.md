@@ -1,99 +1,144 @@
 # nexa_permissions
 
-Eigenes Rollen- und Rechtesystem fuer Nexa Framework.
+`nexa_permissions` is the domain resource for Nexa permission administration. It owns the permission catalog, admin/support role seed, account and character role management, owner protection, audit records, and admin-duty state.
 
-## Zweck
+The technical decision engine remains in `nexa-core`. This resource uses the Core database abstraction and does not load the oxmysql Lua include directly.
 
-- Rollen verwalten
-- Permission-Regeln auswerten
-- Rollenvererbung aufloesen
-- Spieler oder Identifier Rollen zuweisen
-- Character-Zuweisungen im Datenmodell vorbereiten
-- Permission-Cache pro Spieler bereitstellen
+## Responsibilities
 
-## Abhaengigkeiten
+- Register known permission names.
+- Seed Owner/Admin/Support/Developer/QA roles.
+- Seed role inheritance and default role grants.
+- Assign and remove account or character roles.
+- Grant, deny, and revoke direct account or character permissions.
+- Enforce owner protection, hierarchy protection, and self-elevation protection.
+- Write audit records for every mutating action.
+- Provide server-side admin-duty foundation.
+- Keep legacy exports compatible while routing new writes through the Core permission tables.
 
-- `nexa-lib`
-- `nexa-core`
-- `oxmysql`
+## Non-Responsibilities
 
-`oxmysql` wird hier direkt genutzt, weil `nexa-core` aktuell keine Datenbank-API exportiert. Alle Player-, Identifier- und Character-Kontexte werden ueber `nexa-core` Exports gelesen.
+- No admin menu.
+- No kick, ban, noclip, spectate, or gameplay action implementation.
+- No Discord role sync.
+- No client-side permission decisions.
+- No direct SQL ownership outside the Core database layer.
 
-## Migration
+## Role Model
 
-Importiere vor dem Start:
+Project leadership:
 
-```sql
-server/resources/[nexa-core]/nexa_permissions/sql/001_permissions_roles.sql
-```
+- `owner`
+- `co_owner`
 
-Die Foundation-Tabelle `nexa_permissions` bleibt unveraendert. Die neue Resource nutzt eigene Rollen-Tabellen und zerstoert keine bestehenden Daten.
+Administration:
+
+- `head_admin`
+- `senior_admin`
+- `admin`
+- `trial_admin`
+
+Support:
+
+- `head_support`
+- `supporter`
+- `support_trainee`
+
+Technical roles:
+
+- `developer`
+- `qa_tester`
+
+Roles are only permission collections. Resources must check permissions such as `nexa.admin.kick`, never role names.
 
 ## Exports
+
+Read exports:
 
 - `Has(source, permission)`
 - `HasAny(source, permissions)`
 - `HasAll(source, permissions)`
-- `GetRoles(source)`
+- `GetPermissions(target)`
+- `GetRoles(target)`
+- `GetDecisionTrace(actor, target, permission)`
+- `GetRole(roleName)`
+- `ListRoles()`
+- `ListRegisteredPermissions()`
+- `GetPermissionCache(source)` legacy alias
+
+Mutating exports:
+
+- `AssignRole(actor, target, role, reason)`
+- `RemoveRole(actor, target, role, reason)`
+- `GrantPermission(actor, target, permission, reason)`
+- `DenyPermission(actor, target, permission, reason)`
+- `RevokePermission(actor, target, permission, reason)`
+- `RegisterPermission(permission, actor, reason)`
+- `RegisterRole(role, actor, reason)`
+- `SetRoleInheritance(role, inheritedRole, actor, reason)`
+
+Admin-duty exports:
+
+- `SetAdminDuty(source, state, actor, reason)`
+- `GetAdminDuty(source)`
+- `IsAdminOnDuty(source)`
+- `ClearAdminDuty(source, reason)`
+
+Compatibility exports:
+
 - `AssignRoleToPlayer(sourceOrIdentifier, roleName)`
 - `RemoveRoleFromPlayer(sourceOrIdentifier, roleName)`
 - `ReloadPermissions()`
-- `GetPermissionCache(source)`
 
-Alle Exports geben das Nexa Response-Format zurueck:
+## Response Format
+
+Exports return Nexa-compatible response tables:
 
 ```lua
 {
     ok = true,
-    data = {},
-    error = nil
+    success = true,
+    code = 'OK',
+    message = '...',
+    data = {}
 }
 ```
 
-oder:
+Failures include `ok = false`, `success = false`, and an `error` table with a public code and message.
 
-```lua
-{
-    ok = false,
-    data = nil,
-    error = {
-        code = 'ERROR_CODE',
-        message = 'Readable message.',
-        details = {}
-    }
-}
-```
+## Owner Protection
 
-## Permission-Regeln
+- Only Owner can assign or remove `owner`.
+- Co-Owner cannot mutate Owner.
+- Lower roles cannot mutate equal or higher roles unless they have explicit owner-management permission.
+- Self-elevation is denied.
+- The last Owner cannot be removed.
+- Console and controlled bootstrap are the only exceptions.
 
-Unterstuetzt werden exakte Regeln und Wildcards:
+## ACE
 
-- `nexa.admin`
-- `nexa.admin.*`
-- `jobs.police.*`
-- `jobs.police.manage`
+ACE is a bootstrap or fallback mechanism only. Database Deny remains authoritative through the Core decision order. Do not use Discord roles, IP addresses, or hardware identifiers as permission sources.
 
-Exakte Regeln erhalten bei gleicher Rollen-Prioritaet Vorrang vor Wildcards. Bei Konflikten gewinnt die Regel aus der Rolle mit der hoeheren Priority. Regeln koennen erlauben oder verweigern.
+## Admin Duty
 
-## Default-Rollen
+Supported states:
 
-Beim Start werden diese Rollen sichergestellt:
+- `off_duty`
+- `on_duty`
+- `suspended`
 
-- `user`
-- `admin`
+Disconnects and resource stop clear in-memory duty state and write an audit entry. Duty-gated operational permissions are documented in `docs/architecture/admin-duty.md`.
 
-Jeder Spieler erhaelt im Cache die Rolle `user`. Die Rolle `admin` wird nur angelegt, aber niemandem automatisch zugewiesen.
+## Database
 
-## Development Commands
+New append-only migration `030_permission_domain` creates:
 
-Nur im Development-Modus oder fuer Serverkonsole:
+- `nexa_registered_permissions`
+- `nexa_account_roles`
+- `nexa_account_permissions`
+- `nexa_character_roles`
+- `nexa_character_permissions`
+- `nexa_permission_audit`
+- `nexa_admin_duty`
 
-- `/nexaperms`
-- `/nexahas <permission>`
-- `/nexaroles`
-- `/nexaassignrole <serverId|identifier> <role>`
-- `/nexareloadperms`
-
-## Integration
-
-`nexa-core` bleibt unabhaengig. `nexa-core:HasPermission` wird nicht hart auf diese Resource delegiert, damit die Foundation ohne zyklische Dependency starten kann. Neue Ressourcen sollen direkt `exports['nexa_permissions']:Has(source, permission)` nutzen.
+Core tables from `002_permission_foundation` remain the effective decision source.
