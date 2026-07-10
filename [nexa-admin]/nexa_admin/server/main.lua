@@ -766,6 +766,9 @@ function Teleport.GoTo(actorSource, targetSource)
         coords = actorCoords,
         expiresAt = os.time() + NexaAdminConfig.returnPositionTtlSeconds
     }
+    if GetResourceState('nexa_playerstate') == 'started' then
+        exports.nexa_playerstate:AllowPositionJump(actorSource, { action = 'admin.goto', targetSource = targetSource })
+    end
     SetPlayerRoutingBucket(actorSource, targetCoords.bucket or 0)
     TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, actorSource, {
         coords = targetCoords
@@ -785,6 +788,9 @@ function Teleport.Bring(actorSource, targetSource)
         coords = targetCoords,
         expiresAt = os.time() + NexaAdminConfig.returnPositionTtlSeconds
     }
+    if GetResourceState('nexa_playerstate') == 'started' then
+        exports.nexa_playerstate:AllowPositionJump(targetSource, { action = 'admin.bring', actorSource = actorSource })
+    end
     SetPlayerRoutingBucket(targetSource, actorCoords.bucket or 0)
     TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, targetSource, {
         coords = actorCoords
@@ -802,6 +808,9 @@ function Teleport.Return(actorSource, targetSource)
     end
 
     SetPlayerRoutingBucket(target, stored.coords.bucket or 0)
+    if GetResourceState('nexa_playerstate') == 'started' then
+        exports.nexa_playerstate:AllowPositionJump(target, { action = 'admin.return', actorSource = actorSource })
+    end
     TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, target, {
         coords = stored.coords
     })
@@ -825,6 +834,9 @@ function Teleport.ToCoords(actorSource, coords)
         }
     end
 
+    if GetResourceState('nexa_playerstate') == 'started' then
+        exports.nexa_playerstate:AllowPositionJump(actorSource, { action = 'admin.teleport.coords' })
+    end
     TriggerClientEvent(NEXA_ADMIN.events.applyTeleport, actorSource, {
         coords = coords
     })
@@ -869,6 +881,13 @@ function Recovery.Heal(actorSource, targetSource)
 end
 
 function Recovery.Revive(actorSource, targetSource)
+    if GetResourceState('nexa_playerstate') == 'started' then
+        exports.nexa_playerstate:SetLifeState(actorSource, targetSource, 'alive', {
+            reason = 'admin_revive',
+            actorSource = actorSource
+        })
+    end
+
     TriggerClientEvent(NEXA_ADMIN.events.applyRecovery, targetSource, {
         type = 'revive',
         actorSource = actorSource
