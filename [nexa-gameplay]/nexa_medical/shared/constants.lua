@@ -1,0 +1,5 @@
+NEXA_MEDICAL = { resourceName = 'nexa_medical', version = '0.1.0' }
+NEXA_INJURY_TYPES = { blunt = 'blunt', cut = 'cut', gunshot = 'gunshot', burn = 'burn', fall = 'fall', vehicle = 'vehicle', overdose = 'overdose', custom = 'custom' }
+NEXA_MEDICAL_STATE = { healthy = 'healthy', injured = 'injured', bleeding = 'bleeding', unconscious = 'unconscious', dead = 'dead', recovering = 'recovering' }
+NEXA_MEDICAL_EVENTS = { injuryApplied = 'nexa:internal:medical:injuryApplied', patientStabilized = 'nexa:internal:medical:patientStabilized', patientTreated = 'nexa:internal:medical:patientTreated', patientDied = 'nexa:internal:medical:patientDied', patientRespawned = 'nexa:internal:medical:patientRespawned', reportCreated = 'nexa:internal:medical:reportCreated' }
+NEXA_MEDICAL_ERRORS = { stateNotFound = 'MEDICAL_STATE_NOT_FOUND', patientInvalid = 'MEDICAL_PATIENT_INVALID', injuryInvalid = 'MEDICAL_INJURY_INVALID', treatmentInvalid = 'MEDICAL_TREATMENT_INVALID', reportNotFound = 'MEDICAL_REPORT_NOT_FOUND', reasonRequired = 'MEDICAL_REASON_REQUIRED', invalidInput = 'MEDICAL_INVALID_INPUT', databaseError = 'MEDICAL_DATABASE_ERROR' }
