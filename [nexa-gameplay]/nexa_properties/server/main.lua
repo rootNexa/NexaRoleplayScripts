@@ -208,12 +208,15 @@ function UpdateProperty(...) return Properties.UpdateStatus(...) end
 function BuyProperty(...) return PropertySales.Buy(...) end
 function SellProperty(...) return PropertySales.SellToSystem(...) end
 function TransferProperty(...) return PropertySales.Transfer(...) end
+function GetPropertyQuote(...) return PropertySales.GetQuote(...) end
 function GetLease(...) return Leases.Get(...) end
 function GetCharacterLease(...) return Leases.GetForCharacter(...) end
 function CreateLease(...) return Leases.Create(...) end
 function TerminateLease(...) return Leases.Terminate(...) end
 function PayRent(...) return Rent.Pay(...) end
 function GetRentStatus(...) return Rent.GetStatus(...) end
+function ProcessDueRent(...) return Rent.ProcessDue(...) end
+function MarkRentOverdue(...) return Rent.MarkOverdue(...) end
 function ListResidents(...) return Residents.List(...) end
 function InviteResident(...) return Residents.Invite(...) end
 function AcceptResidentInvitation(...) return Residents.Accept(...) end
@@ -249,12 +252,15 @@ exports('UpdateProperty', UpdateProperty)
 exports('BuyProperty', BuyProperty)
 exports('SellProperty', SellProperty)
 exports('TransferProperty', TransferProperty)
+exports('GetPropertyQuote', GetPropertyQuote)
 exports('GetLease', GetLease)
 exports('GetCharacterLease', GetCharacterLease)
 exports('CreateLease', CreateLease)
 exports('TerminateLease', TerminateLease)
 exports('PayRent', PayRent)
 exports('GetRentStatus', GetRentStatus)
+exports('ProcessDueRent', ProcessDueRent)
+exports('MarkRentOverdue', MarkRentOverdue)
 exports('ListResidents', ListResidents)
 exports('InviteResident', InviteResident)
 exports('AcceptResidentInvitation', AcceptResidentInvitation)
