@@ -7,6 +7,7 @@ NexaVehicleConfig = {
     maxMileageDelta = 25000,
     maxHealth = 1000,
     minDriveableHealth = 100,
+    maintenanceIntervalMileage = 500000,
     defaultGarage = nil,
     defaultState = {
         fuel = 100000,

@@ -270,6 +270,17 @@ function VehicleInsurance.Get(vehicleId) local row, err = NexaVehiclesDatabase.G
 
 function VehicleMaintenance.Record(actor, vehicleId, payload) local vehicle = Vehicles.Get(vehicleId); if not vehicle.ok then return vehicle end; local metadata = vehicle.data.metadata or {}; metadata.maintenance = metadata.maintenance or {}; metadata.maintenance[#metadata.maintenance + 1] = payload or {}; return ok({ vehicle_id = vehicleId, maintenance = metadata.maintenance }, 'Maintenance recorded.') end
 function VehicleMaintenance.GetHistory(vehicleId) local vehicle = Vehicles.Get(vehicleId); return vehicle.ok and ok((vehicle.data.metadata or {}).maintenance or {}, 'Maintenance history loaded.') or vehicle end
+function VehicleMaintenance.IsDue(vehicleId)
+    local vehicle = Vehicles.Get(vehicleId)
+    if not vehicle.ok then return vehicle end
+    local mileage = tonumber(vehicle.data.mileage or 0) or 0
+    local history = ((vehicle.data.metadata or {}).maintenance or {})
+    local lastMileage = 0
+    for _, entry in ipairs(history) do
+        lastMileage = math.max(lastMileage, tonumber(entry.mileage or 0) or 0)
+    end
+    return ok({ vehicle_id = vehicleId, due = (mileage - lastMileage) >= (NexaVehicleConfig.maintenanceIntervalMileage or 500000), mileage = mileage, last_maintenance_mileage = lastMileage }, 'Maintenance due evaluated.')
+end
 
 function VehicleTheft.BeginLockpick(actor, vehicleId) local context = actorContext(actor, 'vehicle.theft.lockpick'); local id = normalizeId(vehicleId); theftAttempts[id] = { type = 'lockpick', actor_character_id = context.actor_character_id, started_at = now() }; emit(NEXA_VEHICLE_EVENTS.theftAttempted, { vehicle_id = id, type = 'lockpick' }); return ok({ vehicle_id = id, allowed = true }, 'Lockpick attempt recorded.') end
 function VehicleTheft.BeginHotwire(actor, vehicleId) local context = actorContext(actor, 'vehicle.theft.hotwire'); local id = normalizeId(vehicleId); theftAttempts[id] = { type = 'hotwire', actor_character_id = context.actor_character_id, started_at = now() }; emit(NEXA_VEHICLE_EVENTS.theftAttempted, { vehicle_id = id, type = 'hotwire' }); return ok({ vehicle_id = id, allowed = true }, 'Hotwire attempt recorded.') end
@@ -306,6 +317,7 @@ function CreateVehicleInsurance(...) return VehicleInsurance.Create(...) end
 function GetVehicleInsurance(...) return VehicleInsurance.Get(...) end
 function RecordVehicleMaintenance(...) return VehicleMaintenance.Record(...) end
 function GetVehicleMaintenanceHistory(...) return VehicleMaintenance.GetHistory(...) end
+function IsVehicleMaintenanceDue(...) return VehicleMaintenance.IsDue(...) end
 function BeginVehicleLockpick(...) return VehicleTheft.BeginLockpick(...) end
 function BeginVehicleHotwire(...) return VehicleTheft.BeginHotwire(...) end
 function GetVehicleTheftStatus(...) return VehicleTheft.GetStatus(...) end
@@ -350,6 +362,7 @@ exports('CreateVehicleInsurance', CreateVehicleInsurance)
 exports('GetVehicleInsurance', GetVehicleInsurance)
 exports('RecordVehicleMaintenance', RecordVehicleMaintenance)
 exports('GetVehicleMaintenanceHistory', GetVehicleMaintenanceHistory)
+exports('IsVehicleMaintenanceDue', IsVehicleMaintenanceDue)
 exports('BeginVehicleLockpick', BeginVehicleLockpick)
 exports('BeginVehicleHotwire', BeginVehicleHotwire)
 exports('GetVehicleTheftStatus', GetVehicleTheftStatus)

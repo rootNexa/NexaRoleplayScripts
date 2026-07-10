@@ -53,6 +53,7 @@ server_exports {
     'GetVehicleInsurance',
     'RecordVehicleMaintenance',
     'GetVehicleMaintenanceHistory',
+    'IsVehicleMaintenanceDue',
     'BeginVehicleLockpick',
     'BeginVehicleHotwire',
     'GetVehicleTheftStatus',
