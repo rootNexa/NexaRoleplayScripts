@@ -61,3 +61,7 @@ Sessions werden pro Character gebunden und verhindern doppelte aktive Auftraege.
 ## Resource Nodes, Production und Rewards
 
 Resource Nodes nutzen Reservations fuer Harvesting, damit Mining, Farming und Fishing keine unbegrenzten Client-Ernten erzeugen. Production Chains verweisen kontrolliert auf `nexa_crafting`. Rewards werden als eigene Records mit Idempotency-Key vorbereitet und koennen spaeter ueber Economy- und Inventory-Sagas finalisiert oder wiederholt werden.
+
+## Creator, Admin und Anti-AFK
+
+Creator- und Adminfunktionen muessen die mutierenden Exports mit Actor, Reason, Source-Resource, Correlation-ID und Permission-Kontext verwenden. Anti-AFK ist als serverseitige Foundation vorbereitet und akzeptiert nur plausible Aktionen aus Session- und Task-Kontext.
