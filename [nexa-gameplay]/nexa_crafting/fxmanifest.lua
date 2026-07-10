@@ -41,6 +41,8 @@ server_exports {
     'ListCraftingStations',
     'CreateRecipe',
     'UpdateRecipe',
+    'ActivateRecipe',
+    'DisableRecipe',
     'RegisterCraftingStation',
     'GrantRecipeKnowledge',
     'RevokeRecipeKnowledge',

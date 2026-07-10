@@ -151,6 +151,10 @@ function CompensateShopTransaction(...) return ShopTransactions.Compensate(...) 
 function AdjustShopStock(...) return Stock.Adjust(...) end
 function CreateShop(...) return Shops.Create(...) end
 function UpdateShop(...) return Shops.Update(...) end
+function ActivateShop(...) return Shops.Activate(...) end
+function SuspendShop(...) return Shops.Suspend(...) end
+function DisableShop(...) return Shops.Disable(...) end
+function ArchiveShop(...) return Shops.Archive(...) end
 function AddShopItem(...) return ShopCatalog.AddItem(...) end
 function UpdateShopItem(...) return ShopCatalog.UpdateItem(...) end
 function RemoveShopItem(...) return ShopCatalog.RemoveItem(...) end
@@ -177,6 +181,10 @@ exports('CompensateShopTransaction', CompensateShopTransaction)
 exports('AdjustShopStock', AdjustShopStock)
 exports('CreateShop', CreateShop)
 exports('UpdateShop', UpdateShop)
+exports('ActivateShop', ActivateShop)
+exports('SuspendShop', SuspendShop)
+exports('DisableShop', DisableShop)
+exports('ArchiveShop', ArchiveShop)
 exports('AddShopItem', AddShopItem)
 exports('UpdateShopItem', UpdateShopItem)
 exports('RemoveShopItem', RemoveShopItem)

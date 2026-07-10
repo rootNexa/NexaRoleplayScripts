@@ -110,6 +110,8 @@ function GetCraftingStation(...) return CraftingStations.Get(...) end
 function ListCraftingStations(...) return CraftingStations.List(...) end
 function CreateRecipe(...) return Recipes.Create(...) end
 function UpdateRecipe(...) return Recipes.Update(...) end
+function ActivateRecipe(...) return Recipes.Activate(...) end
+function DisableRecipe(...) return Recipes.Disable(...) end
 function RegisterCraftingStation(...) return CraftingStations.Register(...) end
 function GrantRecipeKnowledge(...) return RecipeKnowledge.Grant(...) end
 function RevokeRecipeKnowledge(...) return RecipeKnowledge.Revoke(...) end
@@ -130,6 +132,8 @@ exports('GetCraftingStation', GetCraftingStation)
 exports('ListCraftingStations', ListCraftingStations)
 exports('CreateRecipe', CreateRecipe)
 exports('UpdateRecipe', UpdateRecipe)
+exports('ActivateRecipe', ActivateRecipe)
+exports('DisableRecipe', DisableRecipe)
 exports('RegisterCraftingStation', RegisterCraftingStation)
 exports('GrantRecipeKnowledge', GrantRecipeKnowledge)
 exports('RevokeRecipeKnowledge', RevokeRecipeKnowledge)
