@@ -27,6 +27,15 @@ local function normalizeString(value, maxLength) if type(value) ~= 'string' then
 local function now() return os.time() end
 local function timer() return GetGameTimer and GetGameTimer() or math.floor(os.clock() * 1000) end
 
+local function cleanupSpawnTokens()
+    local current = timer()
+    for token, entry in pairs(spawnTokens) do
+        if entry.used or entry.expires_at < current then
+            spawnTokens[token] = nil
+        end
+    end
+end
+
 local function getCore()
     if GetResourceState('nexa-core') ~= 'started' then return nil end
     local good, core = pcall(function() return exports['nexa-core']:GetCoreObject() end)
@@ -177,6 +186,7 @@ local function makeSpawnToken(vehicleId, source, characterId, garageId, routingB
 end
 
 function Vehicles.RequestSpawn(actor, vehicleId, options)
+    cleanupSpawnTokens()
     options = type(options) == 'table' and options or {}
     local context = actorContext(actor, 'vehicle.spawn.request')
     vehicleId = normalizeId(vehicleId)
@@ -191,6 +201,7 @@ function Vehicles.RequestSpawn(actor, vehicleId, options)
 end
 
 function Vehicles.ConfirmSpawn(actor, token, netId, entityHandle)
+    cleanupSpawnTokens()
     local context = actorContext(actor, 'vehicle.spawn.confirm')
     local entry = type(token) == 'string' and spawnTokens[token] or nil
     if not entry or entry.used or entry.expires_at < timer() then return fail(NEXA_VEHICLE_ERRORS.tokenInvalid, 'Spawn token is invalid.') end
