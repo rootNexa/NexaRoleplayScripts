@@ -35,3 +35,7 @@ Die Resource besitzt keine eigene Engine und fuehrt keine Rewards direkt aus. Si
 ## Delivery, Trucking und Logistics
 
 Delivery und Courier bilden kurze Pickup/Dropoff-Auftraege ab. Trucking nutzt Cargo- und Vehicle-Kontext fuer laengere Routen. Warehouse Logistics verbindet Picking, Packing und Loading als Produktions-Foundation, ohne schon ein eigenes Warehouse-UI zu bauen.
+
+## Taxi, Garbage und Mechanic
+
+Taxi nutzt Passagier- und Routenaufgaben ohne komplexe NPC-KI. Garbage kombiniert Routen, Interaktionen und Entsorgung. Mechanic Service beschraenkt sich auf Inspection und einfache Repair-Aufgaben; Tuning und Werkstattverwaltung bleiben spaeteren Ressourcen vorbehalten.
