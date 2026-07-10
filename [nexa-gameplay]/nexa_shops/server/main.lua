@@ -145,6 +145,9 @@ function GetShopStock(...) return Stock.Get(...) end
 function CanAccessShop(shopId, actor) return ok({ shop_id = normalizeId(shopId), allowed = true }, 'Shop access evaluated.') end
 function BuyFromShop(...) return ShopTransactions.Buy(...) end
 function SellToShop(...) return ShopTransactions.Sell(...) end
+function GetShopTransaction(...) return ShopTransactions.Get(...) end
+function RetryShopTransaction(...) return ShopTransactions.Retry(...) end
+function CompensateShopTransaction(...) return ShopTransactions.Compensate(...) end
 function AdjustShopStock(...) return Stock.Adjust(...) end
 function CreateShop(...) return Shops.Create(...) end
 function UpdateShop(...) return Shops.Update(...) end
@@ -166,6 +169,9 @@ exports('GetShopStock', GetShopStock)
 exports('CanAccessShop', CanAccessShop)
 exports('BuyFromShop', BuyFromShop)
 exports('SellToShop', SellToShop)
+exports('GetShopTransaction', GetShopTransaction)
+exports('RetryShopTransaction', RetryShopTransaction)
+exports('CompensateShopTransaction', CompensateShopTransaction)
 exports('AdjustShopStock', AdjustShopStock)
 exports('CreateShop', CreateShop)
 exports('UpdateShop', UpdateShop)
