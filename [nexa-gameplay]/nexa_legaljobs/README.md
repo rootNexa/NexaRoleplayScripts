@@ -31,3 +31,7 @@ Die Resource besitzt keine eigene Engine und fuehrt keine Rewards direkt aus. Si
 - `GetLegalJobDefinitions`
 - `GetLegalJobDefinition`
 - `getStatus`
+
+## Delivery, Trucking und Logistics
+
+Delivery und Courier bilden kurze Pickup/Dropoff-Auftraege ab. Trucking nutzt Cargo- und Vehicle-Kontext fuer laengere Routen. Warehouse Logistics verbindet Picking, Packing und Loading als Produktions-Foundation, ohne schon ein eigenes Warehouse-UI zu bauen.
