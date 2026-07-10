@@ -57,3 +57,7 @@ Der Client darf nur technische Beobachtungen melden. Character, Session, Phase, 
 ## Sessions, Groups und Progress
 
 Sessions werden pro Character gebunden und verhindern doppelte aktive Auftraege. Gruppen sind als Foundation mit Leader, Invite und Membership-Kontext vorbereitet. Progress laeuft ueber `Progress.Get`, `Progress.Apply`, `Progress.SetValidated` und `Progress.Complete`; alle Pfade schreiben serverseitige Audit- und Event-Kontexte statt Clientwerte ungeprueft zu uebernehmen.
+
+## Resource Nodes, Production und Rewards
+
+Resource Nodes nutzen Reservations fuer Harvesting, damit Mining, Farming und Fishing keine unbegrenzten Client-Ernten erzeugen. Production Chains verweisen kontrolliert auf `nexa_crafting`. Rewards werden als eigene Records mit Idempotency-Key vorbereitet und koennen spaeter ueber Economy- und Inventory-Sagas finalisiert oder wiederholt werden.
