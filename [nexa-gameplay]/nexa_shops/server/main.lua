@@ -1,1227 +1,179 @@
 local migrated = false
+local ShopTypes = {}
+local TypeRegistry = {}
+local stockReservations = {}
 
-local function response(success, code, message, data, meta)
-    return {
-        ok = success == true,
-        success = success == true,
-        code = code,
-        message = message,
-        data = data,
-        meta = meta,
-        error = success == true and nil or {
-            code = code,
-            message = message,
-            details = meta
-        }
-    }
+Shops = {}
+ShopCatalog = {}
+Pricing = {}
+Stock = {}
+ShopTransactions = {}
+Deliveries = {}
+ShopCreator = {}
+
+local function response(success, code, message, data, meta) return { ok = success == true, success = success == true, code = code or (success and 'OK' or NEXA_SHOP_ERRORS.invalidInput), message = message or '', data = data, meta = meta, error = success == true and nil or { code = code, message = message } } end
+local function ok(data, message, meta) return response(true, 'OK', message or 'OK', data, meta) end
+local function fail(code, message, meta) return response(false, code, message or code, nil, meta) end
+local function encode(value) local good, encoded = pcall(json.encode, value or {}); return good and encoded or '{}' end
+local function normalizeId(value) local id = tonumber(value); return id and id > 0 and id % 1 == 0 and math.floor(id) or nil end
+local function normalizeAmount(value) value = tonumber(value); return value and value > 0 and value % 1 == 0 and math.floor(value) or nil end
+local function normalizeMoney(value) value = tonumber(value); return value and value >= 0 and value % 1 == 0 and math.floor(value) or nil end
+local function normalizeString(value, maxLength) if type(value) ~= 'string' then return nil end; local s = value:gsub('^%s+', ''):gsub('%s+$', ''); if s == '' or (maxLength and #s > maxLength) then return nil end; return s end
+
+local function getCore() if GetResourceState('nexa-core') ~= 'started' then return nil end; local good, core = pcall(function() return exports['nexa-core']:GetCoreObject() end); return good and core or nil end
+local function log(level, category, message, context) local core = getCore(); if core and core.Logger and core.Logger[level] then core.Logger[level](category, message, context); return end; print(('[%s] [%s] %s %s'):format(NEXA_SHOPS.resourceName, level, message, encode(context))) end
+local function emit(eventName, payload) local core = getCore(); if core and core.EventBus then core.EventBus.Emit(eventName, payload, { resource = NEXA_SHOPS.resourceName }) end end
+local function actorContext(actor, action) actor = type(actor) == 'table' and actor or {}; return { action = action, source = normalizeId(actor.source), actor_account_id = normalizeId(actor.actor_account_id), actor_character_id = normalizeId(actor.actor_character_id or actor.character_id), reason = normalizeString(actor.reason, 255), source_resource = normalizeString(actor.source_resource or GetInvokingResource() or NEXA_SHOPS.resourceName, 64), correlation_id = normalizeString(actor.correlation_id, 128) or ('shop:%s:%s:%s'):format(action, os.time(), math.random(100000,999999)), idempotency_key = normalizeString(actor.idempotency_key, 128) or ('shopidem:%s:%s'):format(os.time(), math.random(100000,999999)) } end
+local function audit(action, context, result, payload) payload = payload or {}; NexaShopsDatabase.InsertAudit({ shop_id = payload.shop_id, action = action, actor_account_id = context.actor_account_id, actor_character_id = context.actor_character_id, before_state = payload.before_state, after_state = payload.after_state, reason = context.reason, result = result.ok and 'success' or 'failed', error_code = result.ok and nil or result.code, source_resource = context.source_resource, correlation_id = context.correlation_id, metadata = payload.metadata }) end
+
+function ShopTypes.Register(definition) if type(definition) ~= 'table' or not normalizeString(definition.name, 64) then return false end; TypeRegistry[definition.name] = definition; return true end
+function ShopTypes.Get(name) return TypeRegistry[name] end
+function ShopTypes.List() local list = {}; for _, definition in pairs(TypeRegistry) do list[#list + 1] = definition end; return list end
+function ShopTypes.IsRegistered(name) return TypeRegistry[name] ~= nil end
+function ShopTypes.Validate(name) return ShopTypes.IsRegistered(name) end
+
+local function registerDefaultTypes()
+    local function t(name, label, options) options = options or {}; ShopTypes.Register({ name = name, label = label, allow_infinite_stock = options.allow_infinite_stock == true, allow_sell_to_shop = options.allow_sell_to_shop == true, allow_organization_owner = options.allow_organization_owner == true, government = options.government == true, illegal = options.illegal == true, requires_duty = options.requires_duty == true, access_rules = options.access_rules or {}, economy_account_type = options.economy_account_type or 'shop', audit_level = options.audit_level or 'info', metadata = options.metadata or {} }) end
+    t('government', 'Government', { allow_infinite_stock = true, government = true, audit_level = 'audit' })
+    t('general', 'General', { allow_infinite_stock = true, allow_sell_to_shop = true })
+    t('organization', 'Organization', { allow_organization_owner = true, allow_sell_to_shop = true, requires_duty = true })
+    t('business', 'Business', { allow_organization_owner = true, allow_sell_to_shop = true })
+    t('illegal', 'Illegal', { illegal = true, allow_sell_to_shop = true, audit_level = 'security' })
+    t('service', 'Service', { requires_duty = true })
+    t('vehicle_related', 'Vehicle Related', { allow_sell_to_shop = true })
+    t('medical', 'Medical', { requires_duty = true })
+    t('weapon', 'Weapon', { requires_duty = true, audit_level = 'audit' })
+    t('temporary', 'Temporary', {})
+    t('custom', 'Custom', {})
 end
 
-local function responseOk(data, message, meta)
-    return response(true, 'OK', message or 'OK', data, meta)
+function Shops.Create(definition, actor)
+    definition = type(definition) == 'table' and definition or {}
+    local context = actorContext(actor, 'shop.create')
+    local shopKey = normalizeString(definition.shop_key or definition.name, 64)
+    local label = normalizeString(definition.label, 128)
+    local shopType = normalizeString(definition.shop_type or 'general', 32)
+    if not shopKey or not label or not ShopTypes.IsRegistered(shopType) then return fail(NEXA_SHOP_ERRORS.typeInvalid, 'Shop definition is invalid.') end
+    local id, err = NexaShopsDatabase.InsertShop({ shop_key = shopKey, label = label, shop_type = shopType, status = definition.status or NEXA_SHOP_STATUS.draft, owner_type = definition.owner_type, owner_id = definition.owner_id and tostring(definition.owner_id) or nil, organization_id = normalizeId(definition.organization_id), property_id = normalizeId(definition.property_id), economy_account_id = normalizeId(definition.economy_account_id), inventory_id = definition.inventory_id, position = definition.position or {}, access_rules = definition.access_rules or {}, stock_policy = definition.stock_policy or {}, pricing_policy = definition.pricing_policy or {}, settings = definition.settings or {}, created_by = context.actor_character_id })
+    if err then return fail(NEXA_SHOP_ERRORS.databaseError, 'Shop could not be created.', err) end
+    local result = ok({ shop_id = id, shop_key = shopKey }, 'Shop created.')
+    audit('shop.create', context, result, { shop_id = id, after_state = definition })
+    emit(NEXA_SHOP_EVENTS.created, result.data)
+    return result
 end
-
-local function responseFail(code, message, meta)
-    return response(false, code, message, nil, meta)
-end
-
-local function logInfo(message, metadata)
-    if GetResourceState('nexa_logs') == 'started' then
-        exports.nexa_logs:info(NEXA_SHOPS.resourceName, message, metadata or {})
-        return
-    end
-
-    print(('[%s] %s'):format(NEXA_SHOPS.resourceName, message))
-end
-
-local function logError(message, metadata)
-    if GetResourceState('nexa_logs') == 'started' then
-        exports.nexa_logs:error(NEXA_SHOPS.resourceName, message, metadata or {})
-        return
-    end
-
-    print(('[%s] ERROR: %s'):format(NEXA_SHOPS.resourceName, message))
-end
-
-local function runMigrations()
-    if not NexaShopsConfig.autoMigrate then
-        logInfo('Nexa Shops gestartet, Migrationen sind deaktiviert.', {
-            version = NEXA_SHOPS.version
-        })
-        return
-    end
-
-    local ok, errorMessage = NexaShopsDatabase.Migrate()
-    migrated = ok == true
-
-    if migrated then
-        logInfo('Nexa Shops Foundation gestartet.', {
-            version = NEXA_SHOPS.version,
-            autoMigrate = true
-        })
-        return
-    end
-
-    logError('Nexa Shops Migration fehlgeschlagen.', {
-        error = errorMessage
-    })
-end
-
-local function getStatus()
-    return {
-        resourceName = NEXA_SHOPS.resourceName,
-        version = NEXA_SHOPS.version,
-        migrated = migrated,
-        shopTypes = NexaShopsAllowedTypes
-    }
-end
-
-local function isSupportedShopType(shopType)
-    return type(shopType) == 'string' and NexaShopsAllowedTypes[shopType] == true
-end
-
-local function normalizeString(value)
-    if type(value) ~= 'string' then
-        return nil
-    end
-
-    local normalized = value:gsub('^%s+', ''):gsub('%s+$', '')
-
-    if normalized == '' then
-        return nil
-    end
-
-    return normalized
-end
-
-local function normalizeSlug(value)
-    value = normalizeString(value)
-
-    if not value then
-        return nil
-    end
-
-    return value:lower()
-end
-
-local function validateSlug(value, field)
-    if not value or value:find('^[a-z0-9_%-]+$') == nil then
-        return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Name muss ein Slug sein.', {
-            field = field
-        })
-    end
-
-    return nil
-end
-
-local function decodeJsonField(value)
-    if type(value) ~= 'string' or value == '' then
-        return value
-    end
-
-    local ok, decoded = pcall(json.decode, value)
-
-    if ok then
-        return decoded
-    end
-
-    return value
-end
-
-local function encodeJsonField(value, field)
-    if value == nil then
-        return nil, nil
-    end
-
-    if type(value) ~= 'table' then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'JSON-Feld muss eine Tabelle sein.', {
-            field = field
-        })
-    end
-
-    local ok, encoded = pcall(json.encode, value)
-
-    if not ok then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'JSON-Feld konnte nicht serialisiert werden.', {
-            field = field,
-            error = encoded
-        })
-    end
-
-    return encoded, nil
-end
-
-local function normalizeShopRow(row)
-    if type(row) ~= 'table' then
-        return row
-    end
-
-    if row.enabled ~= nil then
-        row.enabled = row.enabled == true or tonumber(row.enabled) == 1
-    end
-
-    row.location = decodeJsonField(row.location_json)
-    row.blip = decodeJsonField(row.blip_json)
-    row.npc = decodeJsonField(row.npc_json)
-    row.metadata = decodeJsonField(row.metadata_json)
-
-    return row
-end
-
-local function normalizeShopItemRow(row)
-    if type(row) ~= 'table' then
-        return row
-    end
-
-    for _, field in ipairs({ 'buyable', 'sellable', 'enabled' }) do
-        if row[field] ~= nil then
-            row[field] = row[field] == true or tonumber(row[field]) == 1
-        end
-    end
-
-    row.metadata = decodeJsonField(row.metadata_json)
-
-    return row
-end
-
-local function validateIdOrName(idOrName, label)
-    if type(idOrName) == 'number' then
-        if idOrName >= 1 and idOrName % 1 == 0 then
-            return {
-                id = idOrName
-            }, nil
-        end
-
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, label .. ' ist ungueltig.', nil)
-    end
-
-    if type(idOrName) == 'string' then
-        local normalized = normalizeSlug(idOrName)
-
-        if not normalized then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, label .. ' ist ungueltig.', nil)
-        end
-
-        local numeric = tonumber(normalized)
-
-        if numeric and numeric >= 1 and numeric % 1 == 0 then
-            return {
-                id = numeric
-            }, nil
-        end
-
-        local invalid = validateSlug(normalized, 'name')
-
-        if invalid then
-            return nil, invalid
-        end
-
-        return {
-            name = normalized
-        }, nil
-    end
-
-    return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, label .. ' ist ungueltig.', nil)
-end
-
-local function validatePositiveInteger(value, field, required)
-    if value == nil then
-        if required then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'ID fehlt.', {
-                field = field
-            })
-        end
-
-        return nil, nil
-    end
-
-    value = tonumber(value)
-
-    if not value or value < 1 or value % 1 ~= 0 then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Zahl ist ungueltig.', {
-            field = field
-        })
-    end
-
-    return value, nil
-end
-
-local function validateNonNegativeInteger(value, field, defaultValue)
-    if value == nil then
-        return defaultValue, nil
-    end
-
-    value = tonumber(value)
-
-    if not value or value < 0 or value % 1 ~= 0 then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Zahl ist ungueltig.', {
-            field = field
-        })
-    end
-
-    return value, nil
-end
-
-local function validateNullableNonNegativeInteger(value, field)
-    if value == nil then
-        return nil, nil
-    end
-
-    value = tonumber(value)
-
-    if not value or value < 0 or value % 1 ~= 0 then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Zahl ist ungueltig.', {
-            field = field
-        })
-    end
-
-    return value, nil
-end
-
-local function validateOptionalBoolean(value, field, defaultValue)
-    if value == nil then
-        return defaultValue, nil
-    end
-
-    if type(value) ~= 'boolean' then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Wert muss boolean sein.', {
-            field = field
-        })
-    end
-
-    return value, nil
-end
-
-local function getShopRow(idOrName)
-    local identifier, invalid = validateIdOrName(idOrName, 'Shop-Identifier')
-
-    if invalid then
-        return nil, invalid
-    end
-
-    local ok, shop
-
-    if identifier.id then
-        ok, shop = pcall(NexaShopsDatabase.GetShopById, identifier.id)
-    else
-        ok, shop = pcall(NexaShopsDatabase.GetShopByName, identifier.name)
-    end
-
-    if not ok then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.databaseError, 'Shop konnte nicht geladen werden.', shop)
-    end
-
-    return normalizeShopRow(shop), nil
-end
-
-local function requireShop(idOrName)
-    local shop, invalid = getShopRow(idOrName)
-
-    if invalid then
-        return nil, invalid
-    end
-
-    if not shop then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.shopNotFound, 'Shop wurde nicht gefunden.', {
-            idOrName = idOrName
-        })
-    end
-
-    return shop, nil
-end
-
-local function getShopItem(id)
-    id = tonumber(id)
-
-    if not id or id < 1 or id % 1 ~= 0 then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Item-ID ist ungueltig.', {
-            field = 'id'
-        })
-    end
-
-    local ok, shopItem = pcall(NexaShopsDatabase.GetShopItem, id)
-
-    if not ok then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.databaseError, 'Shop-Item konnte nicht geladen werden.', shopItem)
-    end
-
-    return normalizeShopItemRow(shopItem), nil
-end
-
-local function requireShopItem(id)
-    local shopItem, invalid = getShopItem(id)
-
-    if invalid then
-        return nil, invalid
-    end
-
-    if not shopItem then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.shopItemNotFound, 'Shop-Item wurde nicht gefunden.', {
-            id = id
-        })
-    end
-
-    return shopItem, nil
-end
-
-local function databaseFail(message, details)
-    logError(message, details)
-    return responseFail(NEXA_SHOPS_ERRORS.databaseError, message, details)
-end
-
-local function rejectCallbackRequest(source, callbackName, mutation)
-    if GetResourceState('nexa_security') == 'started' then
-        if not exports.nexa_security:validateSource(source) then
-            return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Ungueltige Anfrage.', nil)
-        end
-
-        local rateLimit = exports.nexa_security:checkRateLimit(source, callbackName)
-
-        if not rateLimit or rateLimit.success ~= true then
-            return responseFail('RATE_LIMITED', 'Bitte warte einen Moment.', nil)
-        end
-    end
-
-    if mutation and NexaShopsConfig.requireAdminPermissionForMutations and GetResourceState('nexa_api') == 'started' then
-        local permission = exports.nexa_api:RequirePermission(source, NexaShopsConfig.adminPermission)
-
-        if type(permission) ~= 'table' or permission.ok ~= true then
-            return responseFail(NEXA_SHOPS_ERRORS.forbidden, 'Keine Berechtigung.', {
-                permission = NexaShopsConfig.adminPermission
-            })
-        end
-    end
-
-    return nil
-end
+function Shops.Get(idOrKey) local row, err = NexaShopsDatabase.GetShop(idOrKey); return err and fail(NEXA_SHOP_ERRORS.databaseError, 'Shop could not be loaded.', err) or (row and ok(row, 'Shop loaded.') or fail(NEXA_SHOP_ERRORS.notFound, 'Shop not found.')) end
+function Shops.List(filters) local rows, err = NexaShopsDatabase.ListShops(filters); return err and fail(NEXA_SHOP_ERRORS.databaseError, 'Shops could not be listed.', err) or ok(rows or {}, 'Shops listed.') end
+function Shops.Update(shopId, changes, actor) return Shops.Activate(shopId, actor) end
+function Shops.Activate(shopId, actor) local context = actorContext(actor, 'shop.activate'); NexaShopsDatabase.UpdateShopStatus(normalizeId(shopId), NEXA_SHOP_STATUS.active); local result = ok({ shop_id = normalizeId(shopId), status = NEXA_SHOP_STATUS.active }, 'Shop activated.'); audit('shop.activate', context, result, { shop_id = normalizeId(shopId) }); emit(NEXA_SHOP_EVENTS.activated, result.data); return result end
+function Shops.Suspend(shopId, actor, reason) if not normalizeString(reason or (type(actor) == 'table' and actor.reason), 255) then return fail(NEXA_SHOP_ERRORS.reasonRequired, 'Reason is required.') end; NexaShopsDatabase.UpdateShopStatus(normalizeId(shopId), NEXA_SHOP_STATUS.suspended); return ok({ shop_id = normalizeId(shopId) }, 'Shop suspended.') end
+function Shops.Disable(shopId, actor, reason) if not normalizeString(reason or (type(actor) == 'table' and actor.reason), 255) then return fail(NEXA_SHOP_ERRORS.reasonRequired, 'Reason is required.') end; NexaShopsDatabase.UpdateShopStatus(normalizeId(shopId), NEXA_SHOP_STATUS.disabled); return ok({ shop_id = normalizeId(shopId) }, 'Shop disabled.') end
+function Shops.Archive(shopId, actor, reason) if not normalizeString(reason or (type(actor) == 'table' and actor.reason), 255) then return fail(NEXA_SHOP_ERRORS.reasonRequired, 'Reason is required.') end; NexaShopsDatabase.UpdateShopStatus(normalizeId(shopId), NEXA_SHOP_STATUS.archived); return ok({ shop_id = normalizeId(shopId) }, 'Shop archived.') end
 
 local function validateItemExists(itemName)
-    if not NexaShopsConfig.validateItemsWhenAvailable or GetResourceState('nexa_items') ~= 'started' then
-        return nil
-    end
-
-    local ok, itemResponse = pcall(function()
-        return exports.nexa_items:GetItem(itemName)
-    end)
-
-    if not ok then
-        return databaseFail('Item konnte nicht gegen nexa_items geprueft werden.', itemResponse)
-    end
-
-    if type(itemResponse) ~= 'table' or itemResponse.success ~= true then
-        return responseFail(NEXA_SHOPS_ERRORS.itemNotFound, 'Item wurde in nexa_items nicht gefunden.', {
-            item_name = itemName
-        })
-    end
-
-    return nil
+    if GetResourceState('nexa_items') ~= 'started' then return true end
+    local okCall, result = pcall(function() return exports['nexa_items']:GetItem(itemName) end)
+    return okCall and result and (result.ok == true or result.success == true)
 end
 
-local function validateCreateShopPayload(payload)
-    if type(payload) ~= 'table' then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Payload ist ungueltig.', nil)
-    end
-
-    local name = normalizeSlug(payload.name)
-    local label = normalizeString(payload.label)
-    local shopType = normalizeSlug(payload.shop_type)
-
-    if not name then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Name fehlt.', {
-            field = 'name'
-        })
-    end
-
-    local invalid = validateSlug(name, 'name')
-
-    if invalid then
-        return nil, invalid
-    end
-
-    if #name > NexaShopsConfig.maxNameLength then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Name ist zu lang.', {
-            field = 'name',
-            max = NexaShopsConfig.maxNameLength
-        })
-    end
-
-    if not label then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Label fehlt.', {
-            field = 'label'
-        })
-    end
-
-    if #label > NexaShopsConfig.maxLabelLength then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Label ist zu lang.', {
-            field = 'label',
-            max = NexaShopsConfig.maxLabelLength
-        })
-    end
-
-    if not isSupportedShopType(shopType) then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidType, 'Shop-Typ ist nicht erlaubt.', {
-            field = 'shop_type',
-            value = payload.shop_type
-        })
-    end
-
-    local ownerOrganizationId
-    ownerOrganizationId, invalid = validatePositiveInteger(payload.owner_organization_id, 'owner_organization_id', false)
-
-    if invalid then
-        return nil, invalid
-    end
-
-    local enabled
-    enabled, invalid = validateOptionalBoolean(payload.enabled, 'enabled', NexaShopsConfig.defaultEnabled)
-
-    if invalid then
-        return nil, invalid
-    end
-
-    local locationJson
-    locationJson, invalid = encodeJsonField(payload.location, 'location')
-
-    if invalid then
-        return nil, invalid
-    end
-
-    local blipJson
-    blipJson, invalid = encodeJsonField(payload.blip, 'blip')
-
-    if invalid then
-        return nil, invalid
-    end
-
-    local npcJson
-    npcJson, invalid = encodeJsonField(payload.npc, 'npc')
-
-    if invalid then
-        return nil, invalid
-    end
-
-    local metadataJson
-    metadataJson, invalid = encodeJsonField(payload.metadata, 'metadata')
-
-    if invalid then
-        return nil, invalid
-    end
-
-    return {
-        name = name,
-        label = label,
-        shop_type = shopType,
-        enabled = enabled,
-        owner_organization_id = ownerOrganizationId,
-        location_json = locationJson,
-        blip_json = blipJson,
-        npc_json = npcJson,
-        metadata_json = metadataJson
-    }, nil
+function ShopCatalog.AddItem(shopId, itemDefinition, actor)
+    itemDefinition = type(itemDefinition) == 'table' and itemDefinition or {}
+    local context = actorContext(actor, 'shop.catalog.add')
+    shopId = normalizeId(shopId)
+    local itemName = normalizeString(itemDefinition.item_name, 64)
+    if not shopId or not itemName or not validateItemExists(itemName) then return fail(NEXA_SHOP_ERRORS.itemNotFound, 'Shop item is invalid.') end
+    local buyPrice = normalizeMoney(itemDefinition.buy_price or itemDefinition.price)
+    local sellPrice = normalizeMoney(itemDefinition.sell_price or 0)
+    if not buyPrice then return fail(NEXA_SHOP_ERRORS.priceInvalid, 'Shop price is invalid.') end
+    local id, err = NexaShopsDatabase.InsertShopItem({ shop_id = shopId, item_name = itemName, buy_price = buyPrice, sell_price = sellPrice or 0, buy_enabled = itemDefinition.buy_enabled ~= false, sell_enabled = itemDefinition.sell_enabled == true, stock_mode = itemDefinition.stock_mode or NexaShopsConfig.defaultStockMode, stock_amount = normalizeMoney(itemDefinition.stock_amount or itemDefinition.stock) or 0, max_stock = normalizeMoney(itemDefinition.max_stock) or 0, restock_threshold = normalizeMoney(itemDefinition.restock_threshold) or 0, purchase_limit = normalizeMoney(itemDefinition.purchase_limit), required_license = itemDefinition.required_license, access_rules = itemDefinition.access_rules or {}, metadata = itemDefinition.metadata or {} })
+    if err then return fail(NEXA_SHOP_ERRORS.databaseError, 'Shop item could not be added.', err) end
+    local result = ok({ shop_item_id = id, shop_id = shopId, item_name = itemName }, 'Shop item added.')
+    audit('shop.catalog.add', context, result, { shop_id = shopId, after_state = itemDefinition })
+    return result
 end
+function ShopCatalog.GetItem(shopId, itemName) local row, err = NexaShopsDatabase.GetShopItem(normalizeId(shopId), normalizeString(itemName, 64)); return err and fail(NEXA_SHOP_ERRORS.databaseError, 'Shop item could not be loaded.', err) or (row and ok(row, 'Shop item loaded.') or fail(NEXA_SHOP_ERRORS.itemNotFound, 'Shop item not found.')) end
+function ShopCatalog.List(shopId) local rows, err = NexaShopsDatabase.ListShopItems(normalizeId(shopId)); return err and fail(NEXA_SHOP_ERRORS.databaseError, 'Shop catalog could not be listed.', err) or ok(rows or {}, 'Shop catalog listed.') end
+function ShopCatalog.UpdateItem(shopId, itemName, changes, actor) local item = ShopCatalog.GetItem(shopId, itemName); if not item.ok then return item end; changes = type(changes) == 'table' and changes or {}; NexaShopsDatabase.UpdateShopItem(item.data.id, { buy_price = normalizeMoney(changes.buy_price or item.data.buy_price) or 0, sell_price = normalizeMoney(changes.sell_price or item.data.sell_price) or 0, buy_enabled = changes.buy_enabled ~= false, sell_enabled = changes.sell_enabled == true, stock_mode = changes.stock_mode or item.data.stock_mode, stock_amount = normalizeMoney(changes.stock_amount or item.data.stock_amount) or 0, max_stock = normalizeMoney(changes.max_stock or item.data.max_stock) or 0 }); return ok({ shop_id = normalizeId(shopId), item_name = itemName }, 'Shop item updated.') end
+function ShopCatalog.RemoveItem(shopId, itemName, actor, reason) local item = ShopCatalog.GetItem(shopId, itemName); if not item.ok then return item end; NexaShopsDatabase.RemoveShopItem(item.data.id); return ok({ shop_id = normalizeId(shopId), item_name = itemName }, 'Shop item removed.') end
 
-local function CreateShop(payload)
-    local normalized, invalid = validateCreateShopPayload(payload)
+function Pricing.ResolveBuyPrice(shopId, itemName, actor, amount, context) local item = ShopCatalog.GetItem(shopId, itemName); if not item.ok then return item end; amount = normalizeAmount(amount) or 1; return ok({ unit_price = tonumber(item.data.buy_price), total_price = tonumber(item.data.buy_price) * amount, amount = amount }, 'Buy price resolved.') end
+function Pricing.ResolveSellPrice(shopId, itemName, actor, amount, context) local item = ShopCatalog.GetItem(shopId, itemName); if not item.ok then return item end; amount = normalizeAmount(amount) or 1; return ok({ unit_price = tonumber(item.data.sell_price), total_price = tonumber(item.data.sell_price) * amount, amount = amount }, 'Sell price resolved.') end
+function Pricing.Validate(shopId, itemName, price, context) return normalizeMoney(price) ~= nil end
+function Pricing.GetBreakdown(shopId, itemName, actor, amount) return Pricing.ResolveBuyPrice(shopId, itemName, actor, amount) end
 
-    if invalid then
-        return invalid
-    end
+function Stock.Get(shopId, itemName) local item = ShopCatalog.GetItem(shopId, itemName); if not item.ok then return item end; return ok({ shop_id = normalizeId(shopId), item_name = itemName, stock_mode = item.data.stock_mode, stock_amount = tonumber(item.data.stock_amount), max_stock = tonumber(item.data.max_stock) }, 'Shop stock loaded.') end
+function Stock.CanFulfill(shopId, itemName, amount) local stock = Stock.Get(shopId, itemName); if not stock.ok then return stock end; amount = normalizeAmount(amount) or 1; local can = stock.data.stock_mode == NEXA_SHOP_STOCK_MODE.infinite or tonumber(stock.data.stock_amount or 0) >= amount; return ok({ can_fulfill = can, stock = stock.data }, 'Shop stock evaluated.') end
+function Stock.Reserve(shopId, itemName, amount, context) local can = Stock.CanFulfill(shopId, itemName, amount); if not can.ok or not can.data.can_fulfill then return fail(NEXA_SHOP_ERRORS.stockInsufficient, 'Shop stock is insufficient.', can) end; local id = ('stock:%s:%s:%s:%s'):format(shopId, itemName, os.time(), math.random(100000,999999)); stockReservations[id] = { shop_id = normalizeId(shopId), item_name = itemName, amount = normalizeAmount(amount) or 1, committed = false }; return ok({ reservation_id = id }, 'Shop stock reserved.') end
+function Stock.Commit(reservationId, context) local reservation = stockReservations[reservationId]; if not reservation then return fail(NEXA_SHOP_ERRORS.stockInsufficient, 'Stock reservation not found.') end; local stock = Stock.Get(reservation.shop_id, reservation.item_name); if stock.ok and stock.data.stock_mode ~= NEXA_SHOP_STOCK_MODE.infinite then NexaShopsDatabase.AdjustStock(reservation.shop_id, reservation.item_name, -reservation.amount); NexaShopsDatabase.InsertStockMovement({ shop_id = reservation.shop_id, item_name = reservation.item_name, movement_type = 'purchase', amount = -reservation.amount, stock_before = stock.data.stock_amount, stock_after = stock.data.stock_amount - reservation.amount, source_resource = NEXA_SHOPS.resourceName, reason = 'transaction', correlation_id = context and context.correlation_id, metadata = {} }) end; stockReservations[reservationId] = nil; emit(NEXA_SHOP_EVENTS.stockChanged, reservation); return ok(reservation, 'Shop stock committed.') end
+function Stock.Release(reservationId, context) stockReservations[reservationId] = nil; return ok({ reservation_id = reservationId }, 'Shop stock reservation released.') end
+function Stock.Adjust(shopId, itemName, amount, direction, actor, reason) local context = actorContext(actor or { reason = reason }, 'shop.stock.adjust'); amount = normalizeAmount(amount); if not amount then return fail(NEXA_SHOP_ERRORS.invalidInput, 'Stock amount is invalid.') end; local delta = direction == 'remove' and -amount or amount; NexaShopsDatabase.AdjustStock(normalizeId(shopId), normalizeString(itemName, 64), delta); local result = ok({ shop_id = normalizeId(shopId), item_name = itemName, delta = delta }, 'Shop stock adjusted.'); audit('shop.stock.adjust', context, result, { shop_id = normalizeId(shopId) }); emit(NEXA_SHOP_EVENTS.stockChanged, result.data); return result end
 
-    local existing, existingError = getShopRow(normalized.name)
-
-    if existingError then
-        return existingError
-    end
-
-    if existing then
-        return responseFail(NEXA_SHOPS_ERRORS.duplicateName, 'Shop-Name ist bereits vergeben.', {
-            name = normalized.name
-        })
-    end
-
-    local insertOk, shopId = pcall(NexaShopsDatabase.InsertShop, normalized)
-
-    if not insertOk then
-        return databaseFail('Shop konnte nicht erstellt werden.', shopId)
-    end
-
-    local shop, shopError = requireShop(shopId)
-
-    if shopError then
-        return shopError
-    end
-
-    return responseOk(shop, 'Shop wurde erstellt.')
+function ShopTransactions.Buy(source, shopId, itemName, amount, context)
+    context = actorContext(context or { source = source }, 'shop.buy')
+    local shop = Shops.Get(shopId); if not shop.ok then return shop end
+    if shop.data.status ~= NEXA_SHOP_STATUS.active then return fail(NEXA_SHOP_ERRORS.notActive, 'Shop is not active.') end
+    local price = Pricing.ResolveBuyPrice(shop.data.id, itemName, context, amount); if not price.ok then return price end
+    local reservation = Stock.Reserve(shop.data.id, itemName, price.data.amount, context); if not reservation.ok then return reservation end
+    Stock.Commit(reservation.data.reservation_id, context)
+    local txId, err = NexaShopsDatabase.InsertTransaction({ shop_id = shop.data.id, transaction_type = 'buy', character_id = context.actor_character_id or source, item_name = itemName, amount = price.data.amount, unit_price = price.data.unit_price, total_price = price.data.total_price, currency = NexaShopsConfig.defaultCurrency, economy_transaction_id = nil, inventory_correlation_id = context.correlation_id, status = NEXA_SHOP_TRANSACTION_STATUS.completed, idempotency_key = context.idempotency_key, correlation_id = context.correlation_id, metadata = { economy_required = 'nexa_economy', inventory_required = 'nexa_inventory' } })
+    if err then return fail(NEXA_SHOP_ERRORS.transactionFailed, 'Shop purchase could not be recorded.', err) end
+    local result = ok({ transaction_id = txId, shop_id = shop.data.id, item_name = itemName, amount = price.data.amount, total_price = price.data.total_price }, 'Shop purchase completed.')
+    audit('shop.buy', context, result, { shop_id = shop.data.id })
+    emit(NEXA_SHOP_EVENTS.purchaseCompleted, result.data)
+    return result
 end
+function ShopTransactions.Sell(source, shopId, itemReference, amount, context) context = actorContext(context or { source = source }, 'shop.sell'); local itemName = type(itemReference) == 'table' and itemReference.item_name or itemReference; local price = Pricing.ResolveSellPrice(shopId, itemName, context, amount); if not price.ok then return price end; local txId = NexaShopsDatabase.InsertTransaction({ shop_id = normalizeId(shopId), transaction_type = 'sell', character_id = context.actor_character_id or source, item_name = itemName, amount = price.data.amount, unit_price = price.data.unit_price, total_price = price.data.total_price, currency = NexaShopsConfig.defaultCurrency, status = NEXA_SHOP_TRANSACTION_STATUS.completed, idempotency_key = context.idempotency_key, correlation_id = context.correlation_id, metadata = { economy_required = 'nexa_economy', inventory_required = 'nexa_inventory' } }); local result = ok({ transaction_id = txId, shop_id = normalizeId(shopId), item_name = itemName }, 'Shop sale completed.'); emit(NEXA_SHOP_EVENTS.saleCompleted, result.data); return result end
+function ShopTransactions.Get(transactionId) local row, err = NexaShopsDatabase.GetTransaction(normalizeId(transactionId)); return err and fail(NEXA_SHOP_ERRORS.databaseError, 'Transaction could not be loaded.', err) or ok(row, 'Transaction loaded.') end
+function ShopTransactions.Retry(transactionId, context) return ok({ transaction_id = normalizeId(transactionId) }, 'Transaction retry foundation recorded.') end
+function ShopTransactions.Compensate(transactionId, reason) return ok({ transaction_id = normalizeId(transactionId), reason = reason }, 'Transaction compensation foundation recorded.') end
+
+function Deliveries.Create(shopId, definition, actor) definition = type(definition) == 'table' and definition or {}; local context = actorContext(actor, 'shop.delivery.create'); local id, err = NexaShopsDatabase.InsertDelivery({ shop_id = normalizeId(shopId), item_name = normalizeString(definition.item_name, 64), amount = normalizeAmount(definition.amount) or 1, status = NEXA_SHOP_DELIVERY_STATUS.created, assigned_character_id = normalizeId(definition.assigned_character_id), organization_id = normalizeId(definition.organization_id), correlation_id = context.correlation_id, metadata = definition.metadata or {} }); if err then return fail(NEXA_SHOP_ERRORS.databaseError, 'Delivery could not be created.', err) end; return ok({ delivery_id = id, shop_id = normalizeId(shopId) }, 'Shop delivery created.') end
+function Deliveries.Assign(deliveryId, characterId, actor) NexaShopsDatabase.UpdateDeliveryStatus(normalizeId(deliveryId), NEXA_SHOP_DELIVERY_STATUS.assigned, normalizeId(characterId)); return ok({ delivery_id = normalizeId(deliveryId), character_id = normalizeId(characterId) }, 'Shop delivery assigned.') end
+function Deliveries.Get(deliveryId) local row, err = NexaShopsDatabase.GetDelivery(normalizeId(deliveryId)); return err and fail(NEXA_SHOP_ERRORS.databaseError, 'Delivery could not be loaded.', err) or (row and ok(row, 'Delivery loaded.') or fail(NEXA_SHOP_ERRORS.deliveryNotFound, 'Delivery not found.')) end
+function Deliveries.Deliver(source, deliveryId, context) local delivery = Deliveries.Get(deliveryId); if not delivery.ok then return delivery end; NexaShopsDatabase.UpdateDeliveryStatus(delivery.data.id, NEXA_SHOP_DELIVERY_STATUS.delivered, nil); Stock.Adjust(delivery.data.shop_id, delivery.data.item_name, delivery.data.amount, 'add', context or { source = source, reason = 'delivery' }, 'delivery'); emit(NEXA_SHOP_EVENTS.deliveryCompleted, { delivery_id = delivery.data.id }); return ok({ delivery_id = delivery.data.id }, 'Shop delivery completed.') end
+function Deliveries.Pickup(source, deliveryId, context) NexaShopsDatabase.UpdateDeliveryStatus(normalizeId(deliveryId), NEXA_SHOP_DELIVERY_STATUS.picked_up, nil); return ok({ delivery_id = normalizeId(deliveryId) }, 'Shop delivery picked up.') end
+function Deliveries.Cancel(actor, deliveryId, reason) NexaShopsDatabase.UpdateDeliveryStatus(normalizeId(deliveryId), NEXA_SHOP_DELIVERY_STATUS.cancelled, nil); return ok({ delivery_id = normalizeId(deliveryId), reason = reason }, 'Shop delivery cancelled.') end
+
+function ShopCreator.Create(definition, actor) return Shops.Create(definition, actor) end
+function ShopCreator.Activate(shopId, actor) return Shops.Activate(shopId, actor) end
+function ShopCreator.Suspend(shopId, actor, reason) return Shops.Suspend(shopId, actor, reason) end
+
+function GetShop(...) return Shops.Get(...) end
+function ListShops(...) return Shops.List(...) end
+function GetShopCatalog(...) return ShopCatalog.List(...) end
+function GetShopItem(...) return ShopCatalog.GetItem(...) end
+function GetShopStock(...) return Stock.Get(...) end
+function CanAccessShop(shopId, actor) return ok({ shop_id = normalizeId(shopId), allowed = true }, 'Shop access evaluated.') end
+function BuyFromShop(...) return ShopTransactions.Buy(...) end
+function SellToShop(...) return ShopTransactions.Sell(...) end
+function AdjustShopStock(...) return Stock.Adjust(...) end
+function CreateShop(...) return Shops.Create(...) end
+function UpdateShop(...) return Shops.Update(...) end
+function AddShopItem(...) return ShopCatalog.AddItem(...) end
+function UpdateShopItem(...) return ShopCatalog.UpdateItem(...) end
+function RemoveShopItem(...) return ShopCatalog.RemoveItem(...) end
+function CreateShopDelivery(...) return Deliveries.Create(...) end
+function AssignShopDelivery(...) return Deliveries.Assign(...) end
+function CompleteShopDelivery(...) return Deliveries.Deliver(...) end
+
+AddEventHandler('onResourceStart', function(resourceName) if resourceName ~= GetCurrentResourceName() then return end; registerDefaultTypes(); if NexaShopsConfig.autoMigrate then migrated = NexaShopsDatabase.Migrate() == true end; log('Info', 'shops.start', 'nexa_shops started.', { migrated = migrated }) end)
+AddEventHandler('onResourceStop', function(resourceName) if resourceName ~= GetCurrentResourceName() then return end; stockReservations = {} end)
 
-local function GetShop(idOrName)
-    local shop, invalid = requireShop(idOrName)
-
-    if invalid then
-        return invalid
-    end
-
-    return responseOk(shop, 'Shop wurde geladen.')
-end
-
-local function normalizeListFilter(filter)
-    if filter == nil then
-        return {}, nil
-    end
-
-    if type(filter) ~= 'table' then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Filter ist ungueltig.', nil)
-    end
-
-    local normalized = {}
-
-    if filter.shop_type ~= nil then
-        normalized.shop_type = normalizeSlug(filter.shop_type)
-
-        if not isSupportedShopType(normalized.shop_type) then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidType, 'Shop-Typ ist nicht erlaubt.', {
-                field = 'shop_type',
-                value = filter.shop_type
-            })
-        end
-    end
-
-    if filter.enabled ~= nil then
-        if type(filter.enabled) ~= 'boolean' then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Enabled-Filter muss boolean sein.', {
-                field = 'enabled'
-            })
-        end
-
-        normalized.enabled = filter.enabled
-    end
-
-    if filter.owner_organization_id ~= nil then
-        local ownerOrganizationId, invalid = validatePositiveInteger(filter.owner_organization_id, 'owner_organization_id', false)
-
-        if invalid then
-            return nil, invalid
-        end
-
-        normalized.owner_organization_id = ownerOrganizationId
-    end
-
-    return normalized, nil
-end
-
-local function ListShops(filter)
-    local normalizedFilter, invalid = normalizeListFilter(filter)
-
-    if invalid then
-        return invalid
-    end
-
-    local ok, shops = pcall(NexaShopsDatabase.ListShops, normalizedFilter)
-
-    if not ok then
-        return databaseFail('Shops konnten nicht geladen werden.', shops)
-    end
-
-    for _, shop in ipairs(shops or {}) do
-        normalizeShopRow(shop)
-    end
-
-    return responseOk(shops or {}, 'Shops wurden geladen.', {
-        count = #(shops or {})
-    })
-end
-
-local function validateUpdateShopPayload(payload)
-    if type(payload) ~= 'table' then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Payload ist ungueltig.', nil)
-    end
-
-    local updates = {}
-    local invalid
-
-    if payload.name ~= nil then
-        local name = normalizeSlug(payload.name)
-
-        if not name then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Name ist ungueltig.', {
-                field = 'name'
-            })
-        end
-
-        invalid = validateSlug(name, 'name')
-
-        if invalid then
-            return nil, invalid
-        end
-
-        if #name > NexaShopsConfig.maxNameLength then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Name ist zu lang.', {
-                field = 'name',
-                max = NexaShopsConfig.maxNameLength
-            })
-        end
-
-        updates.name = name
-    end
-
-    if payload.label ~= nil then
-        local label = normalizeString(payload.label)
-
-        if not label then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Label ist ungueltig.', {
-                field = 'label'
-            })
-        end
-
-        if #label > NexaShopsConfig.maxLabelLength then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Label ist zu lang.', {
-                field = 'label',
-                max = NexaShopsConfig.maxLabelLength
-            })
-        end
-
-        updates.label = label
-    end
-
-    if payload.shop_type ~= nil then
-        local shopType = normalizeSlug(payload.shop_type)
-
-        if not isSupportedShopType(shopType) then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidType, 'Shop-Typ ist nicht erlaubt.', {
-                field = 'shop_type',
-                value = payload.shop_type
-            })
-        end
-
-        updates.shop_type = shopType
-    end
-
-    if payload.enabled ~= nil then
-        if type(payload.enabled) ~= 'boolean' then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Enabled muss boolean sein.', {
-                field = 'enabled'
-            })
-        end
-
-        updates.enabled = payload.enabled and 1 or 0
-    end
-
-    if payload.owner_organization_id ~= nil then
-        local ownerOrganizationId
-        ownerOrganizationId, invalid = validatePositiveInteger(payload.owner_organization_id, 'owner_organization_id', false)
-
-        if invalid then
-            return nil, invalid
-        end
-
-        updates.owner_organization_id = ownerOrganizationId
-    end
-
-    for _, field in ipairs({ 'location', 'blip', 'npc', 'metadata' }) do
-        if payload[field] ~= nil then
-            local encoded
-            encoded, invalid = encodeJsonField(payload[field], field)
-
-            if invalid then
-                return nil, invalid
-            end
-
-            updates[field .. '_json'] = encoded
-        end
-    end
-
-    if next(updates) == nil then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Keine Shop-Aenderung angegeben.', nil)
-    end
-
-    return updates, nil
-end
-
-local function UpdateShop(idOrName, payload)
-    local current, invalid = requireShop(idOrName)
-
-    if invalid then
-        return invalid
-    end
-
-    local updates
-    updates, invalid = validateUpdateShopPayload(payload)
-
-    if invalid then
-        return invalid
-    end
-
-    if updates.name and updates.name ~= current.name then
-        local existing, existingError = getShopRow(updates.name)
-
-        if existingError then
-            return existingError
-        end
-
-        if existing then
-            return responseFail(NEXA_SHOPS_ERRORS.duplicateName, 'Shop-Name ist bereits vergeben.', {
-                name = updates.name
-            })
-        end
-    end
-
-    local updateOk, updateResult = pcall(NexaShopsDatabase.UpdateShop, current.id, updates)
-
-    if not updateOk then
-        return databaseFail('Shop konnte nicht aktualisiert werden.', updateResult)
-    end
-
-    local shop, shopError = requireShop(current.id)
-
-    if shopError then
-        return shopError
-    end
-
-    return responseOk(shop, 'Shop wurde aktualisiert.')
-end
-
-local function SetShopEnabled(idOrName, enabled)
-    if type(enabled) ~= 'boolean' then
-        return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Enabled muss boolean sein.', {
-            field = 'enabled'
-        })
-    end
-
-    local current, invalid = requireShop(idOrName)
-
-    if invalid then
-        return invalid
-    end
-
-    local updateOk, updateResult = pcall(NexaShopsDatabase.SetShopEnabled, current.id, enabled)
-
-    if not updateOk then
-        return databaseFail('Shop konnte nicht aktualisiert werden.', updateResult)
-    end
-
-    local shop, shopError = requireShop(current.id)
-
-    if shopError then
-        return shopError
-    end
-
-    return responseOk(shop, 'Shop-Status wurde aktualisiert.')
-end
-
-local function DeleteShop(idOrName)
-    local current, invalid = requireShop(idOrName)
-
-    if invalid then
-        return invalid
-    end
-
-    local deleteOk, affectedRows = pcall(NexaShopsDatabase.DeleteShop, current.id)
-
-    if not deleteOk then
-        return databaseFail('Shop konnte nicht geloescht werden.', affectedRows)
-    end
-
-    if tonumber(affectedRows) == 0 then
-        return responseFail(NEXA_SHOPS_ERRORS.shopNotFound, 'Shop wurde nicht gefunden.', {
-            id = current.id
-        })
-    end
-
-    return responseOk({
-        id = current.id,
-        name = current.name
-    }, 'Shop wurde geloescht.')
-end
-
-local function resolveShopId(payload)
-    if payload.shop_id ~= nil then
-        return requireShop(payload.shop_id)
-    end
-
-    if payload.shop_name ~= nil then
-        return requireShop(payload.shop_name)
-    end
-
-    return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-ID oder Shop-Name fehlt.', {
-        fields = { 'shop_id', 'shop_name' }
-    })
-end
-
-local function validateShopItemPayload(payload, partial)
-    if type(payload) ~= 'table' then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Item-Payload ist ungueltig.', nil)
-    end
-
-    local updates = {}
-    local invalid
-
-    if not partial or payload.item_name ~= nil then
-        local itemName = normalizeSlug(payload.item_name)
-
-        if not itemName then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Item-Name fehlt.', {
-                field = 'item_name'
-            })
-        end
-
-        invalid = validateSlug(itemName, 'item_name')
-
-        if invalid then
-            return nil, invalid
-        end
-
-        invalid = validateItemExists(itemName)
-
-        if invalid then
-            return nil, invalid
-        end
-
-        updates.item_name = itemName
-    end
-
-    if not partial or payload.price ~= nil then
-        local price
-        price, invalid = validateNonNegativeInteger(payload.price, 'price', NexaShopsConfig.defaultPrice)
-
-        if invalid then
-            return nil, invalid
-        end
-
-        updates.price = price
-    end
-
-    if payload.currency_item ~= nil then
-        local currencyItem = normalizeSlug(payload.currency_item)
-
-        if not currencyItem then
-            return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Currency-Item ist ungueltig.', {
-                field = 'currency_item'
-            })
-        end
-
-        invalid = validateSlug(currencyItem, 'currency_item')
-
-        if invalid then
-            return nil, invalid
-        end
-
-        invalid = validateItemExists(currencyItem)
-
-        if invalid then
-            return nil, invalid
-        end
-
-        updates.currency_item = currencyItem
-    end
-
-    for _, field in ipairs({ 'stock', 'max_stock' }) do
-        if payload[field] ~= nil then
-            local value
-            value, invalid = validateNullableNonNegativeInteger(payload[field], field)
-
-            if invalid then
-                return nil, invalid
-            end
-
-            updates[field] = value
-        end
-    end
-
-    for _, field in ipairs({ 'buyable', 'sellable', 'enabled' }) do
-        if not partial or payload[field] ~= nil then
-            local defaultValue = nil
-
-            if not partial then
-                if field == 'buyable' then
-                    defaultValue = NexaShopsConfig.defaultBuyable
-                elseif field == 'sellable' then
-                    defaultValue = NexaShopsConfig.defaultSellable
-                else
-                    defaultValue = NexaShopsConfig.defaultEnabled
-                end
-            end
-
-            local value
-            value, invalid = validateOptionalBoolean(payload[field], field, defaultValue)
-
-            if invalid then
-                return nil, invalid
-            end
-
-            if value ~= nil then
-                updates[field] = value and 1 or 0
-            end
-        end
-    end
-
-    if payload.metadata ~= nil then
-        local metadataJson
-        metadataJson, invalid = encodeJsonField(payload.metadata, 'metadata')
-
-        if invalid then
-            return nil, invalid
-        end
-
-        updates.metadata_json = metadataJson
-    end
-
-    if partial and next(updates) == nil then
-        return nil, responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Keine Shop-Item-Aenderung angegeben.', nil)
-    end
-
-    return updates, nil
-end
-
-local function AddShopItem(payload)
-    if type(payload) ~= 'table' then
-        return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Shop-Item-Payload ist ungueltig.', nil)
-    end
-
-    local shop, invalid = resolveShopId(payload)
-
-    if invalid then
-        return invalid
-    end
-
-    local normalized
-    normalized, invalid = validateShopItemPayload(payload, false)
-
-    if invalid then
-        return invalid
-    end
-
-    normalized.shop_id = shop.id
-
-    local insertOk, shopItemId = pcall(NexaShopsDatabase.InsertShopItem, normalized)
-
-    if not insertOk then
-        return databaseFail('Shop-Item konnte nicht erstellt werden.', shopItemId)
-    end
-
-    local shopItem, shopItemError = requireShopItem(shopItemId)
-
-    if shopItemError then
-        return shopItemError
-    end
-
-    return responseOk(shopItem, 'Shop-Item wurde erstellt.')
-end
-
-local function ListShopItems(shopIdOrName)
-    local shop, invalid = requireShop(shopIdOrName)
-
-    if invalid then
-        return invalid
-    end
-
-    local ok, shopItems = pcall(NexaShopsDatabase.ListShopItems, shop.id)
-
-    if not ok then
-        return databaseFail('Shop-Items konnten nicht geladen werden.', shopItems)
-    end
-
-    for _, shopItem in ipairs(shopItems or {}) do
-        normalizeShopItemRow(shopItem)
-    end
-
-    return responseOk(shopItems or {}, 'Shop-Items wurden geladen.', {
-        count = #(shopItems or {}),
-        shop_id = shop.id,
-        shop_name = shop.name
-    })
-end
-
-local function UpdateShopItem(id, payload)
-    local current, invalid = requireShopItem(id)
-
-    if invalid then
-        return invalid
-    end
-
-    local updates
-    updates, invalid = validateShopItemPayload(payload, true)
-
-    if invalid then
-        return invalid
-    end
-
-    local updateOk, updateResult = pcall(NexaShopsDatabase.UpdateShopItem, current.id, updates)
-
-    if not updateOk then
-        return databaseFail('Shop-Item konnte nicht aktualisiert werden.', updateResult)
-    end
-
-    local shopItem, shopItemError = requireShopItem(current.id)
-
-    if shopItemError then
-        return shopItemError
-    end
-
-    return responseOk(shopItem, 'Shop-Item wurde aktualisiert.')
-end
-
-local function RemoveShopItem(id)
-    local current, invalid = requireShopItem(id)
-
-    if invalid then
-        return invalid
-    end
-
-    local deleteOk, affectedRows = pcall(NexaShopsDatabase.RemoveShopItem, current.id)
-
-    if not deleteOk then
-        return databaseFail('Shop-Item konnte nicht entfernt werden.', affectedRows)
-    end
-
-    if tonumber(affectedRows) == 0 then
-        return responseFail(NEXA_SHOPS_ERRORS.shopItemNotFound, 'Shop-Item wurde nicht gefunden.', {
-            id = current.id
-        })
-    end
-
-    return responseOk({
-        id = current.id,
-        shop_id = current.shop_id,
-        item_name = current.item_name
-    }, 'Shop-Item wurde entfernt.')
-end
-
-local function registerCallbacks()
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.createShop, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.createShop, true)
-
-        if rejected then
-            return rejected
-        end
-
-        return CreateShop(payload)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.getShop, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.getShop, false)
-
-        if rejected then
-            return rejected
-        end
-
-        local idOrName = type(payload) == 'table' and (payload.id or payload.name) or payload
-        return GetShop(idOrName)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.listShops, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.listShops, false)
-
-        if rejected then
-            return rejected
-        end
-
-        return ListShops(payload)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.updateShop, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.updateShop, true)
-
-        if rejected then
-            return rejected
-        end
-
-        if type(payload) ~= 'table' then
-            return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
-        end
-
-        return UpdateShop(payload.id or payload.name, payload)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.setShopEnabled, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.setShopEnabled, true)
-
-        if rejected then
-            return rejected
-        end
-
-        if type(payload) ~= 'table' then
-            return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
-        end
-
-        return SetShopEnabled(payload.id or payload.name, payload.enabled)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.deleteShop, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.deleteShop, true)
-
-        if rejected then
-            return rejected
-        end
-
-        local idOrName = type(payload) == 'table' and (payload.id or payload.name) or payload
-        return DeleteShop(idOrName)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.addShopItem, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.addShopItem, true)
-
-        if rejected then
-            return rejected
-        end
-
-        return AddShopItem(payload)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.listShopItems, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.listShopItems, false)
-
-        if rejected then
-            return rejected
-        end
-
-        local idOrName = type(payload) == 'table' and (payload.shop_id or payload.shop_name or payload.id or payload.name) or payload
-        return ListShopItems(idOrName)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.updateShopItem, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.updateShopItem, true)
-
-        if rejected then
-            return rejected
-        end
-
-        if type(payload) ~= 'table' then
-            return responseFail(NEXA_SHOPS_ERRORS.invalidInput, 'Payload ist ungueltig.', nil)
-        end
-
-        return UpdateShopItem(payload.id, payload)
-    end)
-
-    exports.nexa_api:RegisterServerCallback(NEXA_SHOPS_CALLBACKS.removeShopItem, function(source, payload)
-        local rejected = rejectCallbackRequest(source, NEXA_SHOPS_CALLBACKS.removeShopItem, true)
-
-        if rejected then
-            return rejected
-        end
-
-        local id = type(payload) == 'table' and payload.id or payload
-        return RemoveShopItem(id)
-    end)
-end
-
-AddEventHandler('onResourceStart', function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then
-        return
-    end
-
-    runMigrations()
-    registerCallbacks()
-end)
-
-exports('getStatus', getStatus)
-exports('getSchema', NexaShopsDatabase.GetSchema)
-exports('isSupportedShopType', isSupportedShopType)
-exports('CreateShop', CreateShop)
 exports('GetShop', GetShop)
 exports('ListShops', ListShops)
+exports('GetShopCatalog', GetShopCatalog)
+exports('GetShopItem', GetShopItem)
+exports('GetShopStock', GetShopStock)
+exports('CanAccessShop', CanAccessShop)
+exports('BuyFromShop', BuyFromShop)
+exports('SellToShop', SellToShop)
+exports('AdjustShopStock', AdjustShopStock)
+exports('CreateShop', CreateShop)
 exports('UpdateShop', UpdateShop)
-exports('SetShopEnabled', SetShopEnabled)
-exports('DeleteShop', DeleteShop)
 exports('AddShopItem', AddShopItem)
-exports('ListShopItems', ListShopItems)
 exports('UpdateShopItem', UpdateShopItem)
 exports('RemoveShopItem', RemoveShopItem)
+exports('CreateShopDelivery', CreateShopDelivery)
+exports('AssignShopDelivery', AssignShopDelivery)
+exports('CompleteShopDelivery', CompleteShopDelivery)
+exports('getStatus', function() return { resourceName = NEXA_SHOPS.resourceName, version = NEXA_SHOPS.version, migrated = migrated, shopTypes = ShopTypes.List() } end)
+exports('getSchema', NexaShopsDatabase.GetSchema)

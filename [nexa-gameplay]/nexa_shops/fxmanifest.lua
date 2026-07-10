@@ -4,13 +4,20 @@ lua54 'yes'
 
 name 'nexa_shops'
 author 'Nexa Roleplay'
-description 'Foundation fuer generische Shops und Nexa Shop Studio'
-version '0.1.0'
+description 'Server-authoritative Nexa shops commerce foundation'
+version '0.2.0'
 
 dependencies {
-    'oxmysql',
-    'nexa_api',
-    'nexa_logs'
+    'nexa-core',
+    'nexa_characters',
+    'nexa_playerstate',
+    'nexa_permissions',
+    'nexa_items',
+    'nexa_inventory',
+    'nexa_economy',
+    'nexa_organizations',
+    'nexa_jobs',
+    'nexa_properties'
 }
 
 shared_scripts {
@@ -19,7 +26,28 @@ shared_scripts {
 }
 
 server_scripts {
-    '@oxmysql/lib/MySQL.lua',
     'server/database.lua',
     'server/main.lua'
+}
+
+server_exports {
+    'GetShop',
+    'ListShops',
+    'GetShopCatalog',
+    'GetShopItem',
+    'GetShopStock',
+    'CanAccessShop',
+    'BuyFromShop',
+    'SellToShop',
+    'AdjustShopStock',
+    'CreateShop',
+    'UpdateShop',
+    'AddShopItem',
+    'UpdateShopItem',
+    'RemoveShopItem',
+    'CreateShopDelivery',
+    'AssignShopDelivery',
+    'CompleteShopDelivery',
+    'getStatus',
+    'getSchema'
 }
