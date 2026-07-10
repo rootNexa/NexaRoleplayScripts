@@ -17,6 +17,30 @@ NEXA_CONSTANTS = {
         serverRequest = 'nexa:core:callbacks:serverRequest',
         serverResponse = 'nexa:core:callbacks:serverResponse'
     },
+    lifecycle = {
+        states = {
+            created = 'created',
+            initializing = 'initializing',
+            initialized = 'initialized',
+            starting = 'starting',
+            ready = 'ready',
+            stopping = 'stopping',
+            stopped = 'stopped',
+            failed = 'failed'
+        },
+        stages = {
+            initializing = 'initializing',
+            initialized = 'initialized',
+            starting = 'starting',
+            ready = 'ready',
+            stopping = 'stopping',
+            stopped = 'stopped',
+            failed = 'failed'
+        },
+        requiredResources = {
+            'oxmysql'
+        }
+    },
     errors = {
         ok = 'OK',
         invalidInput = 'INVALID_INPUT',
@@ -25,6 +49,8 @@ NEXA_CONSTANTS = {
         database = 'DATABASE_ERROR',
         security = 'SECURITY_REJECTED',
         characterNotLoaded = 'CHARACTER_NOT_LOADED',
+        coreNotReady = 'CORE_NOT_READY',
+        lifecycle = 'LIFECYCLE_ERROR',
         internal = 'INTERNAL_ERROR'
     }
 }

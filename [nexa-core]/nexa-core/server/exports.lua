@@ -19,16 +19,34 @@ function GetCoreObject()
 end
 
 function GetPlayer(source)
+    local ready = Nexa.Lifecycle.RequireReady('export:GetPlayer')
+
+    if not ready then
+        return nil
+    end
+
     logExport('GetPlayer', source, tonumber(source))
     return Nexa.Players.GetPublic(source)
 end
 
 function GetCharacter(source)
+    local ready = Nexa.Lifecycle.RequireReady('export:GetCharacter')
+
+    if not ready then
+        return nil
+    end
+
     logExport('GetCharacter', source, tonumber(source))
     return Nexa.Characters.GetActive(source)
 end
 
 function ListCharacters(source)
+    local ready, readyErr = Nexa.Lifecycle.RequireReady('export:ListCharacters')
+
+    if not ready then
+        return nil, readyErr
+    end
+
     local rawSource = source
     source = tonumber(source)
     logExport('ListCharacters', rawSource, source)
@@ -41,16 +59,34 @@ function ListCharacters(source)
 end
 
 function HasPermission(source, permission)
+    local ready = Nexa.Lifecycle.RequireReady('export:HasPermission')
+
+    if not ready then
+        return false
+    end
+
     logExport('HasPermission', source, tonumber(source))
     return Nexa.Permissions.Has(source, permission)
 end
 
 function GetIdentifier(source)
+    local ready = Nexa.Lifecycle.RequireReady('export:GetIdentifier')
+
+    if not ready then
+        return nil
+    end
+
     logExport('GetIdentifier', source, tonumber(source))
     return Nexa.Players.GetIdentifier(source)
 end
 
 function CreateCharacter(source, data)
+    local ready, readyErr = Nexa.Lifecycle.RequireReady('export:CreateCharacter')
+
+    if not ready then
+        return nil, readyErr
+    end
+
     local rawSource = source
     source = tonumber(source)
     logExport('CreateCharacter', rawSource, source)
@@ -63,6 +99,12 @@ function CreateCharacter(source, data)
 end
 
 function SelectCharacter(source, characterId)
+    local ready, readyErr = Nexa.Lifecycle.RequireReady('export:SelectCharacter')
+
+    if not ready then
+        return nil, readyErr
+    end
+
     local rawSource = source
     source = tonumber(source)
     characterId = tonumber(characterId)
@@ -76,6 +118,12 @@ function SelectCharacter(source, characterId)
 end
 
 function UpdateCharacter(source, data)
+    local ready, readyErr = Nexa.Lifecycle.RequireReady('export:UpdateCharacter')
+
+    if not ready then
+        return nil, readyErr
+    end
+
     local rawSource = source
     source = tonumber(source)
     logExport('UpdateCharacter', rawSource, source)

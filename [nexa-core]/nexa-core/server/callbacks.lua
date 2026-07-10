@@ -78,6 +78,13 @@ RegisterNetEvent(Nexa.Constants.callbacks.clientRequest, function(requestId, nam
         return
     end
 
+    local ready, readyErr = Nexa.Lifecycle.RequireReady(('callback:%s'):format(name))
+
+    if not ready then
+        TriggerClientEvent(Nexa.Constants.callbacks.clientResponse, source, requestId, Nexa.Response.fail(readyErr, 'Core ist noch nicht bereit.'))
+        return
+    end
+
     local handler = Nexa.Callbacks.handlers[name]
 
     if not handler then

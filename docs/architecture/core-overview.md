@@ -77,17 +77,24 @@ ensure nexa-core-test
 ensure nexa-character-test
 ```
 
-Zur Laufzeit ist der Core-Lifecycle:
+Zur Laufzeit besitzt `nexa-core` jetzt eine eigene Lifecycle-State-Machine mit den Zustaenden `created`, `initializing`, `initialized`, `starting`, `ready`, `stopping`, `stopped` und `failed`.
+
+Der Core-Lifecycle:
 
 1. `oxmysql` wird gestartet.
-2. `nexa-core` initialisiert Config, Constants, Datenbank, Permissions, Player, Characters, Callbacks, Events und Exports.
-3. Beim Spielerbeitritt sammelt `nexa-core` Identifier, ermittelt den Primaer-Identifier und erstellt oder aktualisiert `nexa_players`.
-4. Der Client kann vorhandene Charaktere abfragen.
-5. Die Charakterauswahl laeuft serverseitig ueber `nexa:core:server:selectCharacter` oder den Export `SelectCharacter`.
-6. Bei Auswahl wird der aktive Charakter gecacht und `nexa:core:client:characterSelected` gesendet.
-7. Beim Disconnect oder Unload wird der Charakterzustand entfernt und `nexa:core:client:characterUnloaded` gesendet.
+2. `nexa-core` laedt Config, Constants, Datenbank, Permissions, Player, Characters, Callbacks, Events, Exports und Bootstrap.
+3. `Nexa.Bootstrap.Start()` prueft Pflichtabhaengigkeiten, prueft die Datenbankbereitschaft und fuehrt Lifecycle-Hooks aus.
+4. Erst im Zustand `ready` duerfen Core-Exports, Core-Callbacks, Net Events und `playerJoining` produktiv arbeiten.
+5. Beim Spielerbeitritt sammelt `nexa-core` Identifier, ermittelt den Primaer-Identifier und erstellt oder aktualisiert `nexa_players`.
+6. Der Client kann vorhandene Charaktere abfragen.
+7. Die Charakterauswahl laeuft serverseitig ueber `nexa:core:server:selectCharacter` oder den Export `SelectCharacter`.
+8. Bei Auswahl wird der aktive Charakter gecacht und `nexa:core:client:characterSelected` gesendet.
+9. Beim Disconnect oder Unload wird der Charakterzustand entfernt und `nexa:core:client:characterUnloaded` gesendet.
+10. Beim Resource-Stop setzt `Nexa.Bootstrap.Stop()` den Zustand auf `stopping`, entlaedt Sessions und beendet mit `stopped`.
 
 `nexa_api` sitzt als spaetere API-Fassade ueber dem Core und sollte fuer neue Resources die bevorzugte Integrationsschicht sein.
+
+Details stehen in `docs/architecture/core-lifecycle.md`.
 
 ## Oeffentliche API-Grenzen
 

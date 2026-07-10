@@ -25,3 +25,7 @@ ensure nexa-character-test
 ```
 
 `nexa_api` belongs after `nexa_permissions` so permission bridge calls can use the dedicated permission service when available.
+
+`nexa-core` now has a controlled lifecycle. It requires `oxmysql` to be started and reachable before the Core can move to `ready`. If `oxmysql` is missing or stops while the Core is ready, the Core enters `failed` and public Core APIs must not report false readiness.
+
+For lifecycle details, see `docs/architecture/core-lifecycle.md`.

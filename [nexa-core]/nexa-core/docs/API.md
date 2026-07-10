@@ -9,6 +9,8 @@ Diese API beschreibt nur Funktionen, die bereits existieren. Gameplay-Systeme wi
 ## Grundprinzipien
 
 - Der Server ist autoritativ.
+- Der Core meldet Bereitschaft erst im Lifecycle-Zustand `ready`.
+- Core-Exports, Core-Callbacks und Core-Net-Events sind vor `ready` geschuetzt.
 - Clients duerfen Aktionen anfragen, aber keine vertrauenswuerdigen Daten festlegen.
 - Datenbankzugriffe laufen innerhalb des Framework-Fundaments ueber `Nexa.Database`.
 - Permissions werden serverseitig entschieden.
@@ -94,6 +96,22 @@ Aktuell verwendete Fehlercodes:
 - `RATE_LIMITED`
 
 Clients erhalten keine technischen Datenbankdetails. Technische Fehler werden serverseitig geloggt.
+
+## Lifecycle
+
+Intern verwaltet `nexa-core` die Zustaende `created`, `initializing`, `initialized`, `starting`, `ready`, `stopping`, `stopped` und `failed`.
+
+Interne Lifecycle-Funktionen:
+
+- `Nexa.Lifecycle.GetState()`
+- `Nexa.Lifecycle.IsReady()`
+- `Nexa.Lifecycle.RegisterLifecycleHook(stage, callback)`
+- `Nexa.Lifecycle.GetStartTimestamp()`
+- `Nexa.Lifecycle.GetFailureReason()`
+
+Diese Funktionen sind bewusst interne Core-Schnittstellen und noch keine eigenstaendig versionierten Public Exports. `GetCoreObject()` kann sie fuer Core-nahe Diagnose sichtbar machen.
+
+Wenn der Core nicht `ready` ist, geben geschuetzte Exports keine fachlichen Daten zurueck. Schreibende Exports liefern dann `nil, 'CORE_NOT_READY'`; Permission-Checks liefern `false`.
 
 ## Exports
 

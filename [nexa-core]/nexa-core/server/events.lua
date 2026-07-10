@@ -11,6 +11,12 @@ function Nexa.Events.RegisterNet(name, handler)
             return
         end
 
+        local ready = Nexa.Lifecycle.RequireReady(('event:%s'):format(name))
+
+        if not ready then
+            return
+        end
+
         local player = Nexa.Players.Get(source)
 
         if not player then
@@ -63,5 +69,9 @@ Nexa.Events.RegisterNet(Nexa.Constants.serverEvents.selectCharacter, function(so
 end)
 
 AddEventHandler('playerDropped', function(reason)
+    if not Nexa.Lifecycle.IsReady() and Nexa.Lifecycle.GetState() ~= Nexa.Constants.lifecycle.states.stopping then
+        return
+    end
+
     Nexa.Players.Drop(source, reason)
 end)
