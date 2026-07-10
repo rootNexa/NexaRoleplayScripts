@@ -4,7 +4,7 @@ Phase 4C Banking-Resource fuer private Konten, Kontenuebersicht, Transaktionshis
 
 ## Abhaengigkeiten
 
-- ox_lib
+- nexa_ui
 - nexa_api
 - nexa_audit
 - nexa_security

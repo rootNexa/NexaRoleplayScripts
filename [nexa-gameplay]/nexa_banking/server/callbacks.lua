@@ -14,7 +14,7 @@ local function checkRequest(source, eventName)
     return nil
 end
 
-lib.callback.register('nexa:banking:cb:getAccounts', function(source)
+exports.nexa_api:RegisterServerCallback('nexa:banking:cb:getAccounts', function(source)
     local rejected = checkRequest(source, 'nexa:banking:cb:getAccounts')
 
     if rejected ~= nil then
@@ -24,7 +24,7 @@ lib.callback.register('nexa:banking:cb:getAccounts', function(source)
     return exports.nexa_api:listAccounts(source)
 end)
 
-lib.callback.register('nexa:banking:cb:createPrivateAccount', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:banking:cb:createPrivateAccount', function(source, payload)
     local rejected = checkRequest(source, 'nexa:banking:cb:createPrivateAccount')
 
     if rejected ~= nil then
@@ -40,7 +40,7 @@ lib.callback.register('nexa:banking:cb:createPrivateAccount', function(source, p
     return exports.nexa_api:createPrivateAccount(source, payload or {})
 end)
 
-lib.callback.register('nexa:banking:cb:getTransactions', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:banking:cb:getTransactions', function(source, payload)
     local rejected = checkRequest(source, 'nexa:banking:cb:getTransactions')
 
     if rejected ~= nil then
@@ -56,7 +56,7 @@ lib.callback.register('nexa:banking:cb:getTransactions', function(source, payloa
     return exports.nexa_api:getAccountTransactions(source, payload)
 end)
 
-lib.callback.register('nexa:banking:cb:requestTransfer', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:banking:cb:requestTransfer', function(source, payload)
     local rejected = checkRequest(source, 'nexa:banking:cb:requestTransfer')
 
     if rejected ~= nil then
@@ -72,7 +72,7 @@ lib.callback.register('nexa:banking:cb:requestTransfer', function(source, payloa
     return exports.nexa_api:transferMoney(source, payload)
 end)
 
-lib.callback.register('nexa:banking:cb:getInvoices', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:banking:cb:getInvoices', function(source, payload)
     local rejected = checkRequest(source, 'nexa:banking:cb:getInvoices')
 
     if rejected ~= nil then
@@ -82,7 +82,7 @@ lib.callback.register('nexa:banking:cb:getInvoices', function(source, payload)
     return exports.nexa_api:listInvoices(source, payload or {})
 end)
 
-lib.callback.register('nexa:banking:cb:payInvoice', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:banking:cb:payInvoice', function(source, payload)
     local rejected = checkRequest(source, 'nexa:banking:cb:payInvoice')
 
     if rejected ~= nil then

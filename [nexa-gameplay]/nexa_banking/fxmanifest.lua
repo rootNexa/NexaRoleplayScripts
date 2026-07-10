@@ -8,7 +8,7 @@ description 'Banking, private Konten, Transaktionen und Rechnungen fuer Phase 4C
 version '0.4.2'
 
 dependencies {
-    'ox_lib',
+    'nexa_ui',
     'nexa_api',
     'nexa_audit',
     'nexa_security',
@@ -16,7 +16,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }

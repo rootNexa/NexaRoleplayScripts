@@ -1,11 +1,24 @@
 local cachedAccounts = {}
 
+local function awaitServerCallback(name, payload)
+    local waiter = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback(name, payload or {}, function(response)
+        waiter:resolve(response)
+    end, 5000)
+
+    if type(request) == 'table' and request.ok == false then
+        return request
+    end
+
+    return Citizen.Await(waiter)
+end
+
 local function notify(response)
     if response == nil then
         return
     end
 
-    lib.notify({
+    exports.nexa_ui:notify({
         title = 'Banking',
         description = response.message or 'Vorgang abgeschlossen.',
         type = response.success and 'success' or 'error'
@@ -13,7 +26,7 @@ local function notify(response)
 end
 
 local function loadAccounts()
-    local response = lib.callback.await('nexa:banking:cb:getAccounts', false)
+    local response = awaitServerCallback('nexa:banking:cb:getAccounts', {})
 
     if response ~= nil and response.success and response.data ~= nil then
         cachedAccounts = response.data.accounts or {}
@@ -41,7 +54,7 @@ local function openTransferDialog()
         loadAccounts()
     end
 
-    local input = lib.inputDialog('Ueberweisung', {
+    local input = exports.nexa_ui:inputDialog('Ueberweisung', {
         { type = 'select', label = 'Von Konto', options = getAccountOptions(), required = true },
         { type = 'input', label = 'Ziel-Kontonummer', required = true },
         { type = 'number', label = 'Betrag', required = true, min = 1 },
@@ -52,7 +65,7 @@ local function openTransferDialog()
         return
     end
 
-    local response = lib.callback.await('nexa:banking:cb:requestTransfer', false, {
+    local response = awaitServerCallback('nexa:banking:cb:requestTransfer', {
         fromAccountId = input[1],
         toAccountNumber = input[2],
         amount = input[3],
@@ -67,7 +80,7 @@ local function openTransactionsDialog()
         loadAccounts()
     end
 
-    local input = lib.inputDialog('Transaktionen', {
+    local input = exports.nexa_ui:inputDialog('Transaktionen', {
         { type = 'select', label = 'Konto', options = getAccountOptions(), required = true }
     })
 
@@ -75,7 +88,7 @@ local function openTransactionsDialog()
         return
     end
 
-    local response = lib.callback.await('nexa:banking:cb:getTransactions', false, {
+    local response = awaitServerCallback('nexa:banking:cb:getTransactions', {
         accountId = input[1],
         limit = NexaBankingConfig.defaultHistoryLimit
     })
@@ -88,7 +101,7 @@ local function openInvoiceDialog()
         loadAccounts()
     end
 
-    local input = lib.inputDialog('Rechnung bezahlen', {
+    local input = exports.nexa_ui:inputDialog('Rechnung bezahlen', {
         { type = 'number', label = 'Rechnungs-ID', required = true, min = 1 },
         { type = 'select', label = 'Von Konto', options = getAccountOptions(), required = true }
     })
@@ -97,7 +110,7 @@ local function openInvoiceDialog()
         return
     end
 
-    local response = lib.callback.await('nexa:banking:cb:payInvoice', false, {
+    local response = awaitServerCallback('nexa:banking:cb:payInvoice', {
         invoiceId = input[1],
         fromAccountId = input[2]
     })
@@ -108,7 +121,7 @@ end
 RegisterNetEvent(NEXA_BANKING_EVENTS.requestResult, notify)
 
 RegisterNetEvent(NEXA_BANKING_EVENTS.requestOpenMenu, function()
-    lib.registerContext({
+    exports.nexa_ui:registerContext({
         id = NexaBankingClient.contextId,
         title = 'Banking',
         options = {
@@ -121,7 +134,7 @@ RegisterNetEvent(NEXA_BANKING_EVENTS.requestOpenMenu, function()
                 title = 'Privates Girokonto erstellen',
                 icon = 'circle-plus',
                 onSelect = function()
-                    local response = lib.callback.await('nexa:banking:cb:createPrivateAccount', false, {
+                    local response = awaitServerCallback('nexa:banking:cb:createPrivateAccount', {
                         accountType = 'checking'
                     })
 
@@ -146,5 +159,5 @@ RegisterNetEvent(NEXA_BANKING_EVENTS.requestOpenMenu, function()
         }
     })
 
-    lib.showContext(NexaBankingClient.contextId)
+    exports.nexa_ui:showContext(NexaBankingClient.contextId)
 end)

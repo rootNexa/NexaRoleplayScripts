@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexa Banking</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="app" class="hidden">
+        <aside>
+            <h1>Banking</h1>
+            <button data-tab="accounts">Konten</button>
+            <button data-tab="transactions">Verlauf</button>
+            <button data-tab="invoices">Rechnungen</button>
+        </aside>
+        <section>
+            <header><h2 id="title">Konten</h2><button id="refresh">Aktualisieren</button><button id="close">Schliessen</button></header>
+            <div id="content"></div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
