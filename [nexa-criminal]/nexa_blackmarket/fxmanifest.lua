@@ -4,34 +4,36 @@ lua54 'yes'
 
 name 'nexa_blackmarket'
 author 'Nexa Roleplay'
-description 'Servervalidierter Blackmarket fuer Haendler, Kategorien, Kauf und Verkauf'
+description 'Server-authoritative blackmarket fences dirty cash and laundering foundation'
 version '0.1.0'
 
 dependencies {
-    'ox_lib',
-    'nexa_illegal_core',
-    'nexa_api',
-    'nexa_security',
-    'nexa_featureflags',
-    'nexa_audit',
-    'nexa_logs'
+    'nexa-core',
+    'nexa_crime',
+    'nexa_shops',
+    'nexa_items',
+    'nexa_inventory',
+    'nexa_economy'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
 
-client_scripts {
-    'config/client.lua',
-    'client/main.lua'
+server_scripts {
+    'server/database.lua',
+    'server/main.lua'
 }
 
-server_scripts {
-    'config/server.lua',
-    'server/validators.lua',
-    'server/callbacks.lua',
-    'server/events.lua',
-    'server/main.lua'
+server_exports {
+    'GetAccessibleBlackMarkets',
+    'GetBlackMarketCatalog',
+    'BuyFromBlackMarket',
+    'SellToFence',
+    'GetFenceOffer',
+    'BeginMoneyLaundering',
+    'GetMoneyLaunderingJob',
+    'getStatus',
+    'getSchema'
 }

@@ -1,3 +1,0 @@
-NexaBlackmarketClient = {
-    enableOxContext = true
-}
