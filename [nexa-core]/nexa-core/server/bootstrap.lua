@@ -298,6 +298,12 @@ function Nexa.Bootstrap.Initialize()
         return fail('Datenbank ist nicht erreichbar.', err)
     end
 
+    local migrationsOk, migrationsErr = Nexa.Database.RunMigrations()
+
+    if not migrationsOk then
+        return fail('DATABASE_MIGRATIONS_FAILED', migrationsErr)
+    end
+
     transitioned, transitionErr = transition(states.initialized, 'bootstrap_initialized')
 
     if not transitioned then

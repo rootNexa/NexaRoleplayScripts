@@ -230,6 +230,58 @@ local schema = {
                 }
             }
         },
+        database = {
+            type = 'object',
+            required = true,
+            public = false,
+            serverOnly = true,
+            fields = {
+                timeoutMs = {
+                    type = 'number',
+                    required = true,
+                    default = 10000,
+                    min = 100,
+                    max = 120000,
+                    public = false,
+                    serverOnly = true
+                },
+                slowQueryMs = {
+                    type = 'number',
+                    required = true,
+                    default = 500,
+                    min = 0,
+                    max = 60000,
+                    public = false,
+                    serverOnly = true
+                },
+                retry = {
+                    type = 'object',
+                    required = true,
+                    public = false,
+                    serverOnly = true,
+                    fields = {
+                        maxAttempts = {
+                            type = 'number',
+                            required = true,
+                            default = 2,
+                            min = 1,
+                            max = 5,
+                            public = false,
+                            serverOnly = true
+                        },
+                        delayMs = {
+                            type = 'number',
+                            required = true,
+                            default = 100,
+                            min = 0,
+                            max = 5000,
+                            public = false,
+                            serverOnly = true
+                        }
+                    }
+                }
+            }
+        },
         logging = {
             type = 'object',
             required = true,
@@ -302,6 +354,14 @@ local defaults = {
         defaultCooldownMs = 1000,
         timeoutMs = 10000
     },
+    database = {
+        timeoutMs = 10000,
+        slowQueryMs = 500,
+        retry = {
+            maxAttempts = 2,
+            delayMs = 100
+        }
+    },
     logging = {
         level = 'info'
     },
@@ -334,6 +394,14 @@ local runtimeConfig = {
     },
     logging = {
         level = getConvarValue('nexa:logLevel', getConvarBool('nexa:debug', defaults.debug) and 'debug' or defaults.logging.level)
+    },
+    database = {
+        timeoutMs = getConvarInt('nexa:dbTimeoutMs', defaults.database.timeoutMs),
+        slowQueryMs = getConvarInt('nexa:dbSlowQueryMs', defaults.database.slowQueryMs),
+        retry = {
+            maxAttempts = getConvarInt('nexa:dbRetryMaxAttempts', defaults.database.retry.maxAttempts),
+            delayMs = getConvarInt('nexa:dbRetryDelayMs', defaults.database.retry.delayMs)
+        }
     },
     validation = {
         unknownFields = getConvarValue('nexa:configUnknownFields', defaults.validation.unknownFields)

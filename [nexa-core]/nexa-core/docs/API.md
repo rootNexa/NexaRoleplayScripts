@@ -143,6 +143,22 @@ Intern stellt `nexa-core` `Nexa.Config` bereit:
 
 Die Config ist nach dem Aufbau immutable. Serverseitige Secrets liegen in `serverOnly`-Sektionen und werden nicht in `GetPublicSnapshot()` uebernommen. Fehlerhafte Pflichtwerte, falsche Typen oder ungueltige Wertebereiche verhindern den Core-Start.
 
+## Database
+
+Intern stellt `nexa-core` `Nexa.Database` bereit:
+
+- `Nexa.Database.Query(sql, params, options)`
+- `Nexa.Database.Single(sql, params, options)`
+- `Nexa.Database.Scalar(sql, params, options)`
+- `Nexa.Database.Insert(sql, params, options)`
+- `Nexa.Database.Update(sql, params, options)`
+- `Nexa.Database.Delete(sql, params, options)`
+- `Nexa.Database.Transaction(queries, options)`
+- `Nexa.Database.IsReady()`
+- `Nexa.Database.GetHealth()`
+
+Alle Queries muessen parameterisiert sein. Fehler werden als stabile Fehlerobjekte erzeugt und nicht ungefiltert an Clients weitergegeben. Migrationen laufen beim Bootstrap ueber `Nexa.Database.RunMigrations()`.
+
 ## Exports
 
 ### `GetPlayer(source)`

@@ -215,7 +215,9 @@ Die Core-Dokumentation nennt:
 - `nexa_permissions`
 - `nexa_audit_log`
 
-`nexa-core` kapselt DB-Zugriffe intern ueber `Nexa.Database`. Diese Abstraktion ist aktuell nicht als allgemeiner Cross-Resource-DB-Service exportiert.
+`nexa-core` kapselt DB-Zugriffe intern ueber `Nexa.Database`. Die Schicht bietet parametrisierte Queries, Single-/Multi-Row-Abfragen, Scalar, Insert, Update, Delete, Transaktionen, Timeouts, Fehlerobjekte, Slow-Query-Logging, Health und ein Migrationssystem.
+
+Details stehen in `docs/architecture/core-database.md`.
 
 ### Permission Tabellen
 

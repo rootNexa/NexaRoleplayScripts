@@ -74,7 +74,13 @@ foreach ($needle in @(
     'max = 16',
     'timeoutMs = {',
     'min = 100',
-    'max = 120000'
+    'max = 120000',
+    'database = {',
+    'slowQueryMs',
+    'dbTimeoutMs',
+    'dbSlowQueryMs',
+    'dbRetryMaxAttempts',
+    'dbRetryDelayMs'
 )) {
     Assert-Contains $config $needle "Expected schema detail missing: $needle"
 }
