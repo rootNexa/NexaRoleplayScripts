@@ -156,7 +156,9 @@ function UpdateShopItem(...) return ShopCatalog.UpdateItem(...) end
 function RemoveShopItem(...) return ShopCatalog.RemoveItem(...) end
 function CreateShopDelivery(...) return Deliveries.Create(...) end
 function AssignShopDelivery(...) return Deliveries.Assign(...) end
+function PickupShopDelivery(...) return Deliveries.Pickup(...) end
 function CompleteShopDelivery(...) return Deliveries.Deliver(...) end
+function CancelShopDelivery(...) return Deliveries.Cancel(...) end
 
 AddEventHandler('onResourceStart', function(resourceName) if resourceName ~= GetCurrentResourceName() then return end; registerDefaultTypes(); if NexaShopsConfig.autoMigrate then migrated = NexaShopsDatabase.Migrate() == true end; log('Info', 'shops.start', 'nexa_shops started.', { migrated = migrated }) end)
 AddEventHandler('onResourceStop', function(resourceName) if resourceName ~= GetCurrentResourceName() then return end; stockReservations = {} end)
@@ -180,6 +182,8 @@ exports('UpdateShopItem', UpdateShopItem)
 exports('RemoveShopItem', RemoveShopItem)
 exports('CreateShopDelivery', CreateShopDelivery)
 exports('AssignShopDelivery', AssignShopDelivery)
+exports('PickupShopDelivery', PickupShopDelivery)
 exports('CompleteShopDelivery', CompleteShopDelivery)
+exports('CancelShopDelivery', CancelShopDelivery)
 exports('getStatus', function() return { resourceName = NEXA_SHOPS.resourceName, version = NEXA_SHOPS.version, migrated = migrated, shopTypes = ShopTypes.List() } end)
 exports('getSchema', NexaShopsDatabase.GetSchema)

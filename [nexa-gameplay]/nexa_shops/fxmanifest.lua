@@ -50,7 +50,9 @@ server_exports {
     'RemoveShopItem',
     'CreateShopDelivery',
     'AssignShopDelivery',
+    'PickupShopDelivery',
     'CompleteShopDelivery',
+    'CancelShopDelivery',
     'getStatus',
     'getSchema'
 }
