@@ -1,0 +1,69 @@
+NEXA_PLAYERSTATE = {
+    resourceName = 'nexa_playerstate',
+    version = '1.0.0',
+    states = {
+        disconnected = true,
+        connected = true,
+        session_ready = true,
+        identity_ready = true,
+        character_selection = true,
+        character_selected = true,
+        state_loading = true,
+        spawn_preparing = true,
+        spawn_authorized = true,
+        spawning = true,
+        active = true,
+        incapacitated = true,
+        dead = true,
+        unloading = true,
+        failed = true
+    },
+    lifeStates = {
+        alive = true,
+        incapacitated = true,
+        dead = true,
+        recovering = true
+    },
+    positionTypes = {
+        last_known = true,
+        safe_fallback = true,
+        admin_return = true
+    },
+    events = {
+        spawnExecute = 'nexa:playerstate:client:spawnExecute',
+        spawnConfirm = 'nexa:playerstate:server:spawnConfirm',
+        positionSnapshot = 'nexa:playerstate:server:positionSnapshot',
+        stateChanged = 'nexa:internal:playerstate:stateChanged',
+        spawnPreparing = 'nexa:internal:playerstate:spawnPreparing',
+        spawnAuthorized = 'nexa:internal:playerstate:spawnAuthorized',
+        active = 'nexa:internal:playerstate:active',
+        unloading = 'nexa:internal:playerstate:unloading',
+        failed = 'nexa:internal:playerstate:failed',
+        publicReady = 'nexa:player:ready',
+        publicUnloading = 'nexa:player:unloading'
+    },
+    errors = {
+        notFound = 'PLAYER_STATE_NOT_FOUND',
+        invalidTransition = 'PLAYER_STATE_INVALID_TRANSITION',
+        notReady = 'PLAYER_NOT_GAMEPLAY_READY',
+        alreadyActive = 'PLAYER_ALREADY_ACTIVE',
+        unloading = 'PLAYER_UNLOADING',
+        spawnPending = 'SPAWN_ALREADY_PENDING',
+        spawnNotAuthorized = 'SPAWN_NOT_AUTHORIZED',
+        tokenInvalid = 'SPAWN_TOKEN_INVALID',
+        tokenExpired = 'SPAWN_TOKEN_EXPIRED',
+        tokenUsed = 'SPAWN_TOKEN_ALREADY_USED',
+        spawnPositionInvalid = 'SPAWN_POSITION_INVALID',
+        providerNotFound = 'SPAWN_PROVIDER_NOT_FOUND',
+        providerFailed = 'SPAWN_PROVIDER_FAILED',
+        confirmationTimeout = 'SPAWN_CONFIRMATION_TIMEOUT',
+        positionInvalid = 'POSITION_INVALID',
+        positionRateLimited = 'POSITION_RATE_LIMITED',
+        positionImplausible = 'POSITION_IMPLAUSIBLE',
+        bucketInvalid = 'BUCKET_INVALID',
+        bucketRangeNotRegistered = 'BUCKET_RANGE_NOT_REGISTERED',
+        lifeStateInvalid = 'LIFE_STATE_INVALID',
+        lifeTransitionForbidden = 'LIFE_STATE_TRANSITION_FORBIDDEN',
+        dependencyNotReady = 'PLAYERSTATE_DEPENDENCY_NOT_READY'
+    }
+}
