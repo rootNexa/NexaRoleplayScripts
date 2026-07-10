@@ -34,6 +34,21 @@ Intern stellt `nexa-core` `Nexa.Sessions` fuer aktuelle Verbindungen bereit:
 
 Eine Session ist keine Account-, Character-, Rollen- oder Gameplay-Instanz. Details stehen in `docs/architecture/core-sessions.md`.
 
+## Cache
+
+Intern stellt `nexa-core` `Nexa.Cache` fuer kontrolliertes Runtime-Caching bereit:
+
+- `Nexa.Cache.Set(namespace, key, value, options)`
+- `Nexa.Cache.Get(namespace, key)`
+- `Nexa.Cache.Has(namespace, key)`
+- `Nexa.Cache.Delete(namespace, key)`
+- `Nexa.Cache.Clear(namespace)`
+- `Nexa.Cache.GetOrLoad(namespace, key, loader, options)`
+- `Nexa.Cache.GetStats(namespace)`
+- `Nexa.Cache.Cleanup()`
+
+Der Cache ist nicht persistent und darf keine Secrets, Clientobjekte oder autoritativen Gameplay-Transaktionen halten. Details stehen in `docs/architecture/core-cache.md`.
+
 ## Player und Character
 
 Ein Player steht fuer Verbindung, Account-Identifier und Session.

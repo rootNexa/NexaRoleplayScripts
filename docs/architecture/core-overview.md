@@ -22,6 +22,7 @@ Der Core soll die serverautoritative Basis liefern, auf der Gameplay-, UI-, Admi
 - Charakterbesitz serverseitig pruefen.
 - Core-Callbacks und Core-Events bereitstellen.
 - Technische Permission-Foundation mit Rollen, Vererbung, Allow/Deny, Cache, Audit und optionalem ACE-Fallback bereitstellen.
+- Kontrolliertes Runtime-Caching mit Namespace, TTL, Limits, Statistiken und Get-or-Load bereitstellen.
 - Eine interne `Nexa.Database`-Abstraktion ueber `oxmysql` kapseln.
 
 `nexa_core` ist damit Session- und Character-Core, nicht Gameplay-Core.
@@ -83,7 +84,7 @@ Zur Laufzeit besitzt `nexa-core` jetzt eine eigene Lifecycle-State-Machine mit d
 Der Core-Lifecycle:
 
 1. `oxmysql` wird gestartet.
-2. `nexa-core` laedt Config, Constants, Datenbank, Permissions, Sessions, Player, Characters, Callbacks, Events, Exports und Bootstrap.
+2. `nexa-core` laedt Config, Constants, Datenbank, Cache, Permissions, Sessions, Player, Characters, Callbacks, Events, Exports und Bootstrap.
 3. `Nexa.Bootstrap.Start()` prueft Pflichtabhaengigkeiten, prueft die Datenbankbereitschaft und fuehrt Lifecycle-Hooks aus.
 4. Erst im Zustand `ready` duerfen Core-Exports, Core-Callbacks, Net Events und `playerJoining` produktiv arbeiten.
 5. Beim Spielerbeitritt erstellt `nexa-core` zuerst eine Runtime-Session, prueft die License und erstellt oder aktualisiert danach `nexa_players`.
@@ -98,6 +99,8 @@ Der Core-Lifecycle:
 Details stehen in `docs/architecture/core-lifecycle.md`.
 
 Das Session-Modell ist von Account und Charakter getrennt. Details stehen in `docs/architecture/core-sessions.md`.
+
+Das Cache-Modell ist eine nicht persistente Runtime-Schicht. Details stehen in `docs/architecture/core-cache.md`.
 
 ## Oeffentliche API-Grenzen
 

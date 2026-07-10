@@ -369,6 +369,10 @@ function Nexa.Bootstrap.Start()
         return fail('STARTING_HOOK_FAILED', hookErr)
     end
 
+    if Nexa.Cache then
+        Nexa.Cache.Start()
+    end
+
     if Nexa.Modules then
         local modulesOk, modulesErr = Nexa.Modules.StartAll()
 
@@ -449,6 +453,10 @@ function Nexa.Bootstrap.Stop(reason)
 
     if Nexa.Modules then
         Nexa.Modules.StopAll(reason)
+    end
+
+    if Nexa.Cache then
+        Nexa.Cache.Stop()
     end
 
     transitioned, transitionErr = transition(states.stopped, reason)
