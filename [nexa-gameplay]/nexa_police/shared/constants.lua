@@ -1,0 +1,4 @@
+NEXA_POLICE = { resourceName = 'nexa_police', version = '0.1.0' }
+NEXA_POLICE_AGENCY_TYPES = { lspd = 'lspd', sheriff = 'sheriff', government = 'government', fbi = 'fbi', custom = 'custom' }
+NEXA_POLICE_EVENTS = { arrestCreated = 'nexa:internal:police:arrestCreated', restraintChanged = 'nexa:internal:police:restraintChanged', searchPerformed = 'nexa:internal:police:searchPerformed', itemSeized = 'nexa:internal:police:itemSeized', vehicleChecked = 'nexa:internal:police:vehicleChecked' }
+NEXA_POLICE_ERRORS = { agencyNotFound = 'POLICE_AGENCY_NOT_FOUND', subjectInvalid = 'POLICE_SUBJECT_INVALID', arrestInvalid = 'POLICE_ARREST_INVALID', searchInvalid = 'POLICE_SEARCH_INVALID', seizureInvalid = 'POLICE_SEIZURE_INVALID', reasonRequired = 'POLICE_REASON_REQUIRED', invalidInput = 'POLICE_INVALID_INPUT', databaseError = 'POLICE_DATABASE_ERROR' }
