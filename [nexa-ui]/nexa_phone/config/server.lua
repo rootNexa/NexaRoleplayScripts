@@ -2,7 +2,12 @@ NexaPhoneServerConfig = {
     callbacks = {
         snapshot = 'nexa:phone:cb:getSnapshot',
         saveNote = 'nexa:phone:cb:saveNote',
-        sendMessage = 'nexa:phone:cb:sendMessage'
+        sendMessage = 'nexa:phone:cb:sendMessage',
+        addContact = 'nexa:phone:cb:addContact',
+        addGroup = 'nexa:phone:cb:addGroup',
+        logCall = 'nexa:phone:cb:logCall',
+        savePreferences = 'nexa:phone:cb:savePreferences',
+        emergencyCall = 'nexa:phone:cb:emergencyCall'
     },
     limits = {
         maxContacts = 12,

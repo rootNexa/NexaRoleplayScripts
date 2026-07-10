@@ -13,7 +13,7 @@ Phase-5D-Resource fuer Phone UI und sichere Basisfunktionen.
 - Mail-Grundstruktur als Anzeige
 - deutsche, lore-friendly Texte
 - Nutzung von `nexa_ui`
-- minimale `ox_lib`-Interaktionen
+- NexaUI-Notify und NexaAPI-Callbacks
 - Audit/Logging fuer serverseitige Schreibaktionen
 
 ## Grenzen

@@ -8,7 +8,6 @@ description 'Phone UI-Shell mit sicheren Basisfunktionen ohne Voice-System'
 version '0.5.3'
 
 dependencies {
-    'ox_lib',
     'nexa_ui',
     'nexa_api',
     'nexa_security',
@@ -25,7 +24,6 @@ files {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua',
     'shared/utils.lua',
@@ -40,6 +38,7 @@ client_scripts {
 
 server_scripts {
     'config/server.lua',
+    'server/database.lua',
     'server/state.lua',
     'server/callbacks.lua',
     'server/main.lua'

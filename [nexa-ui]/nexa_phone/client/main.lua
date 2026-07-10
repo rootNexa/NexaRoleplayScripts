@@ -1,6 +1,19 @@
 local phoneVisible = false
 local phoneSnapshot = {}
 
+local function awaitServerCallback(name, payload, timeoutMs)
+    local waiter = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback(name, payload or {}, function(response)
+        waiter:resolve(response)
+    end, timeoutMs or NexaPhoneClientConfig.snapshotTimeoutMs or 5000)
+
+    if type(request) == 'table' and request.ok == false then
+        return request
+    end
+
+    return Citizen.Await(waiter)
+end
+
 local function sendPhoneMessage(messageType, payload)
     SendNUIMessage({
         type = messageType,
@@ -37,7 +50,7 @@ local function setVisible(visible)
 end
 
 local function refreshSnapshot()
-    local response = lib.callback.await(NexaPhoneConfig.snapshotCallback, false)
+    local response = awaitServerCallback(NexaPhoneConfig.snapshotCallback, {})
 
     if type(response) ~= 'table' or response.success ~= true then
         phoneSnapshot = {}
@@ -62,8 +75,8 @@ local function closePhone()
 end
 
 local function showNotice(text, noticeType)
-    if lib and lib.notify then
-        lib.notify({
+    if GetResourceState('nexa_ui') == 'started' then
+        exports.nexa_ui:notify({
             title = NexaPhoneLocale.title,
             description = text,
             type = noticeType or 'inform'
@@ -76,7 +89,7 @@ local function showNotice(text, noticeType)
 end
 
 local function saveNote(payload)
-    local response = lib.callback.await(NexaPhoneConfig.saveNoteCallback, false, payload or {})
+    local response = awaitServerCallback(NexaPhoneConfig.saveNoteCallback, payload or {})
 
     if type(response) == 'table' and response.success == true then
         phoneSnapshot = response.data and response.data.snapshot or phoneSnapshot
@@ -90,7 +103,7 @@ local function saveNote(payload)
 end
 
 local function sendMessage(payload)
-    local response = lib.callback.await(NexaPhoneConfig.sendMessageCallback, false, payload or {})
+    local response = awaitServerCallback(NexaPhoneConfig.sendMessageCallback, payload or {})
 
     if type(response) == 'table' and response.success == true then
         phoneSnapshot = response.data and response.data.snapshot or phoneSnapshot
