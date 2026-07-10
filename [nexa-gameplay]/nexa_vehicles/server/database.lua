@@ -153,6 +153,10 @@ function NexaVehiclesDatabase.UpdateSpawn(id, status, netId, entityHandle, routi
     return dbCall('Update', 'UPDATE nexa_vehicles SET status = ?, net_id = ?, entity_handle = ?, routing_bucket = ? WHERE id = ?', { status, netId, entityHandle, routingBucket, id }, 'vehicles.vehicle.spawn')
 end
 
+function NexaVehiclesDatabase.SetStatus(id, status)
+    return dbCall('Update', 'UPDATE nexa_vehicles SET status = ? WHERE id = ?', { status, id }, 'vehicles.vehicle.status')
+end
+
 function NexaVehiclesDatabase.UpdateState(id, s)
     return dbCall('Update', 'UPDATE nexa_vehicles SET fuel = ?, mileage = ?, engine_health = ?, body_health = ?, tank_health = ?, damage_state = ?, state_json = ? WHERE id = ?', { s.fuel, s.mileage, s.engine_health, s.body_health, s.tank_health, s.damage_state, encode(s.state), id }, 'vehicles.vehicle.state')
 end

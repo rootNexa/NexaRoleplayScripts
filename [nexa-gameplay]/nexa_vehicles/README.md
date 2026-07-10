@@ -35,6 +35,8 @@ Clients may request actions through dedicated gameplay resources, but ownership,
 - `RecordVehicleMaintenance(actor, vehicleId, payload)`
 - `IsVehicleMaintenanceDue(vehicleId)`
 - `BeginVehicleLockpick(actor, vehicleId)` / `BeginVehicleHotwire(actor, vehicleId)`
+- `ResolveVehicleTheftAttempt(actor, vehicleId, successful)`
+- `AdminSetVehicleStatus(actor, vehicleId, status, reason)`
 
 ## Persistence
 
@@ -47,3 +49,7 @@ Vehicle state snapshots are clamped server-side. Fuel, mileage, engine health, b
 ## Insurance, Maintenance And Tuning
 
 Insurance policies are persisted in `nexa_vehicle_insurance`. Maintenance history is stored as structured metadata for the foundation phase and exposes a due check based on mileage intervals. Tuning data is stored as server-owned JSON in `mods_json` so later mechanic gameplay can validate changes before they reach persisted state.
+
+## Theft And Admin Foundation
+
+The theft foundation records and resolves attempts only. It does not transfer ownership, grant keys or change persisted identity. Admin status changes are exposed through an audited export for later permission-gated admin tools.

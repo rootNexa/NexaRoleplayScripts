@@ -284,10 +284,12 @@ end
 
 function VehicleTheft.BeginLockpick(actor, vehicleId) local context = actorContext(actor, 'vehicle.theft.lockpick'); local id = normalizeId(vehicleId); theftAttempts[id] = { type = 'lockpick', actor_character_id = context.actor_character_id, started_at = now() }; emit(NEXA_VEHICLE_EVENTS.theftAttempted, { vehicle_id = id, type = 'lockpick' }); return ok({ vehicle_id = id, allowed = true }, 'Lockpick attempt recorded.') end
 function VehicleTheft.BeginHotwire(actor, vehicleId) local context = actorContext(actor, 'vehicle.theft.hotwire'); local id = normalizeId(vehicleId); theftAttempts[id] = { type = 'hotwire', actor_character_id = context.actor_character_id, started_at = now() }; emit(NEXA_VEHICLE_EVENTS.theftAttempted, { vehicle_id = id, type = 'hotwire' }); return ok({ vehicle_id = id, allowed = true }, 'Hotwire attempt recorded.') end
+function VehicleTheft.Resolve(actor, vehicleId, successful) local context = actorContext(actor, 'vehicle.theft.resolve'); local id = normalizeId(vehicleId); local attempt = theftAttempts[id]; if not attempt then return fail(NEXA_VEHICLE_ERRORS.notFound, 'Theft attempt not found.') end; theftAttempts[id] = nil; local result = ok({ vehicle_id = id, successful = successful == true, attempt = attempt }, 'Theft attempt resolved.'); audit('vehicle.theft.resolve', context, result, { vehicle_id = id, metadata = result.data }); return result end
 function VehicleTheft.GetStatus(vehicleId) return ok(theftAttempts[normalizeId(vehicleId)], 'Theft status loaded.') end
 
 function MarkVehicleImpounded(vehicleId, impoundId) NexaVehiclesDatabase.MarkImpounded(normalizeId(vehicleId), normalizeId(impoundId)); emit(NEXA_VEHICLE_EVENTS.impounded, { vehicle_id = normalizeId(vehicleId), impound_id = normalizeId(impoundId) }); return ok({ vehicle_id = normalizeId(vehicleId), impound_id = normalizeId(impoundId) }, 'Vehicle marked impounded.') end
 function SetVehicleGarage(vehicleId, garageId, status) NexaVehiclesDatabase.SetGarage(normalizeId(vehicleId), normalizeString(tostring(garageId or ''), 64), status or NEXA_VEHICLE_STATUS.stored); return ok({ vehicle_id = normalizeId(vehicleId), garage_id = garageId }, 'Vehicle garage updated.') end
+function AdminSetVehicleStatus(actor, vehicleId, status, reason) local context = actorContext(actor or { reason = reason }, 'vehicle.admin.status'); status = normalizeString(status, 32); local allowed = false; for _, value in pairs(NEXA_VEHICLE_STATUS) do if status == value then allowed = true end end; if not allowed then return fail(NEXA_VEHICLE_ERRORS.invalidState, 'Vehicle status is invalid.') end; local _, err = NexaVehiclesDatabase.SetStatus(normalizeId(vehicleId), status); if err then return fail(NEXA_VEHICLE_ERRORS.databaseError, 'Vehicle status could not be changed.', err) end; local result = ok({ vehicle_id = normalizeId(vehicleId), status = status }, 'Vehicle status changed.'); audit('vehicle.admin.status', context, result, { vehicle_id = normalizeId(vehicleId), metadata = { reason = context.reason } }); return result end
 
 function RegisterVehicleDefinition(...) return VehicleDefinitions.Register(...) end
 function GetVehicleDefinition(...) return VehicleDefinitions.Get(...) end
@@ -320,6 +322,7 @@ function GetVehicleMaintenanceHistory(...) return VehicleMaintenance.GetHistory(
 function IsVehicleMaintenanceDue(...) return VehicleMaintenance.IsDue(...) end
 function BeginVehicleLockpick(...) return VehicleTheft.BeginLockpick(...) end
 function BeginVehicleHotwire(...) return VehicleTheft.BeginHotwire(...) end
+function ResolveVehicleTheftAttempt(...) return VehicleTheft.Resolve(...) end
 function GetVehicleTheftStatus(...) return VehicleTheft.GetStatus(...) end
 
 AddEventHandler('onResourceStart', function(resourceName)
@@ -365,7 +368,9 @@ exports('GetVehicleMaintenanceHistory', GetVehicleMaintenanceHistory)
 exports('IsVehicleMaintenanceDue', IsVehicleMaintenanceDue)
 exports('BeginVehicleLockpick', BeginVehicleLockpick)
 exports('BeginVehicleHotwire', BeginVehicleHotwire)
+exports('ResolveVehicleTheftAttempt', ResolveVehicleTheftAttempt)
 exports('GetVehicleTheftStatus', GetVehicleTheftStatus)
+exports('AdminSetVehicleStatus', AdminSetVehicleStatus)
 exports('MarkVehicleImpounded', MarkVehicleImpounded)
 exports('SetVehicleGarage', SetVehicleGarage)
 exports('getStatus', function() return { resourceName = NEXA_VEHICLES.resourceName, version = NEXA_VEHICLES.version, migrated = migrated, spawnTokens = spawnTokens } end)
