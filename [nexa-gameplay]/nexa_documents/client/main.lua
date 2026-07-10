@@ -1,9 +1,22 @@
+local function awaitServerCallback(name, payload)
+    local waiter = promise.new()
+    local request = exports.nexa_api:TriggerServerCallback(name, payload or {}, function(response)
+        waiter:resolve(response)
+    end, 5000)
+
+    if type(request) == 'table' and request.ok == false then
+        return request
+    end
+
+    return Citizen.Await(waiter)
+end
+
 local function notify(response)
     if response == nil then
         return
     end
 
-    lib.notify({
+    exports.nexa_ui:notify({
         title = 'Dokumente',
         description = response.message or 'Vorgang abgeschlossen.',
         type = response.success and 'success' or 'error'
@@ -13,7 +26,7 @@ end
 RegisterNetEvent(NEXA_DOCUMENTS_EVENTS.requestResult, notify)
 
 RegisterNetEvent(NEXA_DOCUMENTS_EVENTS.requestOpenMenu, function()
-    lib.registerContext({
+    exports.nexa_ui:registerContext({
         id = NexaDocumentsClient.contextId,
         title = 'Dokumente',
         options = {
@@ -21,7 +34,7 @@ RegisterNetEvent(NEXA_DOCUMENTS_EVENTS.requestOpenMenu, function()
                 title = 'Dokumenttypen laden',
                 icon = 'file-text',
                 onSelect = function()
-                    local response = lib.callback.await('nexa:documents:cb:listTypes', false)
+                    local response = awaitServerCallback('nexa:documents:cb:listTypes', {})
                     notify(response)
                 end
             },
@@ -29,7 +42,7 @@ RegisterNetEvent(NEXA_DOCUMENTS_EVENTS.requestOpenMenu, function()
                 title = 'Dokument pruefen',
                 icon = 'shield-check',
                 onSelect = function()
-                    local input = lib.inputDialog('Dokument pruefen', {
+                    local input = exports.nexa_ui:inputDialog('Dokument pruefen', {
                         { type = 'input', label = 'Dokumentnummer', required = true }
                     })
 
@@ -37,7 +50,7 @@ RegisterNetEvent(NEXA_DOCUMENTS_EVENTS.requestOpenMenu, function()
                         return
                     end
 
-                    local response = lib.callback.await('nexa:documents:cb:validateDocument', false, {
+                    local response = awaitServerCallback('nexa:documents:cb:validateDocument', {
                         documentNumber = input[1]
                     })
 
@@ -47,5 +60,5 @@ RegisterNetEvent(NEXA_DOCUMENTS_EVENTS.requestOpenMenu, function()
         }
     })
 
-    lib.showContext(NexaDocumentsClient.contextId)
+    exports.nexa_ui:showContext(NexaDocumentsClient.contextId)
 end)

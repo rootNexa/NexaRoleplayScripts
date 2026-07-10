@@ -8,8 +8,7 @@ description 'Dokumentenverwaltung fuer Phase 4B'
 version '0.4.1'
 
 dependencies {
-    'ox_lib',
-    'ox_inventory',
+    'nexa_ui',
     'nexa_api',
     'nexa_identity',
     'nexa_security',
@@ -17,7 +16,6 @@ dependencies {
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
@@ -29,6 +27,7 @@ client_scripts {
 
 server_scripts {
     'config/server.lua',
+    'server/database.lua',
     'server/validators.lua',
     'server/callbacks.lua',
     'server/events.lua',

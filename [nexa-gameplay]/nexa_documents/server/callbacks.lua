@@ -14,7 +14,7 @@ local function checkRequest(source, eventName)
     return nil
 end
 
-lib.callback.register('nexa:documents:cb:listTypes', function(source)
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:listTypes', function(source)
     local rejected = checkRequest(source, 'nexa:documents:cb:listTypes')
 
     if rejected ~= nil then
@@ -24,7 +24,7 @@ lib.callback.register('nexa:documents:cb:listTypes', function(source)
     return exports.nexa_api:listDocumentTypes()
 end)
 
-lib.callback.register('nexa:documents:cb:issueDocument', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:issueDocument', function(source, payload)
     local rejected = checkRequest(source, 'nexa:documents:cb:issueDocument')
 
     if rejected ~= nil then
@@ -40,7 +40,7 @@ lib.callback.register('nexa:documents:cb:issueDocument', function(source, payloa
     return exports.nexa_api:issueDocument(source, payload)
 end)
 
-lib.callback.register('nexa:documents:cb:revokeDocument', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:revokeDocument', function(source, payload)
     local rejected = checkRequest(source, 'nexa:documents:cb:revokeDocument')
 
     if rejected ~= nil then
@@ -56,7 +56,7 @@ lib.callback.register('nexa:documents:cb:revokeDocument', function(source, paylo
     return exports.nexa_api:revokeDocument(source, payload)
 end)
 
-lib.callback.register('nexa:documents:cb:validateDocument', function(source, payload)
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:validateDocument', function(source, payload)
     local rejected = checkRequest(source, 'nexa:documents:cb:validateDocument')
 
     if rejected ~= nil then
@@ -70,4 +70,36 @@ lib.callback.register('nexa:documents:cb:validateDocument', function(source, pay
     end
 
     return exports.nexa_api:validateDocument(payload)
+end)
+
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:createDigitalDocument', function(source, payload)
+    local rejected = checkRequest(source, 'nexa:documents:cb:createDigitalDocument')
+
+    if rejected ~= nil then
+        return rejected
+    end
+
+    return CreateDigitalDocument(payload)
+end)
+
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:signDocument', function(source, payload)
+    local rejected = checkRequest(source, 'nexa:documents:cb:signDocument')
+
+    if rejected ~= nil then
+        return rejected
+    end
+
+    payload = type(payload) == 'table' and payload or {}
+    return SignDocument(payload.document_id, payload)
+end)
+
+exports.nexa_api:RegisterServerCallback('nexa:documents:cb:shareDocument', function(source, payload)
+    local rejected = checkRequest(source, 'nexa:documents:cb:shareDocument')
+
+    if rejected ~= nil then
+        return rejected
+    end
+
+    payload = type(payload) == 'table' and payload or {}
+    return ShareDocument(payload.document_id, payload)
 end)

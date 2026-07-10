@@ -4,8 +4,7 @@ Phase-4B-Resource fuer Dokumenttypen, Dokumentausstellung, Widerruf und Validier
 
 ## Abhaengigkeiten
 
-- ox_lib
-- ox_inventory
+- nexa_ui
 - nexa_api
 - nexa_identity
 - nexa_security
