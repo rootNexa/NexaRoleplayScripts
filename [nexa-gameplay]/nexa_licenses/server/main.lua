@@ -1,19 +1,25 @@
-local function getStatus()
-    return {
-        resourceName = NEXA_LICENSES.resourceName,
-        version = NEXA_LICENSES.version,
-        api = GetResourceState('nexa_api') == 'started'
-    }
-end
-
-AddEventHandler('onResourceStart', function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then
-        return
-    end
-
-    exports.nexa_logs:info(NEXA_LICENSES.resourceName, 'Lizenzresource gestartet.', {
-        version = NEXA_LICENSES.version
-    })
-end)
-
-exports('getStatus', getStatus)
+local migrated = false
+local function response(success, code, message, data, meta) return { ok = success == true, success = success == true, code = code or (success and 'OK' or NEXA_LICENSE_ERRORS.invalidInput), message = message or '', data = data, meta = meta, error = success == true and nil or { code = code, message = message } } end
+local function ok(data, message, meta) return response(true, 'OK', message or 'OK', data, meta) end
+local function fail(code, message, meta) return response(false, code, message or code, nil, meta) end
+local function encode(value) local good, encoded = pcall(json.encode, value or {}); return good and encoded or '{}' end
+local function normalizeId(value) local id = tonumber(value); return id and id > 0 and id % 1 == 0 and math.floor(id) or nil end
+local function getCore() if GetResourceState('nexa-core') ~= 'started' then return nil end; local good, core = pcall(function() return exports['nexa-core']:GetCoreObject() end); return good and core or nil end
+local function log(level, category, message, context) local core = getCore(); if core and core.Logger and core.Logger[level] then core.Logger[level](category, message, context); return end; print(('[%s] [%s] %s %s'):format(NEXA_LICENSES.resourceName, level, message, encode(context))) end
+local function emit(eventName, payload) local core = getCore(); if core and core.EventBus then core.EventBus.Emit(eventName, payload, { resource = NEXA_LICENSES.resourceName }) end end
+local function registerDefaults() for key, value in pairs(NEXA_LICENSE_TYPES) do NexaLicensesDatabase.UpsertType({ license_key = value, label = value, license_type = value, enabled = true, metadata = { foundation = true } }) end end
+function RegisterLicenseType(definition) definition = type(definition) == 'table' and definition or {}; if type(definition.license_key) ~= 'string' then return fail(NEXA_LICENSE_ERRORS.invalidInput, 'License type is invalid.') end; local id, err = NexaLicensesDatabase.UpsertType({ license_key = definition.license_key, label = definition.label or definition.license_key, license_type = definition.license_type or 'custom', enabled = definition.enabled ~= false, metadata = definition.metadata or {} }); return err and fail(NEXA_LICENSE_ERRORS.databaseError, 'License type could not be registered.', err) or ok({ license_type_id = id }, 'License type registered.') end
+function ListLicenseTypes() local rows, err = NexaLicensesDatabase.ListTypes(); return err and fail(NEXA_LICENSE_ERRORS.databaseError, 'License types could not be listed.', err) or ok(rows or {}, 'License types listed.') end
+function IssueLicense(characterId, licenseKey, payload) payload = type(payload) == 'table' and payload or {}; local id, err = NexaLicensesDatabase.InsertLicense({ character_id = normalizeId(characterId), license_key = licenseKey, status = payload.status or NexaLicensesConfig.defaultStatus, issued_by = normalizeId(payload.issued_by), metadata = payload.metadata or {} }); if err then return fail(NEXA_LICENSE_ERRORS.databaseError, 'License could not be issued.', err) end; NexaLicensesDatabase.InsertHistory({ character_id = normalizeId(characterId), license_key = licenseKey, action = 'issue', actor_character_id = normalizeId(payload.issued_by), reason = payload.reason, metadata = {} }); emit(NEXA_LICENSE_EVENTS.issued, { license_id = id, character_id = characterId, license_key = licenseKey }); return ok({ license_id = id }, 'License issued.') end
+function RevokeLicense(characterId, licenseKey, payload) payload = type(payload) == 'table' and payload or {}; NexaLicensesDatabase.RevokeLicense(normalizeId(characterId), licenseKey); NexaLicensesDatabase.InsertHistory({ character_id = normalizeId(characterId), license_key = licenseKey, action = 'revoke', actor_character_id = normalizeId(payload.actor_character_id), reason = payload.reason, metadata = {} }); emit(NEXA_LICENSE_EVENTS.revoked, { character_id = characterId, license_key = licenseKey }); return ok({ character_id = characterId, license_key = licenseKey }, 'License revoked.') end
+function ValidateLicense(characterId, licenseKey) local row, err = NexaLicensesDatabase.GetLicense(normalizeId(characterId), licenseKey); if err then return fail(NEXA_LICENSE_ERRORS.databaseError, 'License could not be validated.', err) end; emit(NEXA_LICENSE_EVENTS.validated, { character_id = characterId, license_key = licenseKey, valid = row ~= nil }); return ok({ valid = row ~= nil, license = row }, 'License validated.') end
+function GetLicenseHistory(characterId) local rows, err = NexaLicensesDatabase.GetHistory(normalizeId(characterId)); return err and fail(NEXA_LICENSE_ERRORS.databaseError, 'License history could not be listed.', err) or ok(rows or {}, 'License history listed.') end
+AddEventHandler('onResourceStart', function(resourceName) if resourceName ~= GetCurrentResourceName() then return end; if NexaLicensesConfig.autoMigrate then migrated = NexaLicensesDatabase.Migrate() == true end; registerDefaults(); log('Info', 'licenses.start', 'nexa_licenses started.', { migrated = migrated }) end)
+exports('RegisterLicenseType', RegisterLicenseType)
+exports('ListLicenseTypes', ListLicenseTypes)
+exports('IssueLicense', IssueLicense)
+exports('RevokeLicense', RevokeLicense)
+exports('ValidateLicense', ValidateLicense)
+exports('GetLicenseHistory', GetLicenseHistory)
+exports('getStatus', function() return { resourceName = NEXA_LICENSES.resourceName, version = NEXA_LICENSES.version, migrated = migrated } end)
+exports('getSchema', NexaLicensesDatabase.GetSchema)

@@ -4,33 +4,33 @@ lua54 'yes'
 
 name 'nexa_licenses'
 author 'Nexa Roleplay'
-description 'Lizenzverwaltung fuer Phase 4B'
-version '0.4.1'
+description 'Server-authoritative driving weapon hunting and business license foundation'
+version '0.5.0'
 
 dependencies {
-    'ox_lib',
-    'nexa_api',
-    'nexa_documents',
+    'nexa-core',
+    'nexa_characters',
     'nexa_permissions',
-    'nexa_security',
-    'nexa_logs'
+    'nexa_documents'
 }
 
 shared_scripts {
-    '@ox_lib/init.lua',
     'config/shared.lua',
     'shared/constants.lua'
 }
 
-client_scripts {
-    'config/client.lua',
-    'client/main.lua'
+server_scripts {
+    'server/database.lua',
+    'server/main.lua'
 }
 
-server_scripts {
-    'config/server.lua',
-    'server/validators.lua',
-    'server/callbacks.lua',
-    'server/events.lua',
-    'server/main.lua'
+server_exports {
+    'RegisterLicenseType',
+    'ListLicenseTypes',
+    'IssueLicense',
+    'RevokeLicense',
+    'ValidateLicense',
+    'GetLicenseHistory',
+    'getStatus',
+    'getSchema'
 }

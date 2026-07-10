@@ -1,3 +1,4 @@
 NexaLicensesConfig = {
-    maxReasonLength = 255
+    autoMigrate = true,
+    defaultStatus = 'active'
 }
