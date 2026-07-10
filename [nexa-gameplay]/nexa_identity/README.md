@@ -1,54 +1,91 @@
 # nexa_identity
 
-Phase-4A-Resource fuer Charakterverwaltung und RP-Identitaet.
+Serverseitige Account- und Verbindungsidentitaet fuer Nexa Roleplay.
 
 ## Zweck
 
+- Session zu Account aufloesen
+- Account erstellen oder laden
+- Identifier normalisieren und zuordnen
+- Accountstatus pruefen
+- gesperrte Accounts ablehnen
+- Multi-Account-Hinweise erfassen
+- Accountdaten cachen
+- Session mit Account-ID verbinden
+
+Nicht enthalten:
+
 - Charaktererstellung
 - Charakterauswahl
-- aktive Identitaet
-- Spawn-Pipeline nach Charakterauswahl
-- Soft-Delete-Lebenszyklus
+- Spawn
+- Kleidung
+- Inventar
+- Geld
+- Jobs
+- UI
 
 ## Abhaengigkeiten
 
-- `ox_lib`
-- `oxmysql`
-- `qbx_core`
-- `nexa_api`
-- `nexa_security`
-- `nexa_logs`
+- `nexa-core`
 
-## Callbacks
+Alle Datenbankzugriffe laufen ueber `exports['nexa-core']:GetCoreObject().Database`.
 
-- `nexa:identity:cb:listCharacters`
-- `nexa:identity:cb:createCharacter`
-- `nexa:identity:cb:selectCharacter`
-- `nexa:identity:cb:deleteCharacter`
-- `nexa:identity:cb:getActiveCharacter`
+## Accountstatus
 
-Alle Callbacks verwenden das Nexa-Standardformat `success`, `code`, `message`, `data`, `meta`, `audit_id`.
+- `active`
+- `suspended`
+- `banned`
+- `disabled`
+- `pending_review`
 
-## Events
+## Identifier
 
-- `nexa:identity:server:requestOpenManager`
-- `nexa:identity:server:requestCreateCharacter`
-- `nexa:identity:server:requestSelectCharacter`
-- `nexa:identity:server:requestDeleteCharacter`
-- `nexa:identity:client:openManager`
-- `nexa:identity:client:spawnPrepared`
+Unterstuetzt werden:
+
+- `license`
+- `license2`
+- `fivem`
+- `discord`
+- `steam`
+
+IP-Adressen werden nicht als Account-Identifier gespeichert. Hardware-IDs werden nicht verwendet.
+
+## Exports
+
+- `GetAccount(sourceOrAccountId)`
+- `GetAccountId(source)`
+- `GetAccountStatus(sourceOrAccountId)`
+- `IsAccountReady(source)`
+
+Mutierende Adminfunktionen werden nicht breit exportiert.
+
+## Interne Events
+
+- `nexa:internal:identity:resolving`
+- `nexa:internal:identity:ready`
+- `nexa:internal:identity:rejected`
+- `nexa:internal:identity:statusChanged`
 
 ## Datenbanktabellen
 
-Die Resource nutzt ausschliesslich vorhandene Tabellen:
+- `nexa_accounts`
+- `nexa_account_identifiers`
+- `nexa_account_status_history`
+- `nexa_account_review_signals`
 
-- `players`
-- `player_identifiers`
-- `characters`
-- `character_status`
-- `character_metadata`
-- `phone_numbers`
+Migrationen werden append-only ueber den Core-Migrationslayer registriert.
+
+## Multi-Accounting
+
+`nexa_identity` erfasst Signale, sperrt aber nicht hart nur anhand schwacher Hinweise.
+
+- gleiche License: stark
+- gleiche Discord/FiveM: stark
+- gleiche Steam: mittel
+- gleiche IP: wird nicht als permanenter Identifier verwendet
+
+Unsichere Faelle koennen `pending_review` erhalten. Identifier werden in Logs maskiert.
 
 ## Grenzen
 
-Nicht enthalten sind Dokumente, Lizenzen, Banking, Jobs, Businesses, Dispatch, Fahrzeuge, Housing, Polizei und EMS.
+Charaktere gehoeren in `nexa_characters`. Diese Resource verwaltet nur Account und Verbindungsidentitaet.
