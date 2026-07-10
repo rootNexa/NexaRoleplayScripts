@@ -1,7 +1,7 @@
 NexaCharacter = NexaCharacter or {}
 NexaCharacter.activeBySource = NexaCharacter.activeBySource or {}
 
-local CORE_RESOURCE = 'nexa-core'
+local CHARACTER_DOMAIN_RESOURCE = 'nexa_characters'
 local EVENTS = NEXA_CHARACTER_CONSTANTS.events
 
 local function log(level, message, context)
@@ -60,13 +60,13 @@ local function normalizeSource(source)
     return source
 end
 
-local function isCoreStarted()
-    return GetResourceState(CORE_RESOURCE) == 'started'
+local function isCharacterDomainStarted()
+    return GetResourceState(CHARACTER_DOMAIN_RESOURCE) == 'started'
 end
 
-local function callCore(name, ...)
-    if not isCoreStarted() then
-        return nil, 'CORE_UNAVAILABLE'
+local function callCharacterDomain(name, ...)
+    if not isCharacterDomainStarted() then
+        return nil, 'CHARACTER_DOMAIN_UNAVAILABLE'
     end
 
     local args = { ... }
@@ -80,25 +80,25 @@ local function callCore(name, ...)
         }
     end
 
-    log('info', 'Core export call entry.', {
+    log('info', 'Character domain export call entry.', {
         export = name,
         args = debugArgs
     })
 
     local okCall, result, err = pcall(function()
-        local coreExports = exports[CORE_RESOURCE]
-        return coreExports[name](coreExports, table.unpack(args))
+        local characterExports = exports[CHARACTER_DOMAIN_RESOURCE]
+        return characterExports[name](characterExports, table.unpack(args))
     end)
 
     if not okCall then
-        log('error', 'Core export call failed.', {
+        log('error', 'Character domain export call failed.', {
             export = name,
             error = result
         })
-        return nil, 'CORE_UNAVAILABLE'
+        return nil, 'CHARACTER_DOMAIN_UNAVAILABLE'
     end
 
-    log('info', 'Core export call return.', {
+    log('info', 'Character domain export call return.', {
         export = name,
         resultType = type(result),
         err = err,
@@ -108,7 +108,7 @@ local function callCore(name, ...)
     return result, err
 end
 
-local function normalizeCoreResult(action, result, err)
+local function normalizeDomainResult(action, result, err, dataKey)
     if type(result) == 'table' and type(result.ok) == 'boolean' then
         if result.ok then
             return result.data, nil, result
@@ -116,6 +116,20 @@ local function normalizeCoreResult(action, result, err)
 
         local errorPayload = type(result.error) == 'table' and result.error or {}
         return nil, errorPayload.code or err or 'UNKNOWN_ERROR', result
+    end
+
+    if type(result) == 'table' and type(result.success) == 'boolean' then
+        if result.success then
+            local data = result.data
+
+            if dataKey and type(data) == 'table' and data[dataKey] ~= nil then
+                data = data[dataKey]
+            end
+
+            return data, nil, result
+        end
+
+        return nil, result.code or err or 'UNKNOWN_ERROR', result
     end
 
     return result, err, {
@@ -168,8 +182,8 @@ function NexaCharacter.ListCharacters(source)
         return nil, 'INVALID_SOURCE'
     end
 
-    local result, err = callCore('ListCharacters', source)
-    local characters, normalizedErr, raw = normalizeCoreResult('ListCharacters', result, err)
+    local result, err = callCharacterDomain('ListCharacters', source)
+    local characters, normalizedErr, raw = normalizeDomainResult('ListCharacters', result, err, 'characters')
 
     log(normalizedErr and 'warn' or 'info', 'ListCharacters core export response.', {
         source = source,
@@ -202,8 +216,8 @@ function NexaCharacter.CreateCharacter(source, data)
         return nil, validationError
     end
 
-    local result, err = callCore('CreateCharacter', source, payload)
-    local character, normalizedErr = normalizeCoreResult('CreateCharacter', result, err)
+    local result, err = callCharacterDomain('CreateCharacter', source, payload)
+    local character, normalizedErr = normalizeDomainResult('CreateCharacter', result, err, 'character')
 
     return character, normalizedErr
 end
@@ -221,8 +235,8 @@ function NexaCharacter.SelectCharacter(source, characterId)
         return nil, 'INVALID_INPUT'
     end
 
-    local result, err = callCore('SelectCharacter', source, characterId)
-    local character, normalizedErr = normalizeCoreResult('SelectCharacter', result, err)
+    local result, err = callCharacterDomain('SelectCharacter', source, characterId)
+    local character, normalizedErr = normalizeDomainResult('SelectCharacter', result, err, 'character')
 
     if character then
         NexaCharacter.activeBySource[source] = character
@@ -238,8 +252,8 @@ function NexaCharacter.GetActiveCharacter(source)
         return nil, 'INVALID_INPUT'
     end
 
-    local result, err = callCore('GetCharacter', source)
-    local character, normalizedErr = normalizeCoreResult('GetCharacter', result, err)
+    local result, err = callCharacterDomain('GetActiveCharacter', source)
+    local character, normalizedErr = normalizeDomainResult('GetActiveCharacter', result, err, 'character')
 
     if character then
         NexaCharacter.activeBySource[source] = character
@@ -261,8 +275,8 @@ function NexaCharacter.UpdateCharacter(source, data)
         return nil, validationError
     end
 
-    local result, err = callCore('UpdateCharacter', source, payload)
-    local character, normalizedErr = normalizeCoreResult('UpdateCharacter', result, err)
+    local result, err = callCharacterDomain('UpdateCharacter', source, payload.characterId, payload)
+    local character, normalizedErr = normalizeDomainResult('UpdateCharacter', result, err, 'character')
 
     if character then
         NexaCharacter.activeBySource[source] = character
@@ -339,9 +353,9 @@ AddEventHandler('onResourceStart', function(resourceName)
         return
     end
 
-    local core = callCore('GetCoreObject')
+    local characterDomainStarted = isCharacterDomainStarted()
 
-    log(core and 'info' or 'error', core and 'nexa-character started.' or 'nexa-character started without core export access.', {
-        core = core and '<present>' or nil
+    log(characterDomainStarted and 'info' or 'error', characterDomainStarted and 'nexa-character started.' or 'nexa-character started without character domain access.', {
+        characterDomain = GetResourceState(CHARACTER_DOMAIN_RESOURCE)
     })
 end)

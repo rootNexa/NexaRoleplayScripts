@@ -6,6 +6,24 @@ local function debugSource(value)
     }
 end
 
+local deprecationWarnings = {}
+
+local function warnDeprecatedCharacterExport(name)
+    local invokingResource = GetInvokingResource() or 'unknown'
+    local key = ('%s:%s'):format(invokingResource, name)
+
+    if deprecationWarnings[key] then
+        return
+    end
+
+    deprecationWarnings[key] = true
+    Nexa.Log('warn', 'Deprecated Core character export used.', {
+        export = name,
+        invokingResource = invokingResource,
+        replacement = 'nexa_characters'
+    })
+end
+
 local function logExport(name, source, normalizedSource)
     Nexa.Log('info', 'Core export entry.', {
         export = name,
@@ -30,6 +48,7 @@ function GetPlayer(source)
 end
 
 function GetCharacter(source)
+    warnDeprecatedCharacterExport('GetCharacter')
     local ready = Nexa.Lifecycle.RequireReady('export:GetCharacter')
 
     if not ready then
@@ -41,6 +60,7 @@ function GetCharacter(source)
 end
 
 function ListCharacters(source)
+    warnDeprecatedCharacterExport('ListCharacters')
     local ready, readyErr = Nexa.Lifecycle.RequireReady('export:ListCharacters')
 
     if not ready then
@@ -81,6 +101,7 @@ function GetIdentifier(source)
 end
 
 function CreateCharacter(source, data)
+    warnDeprecatedCharacterExport('CreateCharacter')
     local ready, readyErr = Nexa.Lifecycle.RequireReady('export:CreateCharacter')
 
     if not ready then
@@ -99,6 +120,7 @@ function CreateCharacter(source, data)
 end
 
 function SelectCharacter(source, characterId)
+    warnDeprecatedCharacterExport('SelectCharacter')
     local ready, readyErr = Nexa.Lifecycle.RequireReady('export:SelectCharacter')
 
     if not ready then
@@ -118,6 +140,7 @@ function SelectCharacter(source, characterId)
 end
 
 function UpdateCharacter(source, data)
+    warnDeprecatedCharacterExport('UpdateCharacter')
     local ready, readyErr = Nexa.Lifecycle.RequireReady('export:UpdateCharacter')
 
     if not ready then

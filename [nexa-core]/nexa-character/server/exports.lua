@@ -6,7 +6,8 @@ local errorMessages = {
     CHARACTER_LIMIT_REACHED = 'Character limit reached.',
     DATABASE_ERROR = 'Character data could not be saved.',
     NOT_FOUND = 'Character was not found.',
-    CORE_UNAVAILABLE = 'Core export is unavailable.'
+    CORE_UNAVAILABLE = 'Core export is unavailable.',
+    CHARACTER_DOMAIN_UNAVAILABLE = 'Character domain is unavailable.'
 }
 
 local function exportResponse(data, err, details)

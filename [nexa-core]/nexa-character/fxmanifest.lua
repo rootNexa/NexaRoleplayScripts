@@ -7,7 +7,10 @@ author 'Nexa Roleplay'
 description 'Character foundation layer for Nexa Framework'
 version '0.1.0'
 
-dependency 'nexa-core'
+dependencies {
+    'nexa-core',
+    'nexa_characters'
+}
 
 shared_scripts {
     'shared/constants.lua',

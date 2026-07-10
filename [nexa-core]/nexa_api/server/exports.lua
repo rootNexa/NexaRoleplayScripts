@@ -127,6 +127,16 @@ function NexaApi.GetCharacter(source)
         return NexaApiResponse.fail(NexaApiConstants.errors.invalidInput, 'Source is invalid.')
     end
 
+    if resourceStarted('nexa_characters') then
+        local ok, result = pcall(function()
+            return exports['nexa_characters']:GetActiveCharacter(source)
+        end)
+
+        if ok then
+            return normalizeExternalResponse(result)
+        end
+    end
+
     if not resourceStarted('nexa-core') then
         return NexaApiResponse.fail(NexaApiConstants.errors.notFound, 'nexa-core is not started.')
     end
