@@ -48,6 +48,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\validate-core-cache.
 
 Diese Tests sind nicht vollstaendig lokal automatisierbar, weil sie eine laufende FiveM/FXServer-Instanz, MariaDB und `oxmysql` brauchen.
 
+Fuer reproduzierbare Runtime-Abnahmen gibt es zusaetzlich den manuellen Harness:
+
+```text
+ensure nexa-core-runtime-tests
+nexa_test_core_runtime all
+```
+
+Die Resource liegt unter `[nexa-tests]/nexa-core-runtime-tests` und wird nicht automatisch in `server/foundation.dev.cfg` gestartet. Details stehen in [core-runtime-validation.md](core-runtime-validation.md).
+
 ### Starttest
 
 1. `ensure oxmysql`
@@ -126,3 +135,5 @@ Pruefen:
 - `UpdateCharacter`
 
 Exports duerfen vor Core-Ready keine falschen produktiven Antworten liefern.
+
+Mutierende Character-Exports werden im automatischen Runtime-Harness bewusst nicht ausgefuehrt. Sie gehoeren fachlich spaeter in eine Character-/Identity-Resource und duerfen erst in einer isolierten Testdatenbank mit echtem Testspieler validiert werden. Die Bewertung steht in [core-domain-boundary-review.md](core-domain-boundary-review.md).

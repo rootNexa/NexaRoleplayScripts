@@ -54,6 +54,7 @@ Invoke-CoreValidation 'validate-core-modules.ps1'
 Invoke-CoreValidation 'validate-core-permissions.ps1'
 Invoke-CoreValidation 'validate-core-sessions.ps1'
 Invoke-CoreValidation 'validate-core-cache.ps1'
+Invoke-CoreValidation 'validate-core-runtime-harness.ps1'
 
 Assert-NoMatch 'QBCore|qb-core|qbcore|qbx|Qbox|es_extended|ESX|ox_lib|lib\.' 'Forbidden framework or ox_lib reference found in nexa-core.' @(
     'README.md:',

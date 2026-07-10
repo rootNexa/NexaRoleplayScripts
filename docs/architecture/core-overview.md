@@ -102,9 +102,13 @@ Das Session-Modell ist von Account und Charakter getrennt. Details stehen in `do
 
 Das Cache-Modell ist eine nicht persistente Runtime-Schicht. Details stehen in `docs/architecture/core-cache.md`.
 
+Die kontrollierte FXServer-Runtime-Abnahme ist in `docs/architecture/core-runtime-validation.md` dokumentiert. Die aktuelle Domain-Grenze der Core-Exports, insbesondere der Character-Exports, steht in `docs/architecture/core-domain-boundary-review.md`.
+
 Kapitel-01-Qualitaet, Testanleitung, Betrieb und Troubleshooting stehen in:
 
 - `docs/architecture/core-chapter01-validation.md`
+- `docs/architecture/core-runtime-validation.md`
+- `docs/architecture/core-domain-boundary-review.md`
 - `docs/architecture/core-testing.md`
 - `docs/architecture/core-operations.md`
 - `docs/architecture/core-troubleshooting.md`

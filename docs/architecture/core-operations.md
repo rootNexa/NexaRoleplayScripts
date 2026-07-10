@@ -67,6 +67,19 @@ Die Ausgabe enthaelt:
 - Player Count
 - Session Count
 
+## Runtime-Abnahme
+
+Fuer eine manuelle FXServer-Abnahme kann nach `nexa-core` die Testresource gestartet werden:
+
+```text
+ensure nexa-core-runtime-tests
+nexa_test_core_runtime all
+```
+
+Die Resource ist nicht fuer Production gedacht und wird nicht dauerhaft in der Startreihenfolge eingetragen. Spieler duerfen den Command nur mit ACE `nexa.test.core_runtime` ausfuehren; die Serverkonsole darf ihn direkt ausfuehren.
+
+Erwartet wird `fail = 0` in der Summary. `skip` bedeutet nicht bestanden, sondern markiert explizit dokumentierte Faelle wie echten Resource-Restart, gestopptes `oxmysql`, nicht erreichbare Datenbank oder Client-Callback-Roundtrip.
+
 ## Logs
 
 Alle Core-Logs sollen ueber `Nexa.Logger` oder `Nexa.Log` laufen. Der Console-Adapter schreibt strukturierte Eintraege. Sensitive Daten werden maskiert.

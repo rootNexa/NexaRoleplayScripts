@@ -17,6 +17,13 @@ Validierung:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\validate-core-foundation.ps1
 ```
 
+In einer echten FXServer-Instanz:
+
+```text
+ensure nexa-core-runtime-tests
+nexa_test_core_runtime core_readiness
+```
+
 ## `Could not find dependency oxmysql`
 
 `oxmysql` fehlt oder wird nach `nexa-core` gestartet. Startreihenfolge korrigieren:
@@ -73,6 +80,14 @@ Pruefen:
 - Spieler ist disconnected.
 - Source-Bindung der Response passt.
 
+Runtime-Harness:
+
+```text
+nexa_test_core_runtime callbacks_runtime
+```
+
+Der Harness prueft interne Callback-Pfade. Ein echter Server-zu-Client-Timeout braucht einen verbundenen Testclient und bleibt ein manueller Runtime-Test.
+
 ## EventBus Listener blockiert
 
 Fehler in Listenern werden geloggt. Bei `failFast` kann ein Event bewusst abbrechen. Rekursive Events werden durch das Depth-Limit blockiert.
@@ -84,6 +99,23 @@ Pruefen:
 - Wurde nach einer Schreiboperation `Cache.Delete` oder `Cache.Clear` aufgerufen?
 - Ist ein passendes `ttlMs` gesetzt?
 - Wird der richtige Namespace verwendet?
+
+Runtime-Harness:
+
+```text
+nexa_test_core_runtime cache_runtime
+```
+
+Der Harness verwendet nur den Namespace `runtime_tests`.
+
+## Runtime-Harness startet nicht
+
+Pruefen:
+
+- Wurde `nexa-core` vorher gestartet?
+- Ist die Resource `[nexa-tests]/nexa-core-runtime-tests` im FXServer Resource-Pfad sichtbar?
+- Wird der Command aus der Konsole oder von einem Spieler mit ACE `nexa.test.core_runtime` ausgefuehrt?
+- Wurde die Resource versehentlich in Production ensured? Das ist nicht vorgesehen.
 
 ## Keine Logs sichtbar
 
