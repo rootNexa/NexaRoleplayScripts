@@ -97,11 +97,20 @@ function NexaCharacter.Validation.ValidateCreate(data)
         return nil, 'INVALID_INPUT'
     end
 
+    local height = tonumber(data.height)
+    local weight = tonumber(data.weight)
+
+    if not height or not weight then
+        return nil, 'INVALID_INPUT'
+    end
+
     return {
         firstName = firstName,
         lastName = lastName,
         birthdate = birthdate,
-        gender = gender
+        gender = gender,
+        height = math.floor(height),
+        weight = math.floor(weight)
     }, nil
 end
 

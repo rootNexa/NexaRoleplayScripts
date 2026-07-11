@@ -27,3 +27,7 @@ function TriggerServerCallback(...)
     local name, payload, cb, timeoutMs = normalizeExportArgs(...)
     return NexaApiClient.Callbacks.TriggerServerCallback(name, payload, cb, timeoutMs)
 end
+
+exports('GetApi', GetApi)
+exports('RegisterClientCallback', RegisterClientCallback)
+exports('TriggerServerCallback', TriggerServerCallback)

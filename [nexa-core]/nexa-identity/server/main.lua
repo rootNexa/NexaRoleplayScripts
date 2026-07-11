@@ -207,8 +207,16 @@ local function validateCreatePayload(data)
     local lastName = validateName(data.lastName or data.last_name)
     local birthdate = validateBirthdate(data.birthdate)
     local gender = validateGender(data.gender)
+    local height = tonumber(data.height)
+    local weight = tonumber(data.weight)
 
-    if not firstName or not lastName or not birthdate or not gender then
+    if not firstName
+        or not lastName
+        or not birthdate
+        or not gender
+        or not height
+        or not weight
+    then
         return nil, 'INVALID_INPUT'
     end
 
@@ -216,7 +224,9 @@ local function validateCreatePayload(data)
         first_name = firstName,
         last_name = lastName,
         birthdate = birthdate,
-        gender = gender
+        gender = gender,
+        height = math.floor(height),
+        weight = math.floor(weight)
     }, nil
 end
 
@@ -323,6 +333,14 @@ RegisterNetEvent(EVENTS.server.createCharacter, function(data)
         sendError(source, validationError, errorMessages[validationError] or 'Character data is invalid.')
         return
     end
+
+    log('debug', 'CreateCharacter normalized payload.', {
+        source = source,
+        height = payload and payload.height or nil,
+        heightType = payload and type(payload.height) or nil,
+        weight = payload and payload.weight or nil,
+        weightType = payload and type(payload.weight) or nil
+    })
 
     local createResult, createErr = callExport(CHARACTER_RESOURCE, 'CreateCharacter', source, payload)
     local createResponse = normalizeExportResult('CreateCharacter', createResult, createErr)

@@ -174,7 +174,9 @@ createForm.addEventListener('submit', (event) => {
         firstName: formData.get('firstName'),
         lastName: formData.get('lastName'),
         birthdate: formData.get('birthdate'),
-        gender: formData.get('gender') || 'unknown'
+        gender: formData.get('gender') || 'unknown',
+        height: Number(formData.get('height')),
+        weight: Number(formData.get('weight'))
     }).then((response) => {
         console.log('[nexa-identity] createCharacter NUI response', response);
         if (response && response.ok === false) {

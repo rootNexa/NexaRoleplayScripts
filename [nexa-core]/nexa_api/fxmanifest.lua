@@ -54,7 +54,7 @@ server_exports {
     'GetIdentifier'
 }
 
-client_exports {
+exports {
     'GetApi',
     'RegisterClientCallback',
     'TriggerServerCallback'
