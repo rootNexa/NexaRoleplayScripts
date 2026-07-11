@@ -1,0 +1,1329 @@
+﻿[
+    {
+        "resource":  "nexa-core-test",
+        "manifest":  "[standalone]\\nexa-core-test\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-character-test",
+        "manifest":  "[standalone]\\nexa-character-test\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa-character"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_qbox_compat",
+        "manifest":  "[compat]\\nexa_qbox_compat\\fxmanifest.lua",
+        "dependencies":  [
+                             "oxmysql",
+                             "ox_lib"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "oxmysql",
+        "manifest":  "[ox]\\oxmysql\\fxmanifest.lua",
+        "dependencies":  [
+                             "/server:12913"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_vehicles",
+        "manifest":  "[nexa-gameplay]\\nexa_vehicles\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_ui_components",
+        "manifest":  "[nexa-ui]\\nexa_ui_components\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_theme"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_vehiclekeys",
+        "manifest":  "[nexa-gameplay]\\nexa_vehiclekeys\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_vehicles",
+                             "nexa_characters",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_zones",
+        "manifest":  "[nexa-world]\\nexa_zones\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_items",
+        "manifest":  "[nexa-gameplay]\\nexa_items\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_permissions",
+                             "nexa_api",
+                             "nexa_ui"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "chat",
+        "manifest":  "[cfx]\\[gameplay]\\chat\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_worldstates",
+        "manifest":  "[nexa-world]\\nexa_worldstates\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "spawnmanager",
+        "manifest":  "[cfx]\\[managers]\\spawnmanager\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_shops",
+        "manifest":  "[nexa-gameplay]\\nexa_shops\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_economy",
+                             "nexa_organizations",
+                             "nexa_jobs",
+                             "nexa_properties"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_inventory",
+        "manifest":  "[nexa-gameplay]\\nexa_inventory\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_identity",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_api",
+                             "nexa_items"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_npcs",
+        "manifest":  "[nexa-world]\\nexa_npcs\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_ui",
+        "manifest":  "[nexa-ui]\\nexa_ui\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_config",
+                             "nexa_locales"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_radio",
+        "manifest":  "[nexa-gameplay]\\nexa_radio\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_api",
+                             "nexa_dispatch"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_theme",
+        "manifest":  "[nexa-ui]\\nexa_theme\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "mapmanager",
+        "manifest":  "[cfx]\\[managers]\\mapmanager\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_property_security",
+        "manifest":  "[nexa-gameplay]\\nexa_property_security\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_properties",
+                             "nexa_propertykeys",
+                             "nexa_inventory"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "hardcap",
+        "manifest":  "[cfx]\\[system]\\hardcap\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_maps",
+        "manifest":  "[nexa-world]\\nexa_maps\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_tablet",
+        "manifest":  "[nexa-ui]\\nexa_tablet\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_permissions"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_crafting",
+        "manifest":  "[nexa-gameplay]\\nexa_crafting\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_organizations",
+                             "nexa_jobs",
+                             "nexa_properties"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_property_interiors",
+        "manifest":  "[nexa-gameplay]\\nexa_property_interiors\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_properties",
+                             "nexa_playerstate"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_identity",
+        "manifest":  "[nexa-gameplay]\\nexa_identity\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_garages",
+        "manifest":  "[nexa-gameplay]\\nexa_garages\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_vehicles",
+                             "nexa_vehiclekeys",
+                             "nexa_organizations",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_phone",
+        "manifest":  "[nexa-ui]\\nexa_phone\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_impound",
+        "manifest":  "[nexa-gameplay]\\nexa_impound\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_vehicles",
+                             "nexa_billing",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_interiors",
+        "manifest":  "[nexa-world]\\nexa_interiors\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_characters",
+        "manifest":  "[nexa-gameplay]\\nexa_characters\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_identity"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_mdt_ui",
+        "manifest":  "[nexa-ui]\\nexa_mdt_ui\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_theme",
+                             "nexa_ui_components",
+                             "nexa_mdt"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_ems",
+        "manifest":  "[nexa-gameplay]\\nexa_ems\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_api",
+                             "nexa_medical"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_blips",
+        "manifest":  "[nexa-world]\\nexa_blips\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_licenses",
+        "manifest":  "[nexa-gameplay]\\nexa_licenses\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_permissions",
+                             "nexa_documents"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_propertykeys",
+        "manifest":  "[nexa-gameplay]\\nexa_propertykeys\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_properties",
+                             "nexa_characters",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_business",
+        "manifest":  "[nexa-gameplay]\\nexa_business\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_jobs_core",
+                             "nexa_api",
+                             "nexa_audit",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_economy",
+        "manifest":  "[nexa-gameplay]\\nexa_economy\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_api",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_items",
+                             "nexa_inventory"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_mdt",
+        "manifest":  "[nexa-ui]\\nexa_mdt\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_legaljobs",
+        "manifest":  "[nexa-gameplay]\\nexa_legaljobs\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_jobframework",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_economy",
+                             "nexa_vehicles",
+                             "nexa_garages",
+                             "nexa_crafting"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_documents",
+        "manifest":  "[nexa-gameplay]\\nexa_documents\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_identity",
+                             "nexa_security",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_properties",
+        "manifest":  "[nexa-gameplay]\\nexa_properties\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_permissions",
+                             "nexa_playerstate",
+                             "nexa_economy",
+                             "nexa_inventory",
+                             "nexa_garages"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_payroll",
+        "manifest":  "[nexa-gameplay]\\nexa_payroll\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_jobs",
+                             "nexa_organizations",
+                             "nexa_economy",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_vehiclekeys",
+        "manifest":  "[nexa-vehicles]\\nexa_vehiclekeys\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_jobs_core",
+        "manifest":  "[nexa-gameplay]\\nexa_jobs_core\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "qbx_core",
+                             "nexa_api",
+                             "nexa_audit",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_hud",
+        "manifest":  "[nexa-ui]\\nexa_hud\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_police",
+        "manifest":  "[nexa-gameplay]\\nexa_police\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_jobs",
+                             "nexa_organizations",
+                             "nexa_inventory",
+                             "nexa_vehicles",
+                             "nexa_vehiclekeys",
+                             "nexa_evidence",
+                             "nexa_dispatch"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_billing",
+        "manifest":  "[nexa-gameplay]\\nexa_billing\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_organizations",
+                             "nexa_economy",
+                             "nexa_permissions",
+                             "nexa_playerstate"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_playerstate",
+        "manifest":  "[nexa-gameplay]\\nexa_playerstate\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_identity",
+                             "nexa_characters"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_dispatch_ui",
+        "manifest":  "[nexa-ui]\\nexa_dispatch_ui\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_theme",
+                             "nexa_ui_components",
+                             "nexa_dispatch"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_jobscreator",
+        "manifest":  "[nexa-gameplay]\\nexa_jobscreator\\fxmanifest.lua",
+        "dependencies":  [
+                             "oxmysql",
+                             "nexa_api",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_banking",
+        "manifest":  "[nexa-gameplay]\\nexa_banking\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_audit",
+                             "nexa_security",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_banking_ui",
+        "manifest":  "[nexa-ui]\\nexa_banking_ui\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_theme",
+                             "nexa_ui_components",
+                             "nexa_banking"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_dispatch",
+        "manifest":  "[nexa-gameplay]\\nexa_dispatch\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_jobs",
+                             "nexa_organizations"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_jobs",
+        "manifest":  "[nexa-gameplay]\\nexa_jobs\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_organizations",
+                             "nexa_permissions"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-vehicles-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-vehicles-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_vehicles",
+                             "nexa_vehiclekeys",
+                             "nexa_garages",
+                             "nexa_impound"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_vehicledealer",
+        "manifest":  "[nexa-vehicles]\\nexa_vehicledealer\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs",
+                             "nexa_garage",
+                             "nexa_vehiclekeys"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-shops-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-shops-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_shops"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-spawn",
+        "manifest":  "[nexa-gameplay]\\nexa-spawn\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-properties-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-properties-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_properties",
+                             "nexa_propertykeys",
+                             "nexa_property_interiors",
+                             "nexa_property_security"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_organizations",
+        "manifest":  "[nexa-gameplay]\\nexa_organizations\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_identity",
+                             "nexa_characters",
+                             "nexa_permissions",
+                             "nexa_economy",
+                             "nexa_inventory"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_impound",
+        "manifest":  "[nexa-vehicles]\\nexa_impound\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_jobframework",
+        "manifest":  "[nexa-gameplay]\\nexa_jobframework\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_economy",
+                             "nexa_organizations",
+                             "nexa_jobs",
+                             "nexa_vehicles",
+                             "nexa_garages",
+                             "nexa_properties",
+                             "nexa_crafting"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-playerstate-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-playerstate-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_playerstate"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-payroll-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-payroll-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_payroll"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_factions_core",
+        "manifest":  "[nexa-factions]\\nexa_factions_core\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_api",
+                             "nexa_ui",
+                             "nexa_featureflags",
+                             "nexa_audit",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_medical",
+        "manifest":  "[nexa-gameplay]\\nexa_medical\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_jobs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_garage",
+        "manifest":  "[nexa-vehicles]\\nexa_garage\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-billing-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-billing-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_billing"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-economy-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-economy-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_economy"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-organizations-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-organizations-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_organizations",
+                             "nexa_jobs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-items-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-items-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_items"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-beta-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-beta-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_beta"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_robberies",
+        "manifest":  "[nexa-criminal]\\nexa_robberies\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_crime",
+                             "nexa_inventory",
+                             "nexa_items",
+                             "nexa_economy",
+                             "nexa_properties",
+                             "nexa_vehiclekeys"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-crime-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-crime-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_crime",
+                             "nexa_robberies",
+                             "nexa_drugs",
+                             "nexa_blackmarket"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-admin-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-admin-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_admin"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-jobframework-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-jobframework-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_jobframework",
+                             "nexa_legaljobs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-inventory-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-inventory-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_inventory"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_fuel",
+        "manifest":  "[nexa-vehicles]\\nexa_fuel\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-core-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-core-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-crafting-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-crafting-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_crafting"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-emergency-runtime-tests",
+        "manifest":  "[nexa-tests]\\nexa-emergency-runtime-tests\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_medical",
+                             "nexa_ems",
+                             "nexa_police",
+                             "nexa_dispatch",
+                             "nexa_evidence",
+                             "nexa_licenses"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_crime",
+        "manifest":  "[nexa-criminal]\\nexa_crime\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters",
+                             "nexa_playerstate",
+                             "nexa_permissions",
+                             "nexa_organizations",
+                             "nexa_jobs",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_economy",
+                             "nexa_vehicles",
+                             "nexa_properties",
+                             "nexa_jobframework"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_moneywash",
+        "manifest":  "[nexa-criminal]\\nexa_moneywash\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_illegal_core",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_featureflags",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_security",
+        "manifest":  "[nexa-core]\\nexa_security\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_config",
+                             "nexa_logs",
+                             "nexa_audit"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_devtools",
+        "manifest":  "[nexa-admin]\\nexa_devtools\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_config",
+                             "nexa_logs",
+                             "nexa_audit",
+                             "nexa_api"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_blackmarket",
+        "manifest":  "[nexa-criminal]\\nexa_blackmarket\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_crime",
+                             "nexa_shops",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_economy"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_furniture",
+        "manifest":  "[nexa-housing]\\nexa_furniture\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_chopshop",
+        "manifest":  "[nexa-criminal]\\nexa_chopshop\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_illegal_core",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_featureflags",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_drugs",
+        "manifest":  "[nexa-criminal]\\nexa_drugs\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_crime",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_crafting",
+                             "nexa_properties"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_admin_ui",
+        "manifest":  "[nexa-admin]\\nexa_admin_ui\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_ui",
+                             "nexa_api",
+                             "nexa_beta"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_illegal_core",
+        "manifest":  "[nexa-criminal]\\nexa_illegal_core\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_featureflags",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_admin",
+        "manifest":  "[nexa-admin]\\nexa_admin\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_identity",
+                             "nexa_characters",
+                             "nexa_permissions",
+                             "nexa_api",
+                             "nexa_playerstate"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_permissions",
+        "manifest":  "[nexa-core]\\nexa_permissions\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_identity"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-lib",
+        "manifest":  "[nexa-core]\\nexa-lib\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_api",
+        "manifest":  "[nexa-core]\\nexa_api\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-lib",
+                             "nexa-core"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-core",
+        "manifest":  "[nexa-core]\\nexa-core\\fxmanifest.lua",
+        "dependencies":  [
+                             "oxmysql"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-identity",
+        "manifest":  "[nexa-core]\\nexa-identity\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa-character"
+                         ],
+        "nui":  true,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_evidence",
+        "manifest":  "[nexa-criminal]\\nexa_evidence\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_items",
+                             "nexa_inventory",
+                             "nexa_crime"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_anticheat",
+        "manifest":  "[nexa-core]\\nexa_anticheat\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "oxmysql",
+                             "nexa_config",
+                             "nexa_featureflags",
+                             "nexa_security",
+                             "nexa_permissions",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_bootstrap",
+        "manifest":  "[nexa-core]\\nexa_bootstrap\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "oxmysql",
+                             "qbx_core",
+                             "nexa_config",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_beta",
+        "manifest":  "[nexa-core]\\nexa_beta\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_api"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa-character",
+        "manifest":  "[nexa-core]\\nexa-character\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa-core",
+                             "nexa_characters"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_audit",
+        "manifest":  "[nexa-core]\\nexa_audit\\fxmanifest.lua",
+        "dependencies":  [
+                             "oxmysql",
+                             "nexa_config"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_logs",
+        "manifest":  "[nexa-core]\\nexa_logs\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_config",
+                             "nexa_locales",
+                             "nexa_audit"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_housing",
+        "manifest":  "[nexa-housing]\\nexa_housing\\fxmanifest.lua",
+        "dependencies":  [
+                             "ox_lib",
+                             "ox_inventory",
+                             "nexa_api",
+                             "nexa_security",
+                             "nexa_audit",
+                             "nexa_logs"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_featureflags",
+        "manifest":  "[nexa-core]\\nexa_featureflags\\fxmanifest.lua",
+        "dependencies":  [
+                             "oxmysql",
+                             "nexa_config"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_locales",
+        "manifest":  "[nexa-core]\\nexa_locales\\fxmanifest.lua",
+        "dependencies":  [
+                             "nexa_config"
+                         ],
+        "nui":  false,
+        "database_access":  false
+    },
+    {
+        "resource":  "nexa_config",
+        "manifest":  "[nexa-core]\\nexa_config\\fxmanifest.lua",
+        "dependencies":  [
+
+                         ],
+        "nui":  false,
+        "database_access":  false
+    }
+]

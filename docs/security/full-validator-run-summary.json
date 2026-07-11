@@ -1,0 +1,472 @@
+﻿{
+    "total":  116,
+    "passed":  111,
+    "failed":  5,
+    "duration_seconds":  58.29,
+    "results":  [
+                    {
+                        "Name":  "validate-admin-actions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-admin-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-admin-roles.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-admin-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-admin-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-billing-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-billing-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-billing-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-blackmarket-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-commerce-legacy-callers.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-cache.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-callbacks.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-config.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-database.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-eventbus.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-lifecycle.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-logger.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-modules.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-permissions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-core-sessions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crafting-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crafting-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crafting-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crafting-transactions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crime-challenges.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crime-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crime-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-crime-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-dispatch-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-drugs-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-drugs-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-economy-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-economy-ledger.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-economy-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-economy-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-economy-transactions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-emergency-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-ems-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-evidence-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-client-trust.ps1",
+                        "ExitCode":  1
+                    },
+                    {
+                        "Name":  "validate-full-dupe-risks.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-event-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-export-usage.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-nui-security.ps1",
+                        "ExitCode":  1
+                    },
+                    {
+                        "Name":  "validate-full-repository-syntax.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-resource-manifests.ps1",
+                        "ExitCode":  1
+                    },
+                    {
+                        "Name":  "validate-full-restart-cleanup.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-secrets.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-full-security-audit.ps1",
+                        "ExitCode":  1
+                    },
+                    {
+                        "Name":  "validate-full-sql-security.ps1",
+                        "ExitCode":  1
+                    },
+                    {
+                        "Name":  "validate-garages.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-gp17-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-gp17-nui.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-gp18-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-gp18-ui.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-identity-character.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-inventory-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-inventory-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-inventory-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-inventory-transactions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-item-actions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-item-assets.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-items-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-items-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-items-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-jobframework-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-jobframework-progress.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-jobframework-rewards.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-jobframework-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-jobframework-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-jobs-duty.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-legaljobs.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-licenses-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-medical-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-moneylaundering.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-organization-creator.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-organizations-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-organizations-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-organizations-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-payroll-calculation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-payroll-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-payroll-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-payroll-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-permission-audit.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-permissions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-playerstate-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-playerstate-lifecycle.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-playerstate-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-playerstate-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-police-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-properties-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-properties-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-properties-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-property-interiors.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-property-keys.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-property-leases.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-property-ownership.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-property-security-system.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-property-storage.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-resource-dependency-graph.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-robberies-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-robberies-loot.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-shop-deliveries.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-shops-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-shops-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-shops-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-shop-transactions.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicle-impound.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicle-keys.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicles-foundation.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicle-spawn.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicles-runtime-harness.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicles-security.ps1",
+                        "ExitCode":  0
+                    },
+                    {
+                        "Name":  "validate-vehicle-state.ps1",
+                        "ExitCode":  0
+                    }
+                ]
+}
