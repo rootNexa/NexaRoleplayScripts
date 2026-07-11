@@ -385,10 +385,13 @@ function Nexa.Database.Transaction(queries, options)
                     end
 
                     completed = true
-                    pending:resolve({
+
+                    local timeoutResponse = {
                         timeout = true
-                    })
-                })
+                    }
+
+                    pending:resolve(timeoutResponse)
+                end)
             end
 
             MySQL.transaction(normalizedQueries, function(success)
@@ -397,9 +400,12 @@ function Nexa.Database.Transaction(queries, options)
                 end
 
                 completed = true
-                pending:resolve({
+
+                local transactionResponse = {
                     success = success
-                })
+                }
+
+                pending:resolve(transactionResponse)
             end)
 
             local response = Citizen.Await(pending)

@@ -43,7 +43,7 @@ NexaItemsConfig = {
         item = true,
         inventory = true,
         money = true,
-        nil = true,
+        ['nil'] = true,
         null = true
     },
     allowedAssetMimeTypes = {

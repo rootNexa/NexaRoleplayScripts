@@ -34,6 +34,19 @@ local function isValidCallbackName(name)
     return type(name) == 'string' and name:match(CALLBACK_NAME_PATTERN) ~= nil
 end
 
+local function isCallable(value)
+    if type(value) == 'function' then
+        return true
+    end
+
+    if type(value) ~= 'table' and type(value) ~= 'userdata' then
+        return false
+    end
+
+    local metatable = getmetatable(value)
+    return type(metatable) == 'table' and type(metatable.__call) == 'function'
+end
+
 local function validatePayload(payload, validator)
     if validator == nil then
         return true, nil
@@ -123,7 +136,7 @@ local function sanitizeForClient(response)
 end
 
 function Nexa.Callbacks.Register(name, handler, options)
-    if not isValidCallbackName(name) or type(handler) ~= 'function' then
+    if not isValidCallbackName(name) or not isCallable(handler) then
         Nexa.Logger.Error('callbacks.register', 'Interne Callback-Registrierung ungueltig.', {
             name = name
         })
@@ -140,7 +153,7 @@ function Nexa.Callbacks.Register(name, handler, options)
 end
 
 function Nexa.Callbacks.RegisterNetwork(name, handler, options)
-    if not isValidCallbackName(name) or type(handler) ~= 'function' then
+    if not isValidCallbackName(name) or not isCallable(handler) then
         Nexa.Logger.Error('callbacks.network.register', 'Netzwerk-Callback-Registrierung ungueltig.', {
             name = name
         })

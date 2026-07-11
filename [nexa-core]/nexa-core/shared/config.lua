@@ -428,25 +428,40 @@ local function addIssue(target, path, code, message)
 end
 
 local function typeMatches(value, expectedType)
+    local actualType = type(value)
+
+    if expectedType == 'object' then
+        return actualType == 'table'
+    end
+
     if expectedType == 'array' then
-        if type(value) ~= 'table' then
+        if actualType ~= 'table' then
             return false
         end
 
         local count = 0
 
         for key in pairs(value) do
-            if type(key) ~= 'number' then
+            if type(key) ~= 'number'
+                or key < 1
+                or key % 1 ~= 0
+            then
                 return false
             end
 
             count = count + 1
         end
 
-        return count == #value
+        for index = 1, count do
+            if value[index] == nil then
+                return false
+            end
+        end
+
+        return true
     end
 
-    return type(value) == expectedType
+    return actualType == expectedType
 end
 
 local function isAllowed(value, allowed)
@@ -602,10 +617,9 @@ local function removeServerOnlyValues(snapshot, nodeSchema)
     return output
 end
 
-rawConfig = removeServerOnlyValues(rawConfig, schema)
-
 local validationOk, validationErrors, validationWarnings = validateSnapshot(rawConfig)
-local frozenSnapshot = freeze(deepClone(rawConfig))
+local runtimeSnapshot = removeServerOnlyValues(rawConfig, schema)
+local frozenSnapshot = freeze(deepClone(runtimeSnapshot))
 local publicSnapshot = freeze(makePublicSnapshot(rawConfig, schema) or {})
 
 local Config = {
