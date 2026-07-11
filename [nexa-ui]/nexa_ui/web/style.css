@@ -257,6 +257,147 @@ input[type="checkbox"].nexa-field__control {
     line-height: 1.4;
 }
 
+.nexa-window-layer {
+    position: fixed;
+    inset: 24px;
+    display: grid;
+    align-items: start;
+    justify-items: center;
+    gap: 16px;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.nexa-window {
+    width: min(840px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+    border: 1px solid var(--nexa-line);
+    border-radius: var(--nexa-radius);
+    background: var(--nexa-surface);
+    box-shadow: var(--nexa-shadow);
+    pointer-events: auto;
+}
+
+.nexa-window[data-size="wide"] {
+    width: min(1180px, calc(100vw - 48px));
+}
+
+.nexa-window__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--nexa-line);
+}
+
+.nexa-window__header h2,
+.nexa-error-overlay__box h2 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 0;
+}
+
+.nexa-window__header p {
+    margin: 4px 0 0;
+    color: var(--nexa-muted);
+    font-size: 13px;
+}
+
+.nexa-window__body {
+    display: grid;
+    gap: 12px;
+    padding: 18px 20px;
+    overflow: auto;
+}
+
+.nexa-window__section {
+    padding: 12px;
+    border: 1px solid var(--nexa-line);
+    border-radius: var(--nexa-radius);
+    background: #fffaf1;
+}
+
+.nexa-window__section h3,
+.nexa-window__section p,
+.nexa-window__empty {
+    margin: 0;
+}
+
+.nexa-window__section h3 {
+    font-size: 15px;
+}
+
+.nexa-window__section p,
+.nexa-window__empty {
+    margin-top: 4px;
+    color: var(--nexa-muted);
+    font-size: 14px;
+}
+
+.nexa-loading-overlay,
+.nexa-error-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(23, 32, 42, 0.38);
+    z-index: 30;
+}
+
+.nexa-loading-overlay__box,
+.nexa-error-overlay__box {
+    width: min(420px, 100%);
+    padding: 20px;
+    border: 1px solid var(--nexa-line);
+    border-radius: var(--nexa-radius);
+    background: var(--nexa-surface);
+    box-shadow: var(--nexa-shadow);
+}
+
+.nexa-loading-overlay__box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.nexa-loading-overlay__spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(40, 106, 143, 0.22);
+    border-top-color: var(--nexa-civic-blue);
+    border-radius: 999px;
+    animation: nexa-spin 0.9s linear infinite;
+}
+
+.nexa-loading-overlay__label,
+.nexa-error-overlay__box p {
+    margin: 0;
+    color: var(--nexa-muted);
+    line-height: 1.45;
+}
+
+.nexa-error-overlay__code {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 8px;
+    border-radius: var(--nexa-radius);
+    color: var(--nexa-error);
+    background: rgba(168, 60, 60, 0.12);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+@keyframes nexa-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 @media (max-width: 520px) {
     .nexa-shell {
         padding: 14px;
@@ -273,5 +414,14 @@ input[type="checkbox"].nexa-field__control {
 
     .nexa-button {
         width: 100%;
+    }
+
+    .nexa-window-layer {
+        inset: 12px;
+    }
+
+    .nexa-window {
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
     }
 }

@@ -16,6 +16,12 @@ NEXA_UI_MESSAGE_TYPES = {
     contextClose = 'context_close',
     inputOpen = 'input_open',
     inputClose = 'input_close',
+    windowOpen = 'ui:windowOpen',
+    windowClose = 'ui:windowClose',
+    loadingOpen = 'ui:loadingOpen',
+    loadingClose = 'ui:loadingClose',
+    errorOpen = 'ui:errorOpen',
+    errorClose = 'ui:errorClose',
     theme = 'theme'
 }
 

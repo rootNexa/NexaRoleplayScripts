@@ -3,6 +3,10 @@ local ContextRegistry = {}
 local CurrentContext = nil
 local CurrentInputDialog = nil
 local InputDialogRequestId = 0
+local WindowRegistry = {}
+local CurrentWindows = {}
+local LoadingOverlay = nil
+local ErrorOverlay = nil
 local identitySpawnCompletedAt = nil
 
 local function getRenderingCamState()
@@ -57,7 +61,14 @@ local function setUiFocus(enabled)
 end
 
 local function refreshUiFocus()
-    setUiFocus(currentPanel ~= nil or CurrentContext ~= nil)
+    local hasWindow = false
+
+    for _ in pairs(CurrentWindows) do
+        hasWindow = true
+        break
+    end
+
+    setUiFocus(currentPanel ~= nil or CurrentContext ~= nil or CurrentInputDialog ~= nil or hasWindow or ErrorOverlay ~= nil)
 end
 
 local function resolveInputDialog(value)
@@ -163,6 +174,98 @@ end
 
 function getLocale()
     return NexaUiCopyTable(NexaUiLocale)
+end
+
+local function normalizeWindowDefinition(definition)
+    if type(definition) ~= 'table' or type(definition.id) ~= 'string' or definition.id == '' then
+        return nil
+    end
+
+    return {
+        id = definition.id,
+        title = NexaUiSanitizeText(definition.title or definition.id, 80) or definition.id,
+        subtitle = NexaUiSanitizeText(definition.subtitle or '', 120) or '',
+        size = NexaUiSanitizeText(definition.size or 'standard', 24) or 'standard',
+        closable = definition.closable ~= false,
+        sections = type(definition.sections) == 'table' and definition.sections or {}
+    }
+end
+
+function registerWindow(definition)
+    local normalized = normalizeWindowDefinition(definition)
+
+    if normalized == nil then
+        return false
+    end
+
+    WindowRegistry[normalized.id] = normalized
+
+    return true
+end
+
+function openWindow(id, payload)
+    if type(id) ~= 'string' or WindowRegistry[id] == nil then
+        return false
+    end
+
+    CurrentWindows[id] = payload or {}
+    refreshUiFocus()
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.windowOpen, {
+        window = WindowRegistry[id],
+        payload = payload or {},
+        locale = NexaUiLocale,
+        theme = getTheme()
+    })
+
+    return true
+end
+
+function closeWindow(id)
+    if type(id) ~= 'string' or CurrentWindows[id] == nil then
+        return false
+    end
+
+    CurrentWindows[id] = nil
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.windowClose, {
+        id = id
+    })
+    refreshUiFocus()
+
+    return true
+end
+
+function getOpenWindows()
+    return NexaUiCopyTable(CurrentWindows)
+end
+
+function showLoading(payload)
+    LoadingOverlay = type(payload) == 'table' and payload or {}
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.loadingOpen, LoadingOverlay)
+
+    return true
+end
+
+function hideLoading()
+    LoadingOverlay = nil
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.loadingClose)
+
+    return true
+end
+
+function showError(payload)
+    ErrorOverlay = type(payload) == 'table' and payload or {}
+    refreshUiFocus()
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.errorOpen, ErrorOverlay)
+
+    return true
+end
+
+function hideError()
+    ErrorOverlay = nil
+    sendUiMessage(NEXA_UI_MESSAGE_TYPES.errorClose)
+    refreshUiFocus()
+
+    return true
 end
 
 local function normalizeContextForDisplay(context)
@@ -315,6 +418,9 @@ function NexaUiHandleCloseRequest()
         closeInputDialog()
     end
 
+    ErrorOverlay = nil
+    LoadingOverlay = nil
+    CurrentWindows = {}
     hideContext(true)
     close()
 end
@@ -336,6 +442,14 @@ exports('hideContext', hideContext)
 exports('getOpenContextMenu', getOpenContextMenu)
 exports('inputDialog', inputDialog)
 exports('closeInputDialog', closeInputDialog)
+exports('registerWindow', registerWindow)
+exports('openWindow', openWindow)
+exports('closeWindow', closeWindow)
+exports('getOpenWindows', getOpenWindows)
+exports('showLoading', showLoading)
+exports('hideLoading', hideLoading)
+exports('showError', showError)
+exports('hideError', hideError)
 
 if NexaUiConfig.allowDemoInteractions then
     RegisterCommand('nexaui', function()

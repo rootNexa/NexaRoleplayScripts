@@ -326,6 +326,156 @@
         panelContent.append(form);
     }
 
+    function getOverlayRoot(id, className) {
+        let root = document.getElementById(id);
+
+        if (!root) {
+            root = document.createElement('section');
+            root.id = id;
+            root.className = className;
+            root.hidden = true;
+            document.body.append(root);
+        }
+
+        return root;
+    }
+
+    function hideOverlay(id) {
+        const root = document.getElementById(id);
+
+        if (!root) {
+            return;
+        }
+
+        root.hidden = true;
+        root.replaceChildren();
+    }
+
+    function renderLoading(payload) {
+        const root = getOverlayRoot('nexaLoadingOverlay', 'nexa-loading-overlay');
+        const box = document.createElement('div');
+        box.className = 'nexa-loading-overlay__box';
+
+        const spinner = document.createElement('div');
+        spinner.className = 'nexa-loading-overlay__spinner';
+
+        const label = document.createElement('p');
+        label.className = 'nexa-loading-overlay__label';
+        label.textContent = text(payload.label || payload.message, 'Laedt...');
+
+        box.append(spinner, label);
+        root.replaceChildren(box);
+        root.hidden = false;
+    }
+
+    function renderError(payload) {
+        const root = getOverlayRoot('nexaErrorOverlay', 'nexa-error-overlay');
+        const box = document.createElement('article');
+        box.className = 'nexa-error-overlay__box';
+
+        const title = document.createElement('h2');
+        title.textContent = text(payload.title, 'Fehler');
+
+        const message = document.createElement('p');
+        message.textContent = text(payload.message, 'Der Vorgang konnte nicht abgeschlossen werden.');
+
+        const code = document.createElement('span');
+        code.className = 'nexa-error-overlay__code';
+        code.textContent = text(payload.code, '');
+
+        box.append(title, message);
+
+        if (code.textContent !== '') {
+            box.append(code);
+        }
+
+        root.replaceChildren(box);
+        root.hidden = false;
+    }
+
+    function renderWindow(payload) {
+        const definition = payload.window || {};
+        const windowPayload = payload.payload || {};
+        const root = getOverlayRoot('nexaWindowLayer', 'nexa-window-layer');
+        const id = text(definition.id, `window-${Date.now()}`);
+        let windowElement = root.querySelector(`[data-window-id="${id}"]`);
+
+        if (!windowElement) {
+            windowElement = document.createElement('article');
+            windowElement.className = 'nexa-window';
+            windowElement.dataset.windowId = id;
+            root.append(windowElement);
+        }
+
+        windowElement.dataset.size = text(definition.size, 'standard');
+        windowElement.replaceChildren();
+
+        const header = document.createElement('header');
+        header.className = 'nexa-window__header';
+
+        const titleGroup = document.createElement('div');
+        const title = document.createElement('h2');
+        title.textContent = text(windowPayload.title || definition.title, id);
+        const subtitle = document.createElement('p');
+        subtitle.textContent = text(windowPayload.subtitle || definition.subtitle, '');
+        titleGroup.append(title, subtitle);
+        header.append(titleGroup);
+
+        if (definition.closable !== false) {
+            const close = document.createElement('button');
+            close.className = 'nexa-icon-button';
+            close.type = 'button';
+            close.textContent = 'x';
+            close.addEventListener('click', () => post('nexaUiClose'));
+            header.append(close);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'nexa-window__body';
+
+        const sections = Array.isArray(windowPayload.sections) ? windowPayload.sections : definition.sections || [];
+
+        if (sections.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'nexa-window__empty';
+            empty.textContent = text(windowPayload.emptyLabel, 'Keine Daten verfuegbar.');
+            body.append(empty);
+        }
+
+        sections.forEach((section) => {
+            const card = document.createElement('section');
+            card.className = 'nexa-window__section';
+
+            const sectionTitle = document.createElement('h3');
+            sectionTitle.textContent = text(section.title, 'Bereich');
+            const sectionText = document.createElement('p');
+            sectionText.textContent = text(section.description || section.value, '');
+
+            card.append(sectionTitle, sectionText);
+            body.append(card);
+        });
+
+        windowElement.append(header, body);
+        root.hidden = false;
+    }
+
+    function closeWindow(payload) {
+        const id = payload.id;
+        const root = document.getElementById('nexaWindowLayer');
+
+        if (!root || typeof id !== 'string') {
+            return;
+        }
+
+        const windowElement = root.querySelector(`[data-window-id="${id}"]`);
+
+        if (windowElement) {
+            windowElement.remove();
+        }
+
+        root.hidden = root.children.length === 0;
+    }
+
     function notify(payload) {
         const toast = document.createElement('article');
         toast.className = 'nexa-toast';
@@ -375,6 +525,30 @@
 
         if (message.type === 'input_open') {
             renderInputDialog(payload);
+        }
+
+        if (message.type === 'ui:loadingOpen') {
+            renderLoading(payload);
+        }
+
+        if (message.type === 'ui:loadingClose') {
+            hideOverlay('nexaLoadingOverlay');
+        }
+
+        if (message.type === 'ui:errorOpen') {
+            renderError(payload);
+        }
+
+        if (message.type === 'ui:errorClose') {
+            hideOverlay('nexaErrorOverlay');
+        }
+
+        if (message.type === 'ui:windowOpen') {
+            renderWindow(payload);
+        }
+
+        if (message.type === 'ui:windowClose') {
+            closeWindow(payload);
         }
     });
 
