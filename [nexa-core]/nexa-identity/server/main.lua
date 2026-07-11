@@ -1,7 +1,11 @@
 local RESOURCE = GetCurrentResourceName()
 local CHARACTER_RESOURCE = 'nexa-character'
+local PLAYERSTATE_RESOURCE = 'nexa_playerstate'
 local CORE_RESOURCE = 'nexa-core'
 local EVENTS = NexaIdentityEvents
+local pendingSpawnBySource = {}
+local sendError
+local SPAWN_REQUEST_TIMEOUT_MS = 20000
 
 local function log(level, message, context)
     local suffix = ''
@@ -58,7 +62,10 @@ local errorMessages = {
     DATABASE_ERROR = 'Character data could not be saved.',
     NOT_FOUND = 'Character was not found.',
     RESOURCE_NOT_STARTED = 'Required resource is not started.',
-    EXPORT_ERROR = 'Export call failed.'
+    EXPORT_ERROR = 'Export call failed.',
+    SPAWN_ALREADY_PENDING = 'Spawn request is already pending.',
+    SPAWN_REJECTED = 'Spawn request was rejected.',
+    PLAYER_DISCONNECTED = 'Player disconnected before spawn could start.'
 }
 
 local function normalizeExportResult(action, result, err)
@@ -143,6 +150,151 @@ local function publicCharacters(characters)
     end
 
     return public
+end
+
+local function responseErrorCode(response)
+    if type(response) ~= 'table' then
+        return nil
+    end
+
+    if type(response.error) == 'table' and response.error.code then
+        return response.error.code
+    end
+
+    return response.code
+end
+
+local function responseErrorMessage(response)
+    if type(response) ~= 'table' then
+        return nil
+    end
+
+    if type(response.error) == 'table' and response.error.message then
+        return response.error.message
+    end
+
+    return response.message
+end
+
+local function verifyActiveCharacter(source, characterId)
+    local activeResult, activeErr = callExport(CHARACTER_RESOURCE, 'GetActiveCharacter', source)
+    local activeResponse = normalizeExportResult('GetActiveCharacter', activeResult, activeErr)
+
+    if not activeResponse.ok or type(activeResponse.data) ~= 'table' or tonumber(activeResponse.data.id) ~= tonumber(characterId) then
+        return false, {
+            code = activeResponse.error and activeResponse.error.code or 'NOT_FOUND',
+            message = 'Selected character is not active.',
+            details = activeResponse.error
+        }
+    end
+
+    return true, activeResponse.data
+end
+
+local function requestPlayerSpawn(source, character)
+    if GetPlayerName(source) == nil then
+        return false, {
+            code = 'PLAYER_DISCONNECTED',
+            message = errorMessages.PLAYER_DISCONNECTED
+        }
+    end
+
+    if type(character) ~= 'table' or tonumber(character.id) == nil then
+        return false, {
+            code = 'NOT_FOUND',
+            message = 'Selected character is not active.'
+        }
+    end
+
+    local active, activeResult = verifyActiveCharacter(source, character.id)
+
+    if not active then
+        return false, activeResult
+    end
+
+    if pendingSpawnBySource[source] then
+        return false, {
+            code = 'SPAWN_ALREADY_PENDING',
+            message = errorMessages.SPAWN_ALREADY_PENDING
+        }
+    end
+
+    if not isStarted(PLAYERSTATE_RESOURCE) then
+        return false, {
+            code = 'RESOURCE_NOT_STARTED',
+            message = 'PlayerState is not started.'
+        }
+    end
+
+    pendingSpawnBySource[source] = {
+        characterId = tonumber(character.id),
+        requestedAt = os.time()
+    }
+
+    local okCall, spawnResponse = pcall(function()
+        return exports[PLAYERSTATE_RESOURCE]:RequestSpawn(source)
+    end)
+
+    if not okCall then
+        pendingSpawnBySource[source] = nil
+        log('error', 'PlayerState RequestSpawn export failed.', {
+            source = source,
+            characterId = character.id,
+            error = spawnResponse
+        })
+        return false, {
+            code = 'EXPORT_ERROR',
+            message = errorMessages.EXPORT_ERROR
+        }
+    end
+
+    local accepted = type(spawnResponse) == 'table' and (spawnResponse.ok == true or spawnResponse.success == true)
+
+    if not accepted then
+        pendingSpawnBySource[source] = nil
+        return false, {
+            code = responseErrorCode(spawnResponse) or 'SPAWN_REJECTED',
+            message = responseErrorMessage(spawnResponse) or errorMessages.SPAWN_REJECTED,
+            details = spawnResponse
+        }
+    end
+
+    log('info', 'PlayerState spawn request accepted.', {
+        source = source,
+        characterId = character.id,
+        response = spawnResponse
+    })
+
+    SetTimeout(SPAWN_REQUEST_TIMEOUT_MS, function()
+        local pending = pendingSpawnBySource[source]
+
+        if pending and pending.characterId == tonumber(character.id) then
+            pendingSpawnBySource[source] = nil
+            log('warn', 'PlayerState spawn request timed out before gameplay ready.', {
+                source = source,
+                characterId = character.id
+            })
+        end
+    end)
+
+    return true, spawnResponse
+end
+
+local function completeCharacterSelection(source, character)
+    local spawnStarted, spawnResult = requestPlayerSpawn(source, character)
+
+    if not spawnStarted then
+        log('warn', 'Character selected but spawn request failed.', {
+            source = source,
+            characterId = character and character.id or nil,
+            error = spawnResult
+        })
+        sendError(source, spawnResult.code, spawnResult.message, spawnResult.details)
+        return false
+    end
+
+    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(character))
+    return true
 end
 
 local function trim(value)
@@ -230,7 +382,7 @@ local function validateCreatePayload(data)
     }, nil
 end
 
-local function sendError(source, code, message, details)
+sendError = function(source, code, message, details)
     TriggerClientEvent(EVENTS.client.error, source, {
         code = code or 'INTERNAL_ERROR',
         message = message or errorMessages[code] or 'Action failed.',
@@ -377,7 +529,7 @@ RegisterNetEvent(EVENTS.server.createCharacter, function(data)
         return
     end
 
-    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(selectResponse.data))
+    completeCharacterSelection(source, selectResponse.data)
 end)
 
 RegisterNetEvent(EVENTS.server.selectCharacter, function(characterId)
@@ -412,7 +564,45 @@ RegisterNetEvent(EVENTS.server.selectCharacter, function(characterId)
         return
     end
 
-    TriggerClientEvent(EVENTS.client.selected, source, publicCharacter(selectResponse.data))
+    completeCharacterSelection(source, selectResponse.data)
+end)
+
+AddEventHandler('nexa:playerstate:active', function(payload)
+    local playerSource = payload and normalizeSource(payload.source)
+
+    if playerSource then
+        pendingSpawnBySource[playerSource] = nil
+    end
+end)
+
+AddEventHandler('nexa:player:ready', function(payload)
+    local playerSource = payload and normalizeSource(payload.source)
+
+    if playerSource then
+        pendingSpawnBySource[playerSource] = nil
+    end
+end)
+
+AddEventHandler('nexa:playerstate:failed', function(payload)
+    local playerSource = payload and normalizeSource(payload.source)
+
+    if playerSource then
+        pendingSpawnBySource[playerSource] = nil
+    end
+end)
+
+AddEventHandler('playerDropped', function()
+    local source = normalizeSource(source)
+
+    if source then
+        pendingSpawnBySource[source] = nil
+    end
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName == RESOURCE then
+        pendingSpawnBySource = {}
+    end
 end)
 
 AddEventHandler('onResourceStart', function(resourceName)
@@ -422,6 +612,7 @@ AddEventHandler('onResourceStart', function(resourceName)
 
     log('info', 'nexa-identity started.', {
         core = GetResourceState(CORE_RESOURCE),
-        character = GetResourceState(CHARACTER_RESOURCE)
+        character = GetResourceState(CHARACTER_RESOURCE),
+        playerstate = GetResourceState(PLAYERSTATE_RESOURCE)
     })
 end)

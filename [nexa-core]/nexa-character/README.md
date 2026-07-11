@@ -7,6 +7,7 @@ This resource owns the server-facing Character API for later UI resources. It do
 ## Dependencies
 
 - `nexa-core`
+- `nexa_characters`
 
 Database access is delegated to `nexa-core` exports. This resource does not access the database directly.
 
@@ -46,7 +47,10 @@ Client:
 ```cfg
 ensure oxmysql
 ensure nexa-core
+ensure nexa_identity
+ensure nexa_characters
+ensure nexa_playerstate
 ensure nexa-character
-ensure nexa-spawn
+ensure nexa-identity
 ensure nexa-core-test
 ```

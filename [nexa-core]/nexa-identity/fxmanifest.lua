@@ -9,7 +9,8 @@ version '0.1.0'
 
 dependencies {
     'nexa-core',
-    'nexa-character'
+    'nexa-character',
+    'nexa_playerstate'
 }
 
 ui_page 'web/index.html'

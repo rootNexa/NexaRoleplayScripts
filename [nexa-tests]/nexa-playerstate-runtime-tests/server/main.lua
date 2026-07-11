@@ -4,6 +4,7 @@ local SUITES = {
     position = true,
     bucket = true,
     lifestate = true,
+    identity_spawn = true,
     disconnect = true,
     restart = true,
     security = true,
@@ -34,6 +35,18 @@ local function runSuite(suite)
     if suite == 'lifecycle' then
         local actions = exports.nexa_playerstate:GetPlayerState(1)
         return result(suite, type(actions) == 'table' and 'passed' or 'open', 'Static export smoke check.')
+    end
+
+    if suite == 'identity_spawn' then
+        local identityStarted = GetResourceState('nexa-identity') == 'started'
+        local playerstateStarted = GetResourceState('nexa_playerstate') == 'started'
+        local characterStarted = GetResourceState('nexa-character') == 'started'
+
+        if identityStarted and playerstateStarted and characterStarted then
+            return result(suite, 'open', 'Resources are started; requires live selected character fixture to execute RequestSpawn end-to-end.')
+        end
+
+        return result(suite, 'failed', 'nexa-identity, nexa-character and nexa_playerstate must be started.')
     end
 
     return result(suite, 'open', 'Requires live FXServer player and safe test character.')

@@ -24,7 +24,7 @@ if ($server -notmatch 'nexa_test_playerstate_runtime') {
     throw 'Runtime test command is missing.'
 }
 
-foreach ($suite in @('lifecycle', 'spawn', 'position', 'bucket', 'lifestate', 'disconnect', 'restart', 'security', 'all')) {
+foreach ($suite in @('lifecycle', 'spawn', 'position', 'bucket', 'lifestate', 'identity_spawn', 'disconnect', 'restart', 'security', 'all')) {
     if ($server -notmatch $suite) {
         throw "Runtime suite is missing: $suite"
     }

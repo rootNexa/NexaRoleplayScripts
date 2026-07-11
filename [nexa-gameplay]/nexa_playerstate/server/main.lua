@@ -619,6 +619,10 @@ function RequestSpawn(source)
         return response(false, NEXA_PLAYERSTATE.errors.alreadyActive, 'Player is already active.')
     end
 
+    if state.state == 'spawn_preparing' or state.state == 'spawn_authorized' or state.state == 'spawning' then
+        return response(false, NEXA_PLAYERSTATE.errors.spawnPending, 'Spawn request is already pending.')
+    end
+
     state.accountId = getAccountId(source)
     state.characterId = getCharacterId(source)
 

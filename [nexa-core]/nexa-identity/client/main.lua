@@ -53,7 +53,6 @@ RegisterNetEvent(EVENTS.client.selected, function(character)
     print(('[nexa-identity] character selected: %s'):format(json.encode(character or {})))
     selectedCharacter = character
     setUiOpen(false)
-    TriggerEvent('nexa-spawn:client:requestSpawn')
 end)
 
 RegisterNUICallback('nexa_identity:createCharacter', function(data, cb)
